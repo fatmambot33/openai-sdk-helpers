@@ -1,1 +1,121 @@
+<div align="center">
+
 # corai
+
+Shared primitives for composing OpenAI agent workflows: structures, response
+handling, prompt rendering, and reusable agent factories.
+
+</div>
+
+## Overview
+
+`corai` packages the common building blocks required to assemble agent-driven
+applications. The library intentionally focuses on reusable primitives—data
+structures, configuration helpers, and orchestration utilities—while leaving
+application-specific prompts and tools to the consuming project.
+
+### Features
+
+- **Agent wrappers** for OpenAI Agents SDK with synchronous and asynchronous
+  entry points.
+- **Prompt rendering** powered by Jinja for dynamic agent instructions.
+- **Typed structures** for prompts, responses, and search workflows to ensure
+  predictable inputs and outputs.
+- **Vector and web search flows** that coordinate planning, execution, and
+  reporting.
+
+## Installation
+
+Install the package directly from PyPI to reuse it across projects:
+
+```bash
+pip install corai
+```
+
+For local development, install with editable sources and the optional dev
+dependencies:
+
+```bash
+pip install -e .
+pip install -e . --group dev
+```
+
+## Quickstart
+
+Create a basic vector search workflow by wiring your own prompt templates and
+preferred model configuration:
+
+```python
+from pathlib import Path
+
+from corai.agent.vector_search import VectorSearch
+
+
+prompts = Path("./prompts")
+vector_search = VectorSearch(prompt_dir=prompts, default_model="gpt-4o-mini")
+
+report = vector_search.run_agent_sync("Explain quantum entanglement for beginners")
+print(report.report)
+```
+
+You can plug in your own prompt templates by placing matching `.jinja` files in
+the provided `prompt_dir` and naming them after the agent (for example,
+`vector_planner.jinja`).
+
+### Centralized OpenAI configuration
+
+`corai` ships with a lightweight `OpenAISettings` helper so projects can share
+consistent authentication, routing, and model defaults when using the OpenAI
+SDK:
+
+```python
+from corai import OpenAISettings
+
+
+# Load from environment variables or a local .env file
+settings = OpenAISettings.from_env()
+client = settings.create_client()
+
+# Reuse the default model across agents
+vector_search = VectorSearch(
+    prompt_dir=prompts, default_model=settings.default_model or "gpt-4o-mini"
+)
+```
+
+The helper reads `OPENAI_API_KEY`, `OPENAI_ORG_ID`, `OPENAI_PROJECT_ID`,
+`OPENAI_BASE_URL`, and `OPENAI_MODEL` by default but supports overrides for
+custom deployments.
+
+## Development
+
+The repository is configured for a lightweight Python development workflow.
+Before opening a pull request, format and validate your changes locally:
+
+```bash
+# Style and formatting
+pydocstyle src
+black --check .
+
+# Static type checking
+pyright src
+
+# Unit tests with coverage
+pytest -q --cov=src --cov-report=term-missing --cov-fail-under=70
+```
+
+## Project Structure
+
+- `src/corai/agent`: Agent factories, orchestration helpers, and search
+  workflows.
+- `src/corai/prompt`: Prompt rendering utilities backed by Jinja.
+- `src/corai/response`: Response parsing and transformation helpers.
+- `src/corai/structure`: Typed data structures shared across workflows.
+- `src/corai/vector_storage`: Minimal vector store abstraction.
+- `tests/`: Unit tests covering core modules and structures.
+
+## Contributing
+
+Contributions are welcome! Please accompany functional changes with relevant
+tests and ensure all quality gates pass. Follow the NumPy-style docstring
+conventions outlined in `AGENTS.md` to keep the codebase consistent.
+

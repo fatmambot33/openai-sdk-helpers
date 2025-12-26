@@ -1,0 +1,56 @@
+[project]
+name = "corai"
+version = "0.0.1"
+requires-python = ">=3.10"
+readme = "README.md"
+description = "Composable helpers for OpenAI SDK agents, prompts, and storage"
+license = {text = "MIT"}
+authors = [{name = "corai maintainers"}]
+dependencies = [
+
+    # Template rendering
+    "jinja2",
+
+
+    # Data modeling
+    "pydantic>=2.7,<3",
+    "typing_extensions>=4.15.0,<5",
+
+
+    # Environment variable management
+    "python-dotenv",
+
+
+    # OpenAI functionality
+    "openai",
+    "openai-agents",
+
+
+]
+
+[dependency-groups]
+dev = [
+
+
+    # Linting and docstring style checks
+    "pydocstyle",
+    "pyright",
+
+    # Formatting
+    "black",
+    "black[jupyter]",
+
+    # Testing
+    "pytest-cov",
+    "pytest",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/corai"]
+
+[tool.pyright]
+extraPaths = ["src"]
