@@ -197,9 +197,7 @@ class VectorSearchTool(BaseAgent):
             results = VectorSearchItemResultsStructure()
             for item, result in zip(search_plan.searches, results_list):
                 if isinstance(result, BaseException):
-                    results.errors.append(
-                        f"Search for '{item.query}' failed: {result}"
-                    )
+                    results.errors.append(f"Search for '{item.query}' failed: {result}")
                     continue
                 if result is not None:
                     results.append(result)

@@ -108,7 +108,9 @@ class OpenAISettings(BaseModel):
         settings = cls(**values)
         if not settings.api_key:
             source_hint = (
-                f" from {dotenv_path}" if dotenv_path is not None else " from environment"
+                f" from {dotenv_path}"
+                if dotenv_path is not None
+                else " from environment"
             )
             raise ValueError(
                 "OPENAI_API_KEY is required to configure the OpenAI client"
