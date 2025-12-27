@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from agents import custom_span, gen_trace_id, trace
 
@@ -96,6 +96,9 @@ class VectorSearchTool(BaseAgent):
         prompt_dir: Optional[Path] = None,
         default_model: Optional[str] = None,
         store_name: Optional[str] = None,
+        max_concurrent_searches: int = MAX_CONCURRENT_SEARCHES,
+        vector_storage: Optional[VectorStorage] = None,
+        vector_storage_factory: Optional[Callable[[str], VectorStorage]] = None,
     ) -> None:
         """Initialize the search tool agent.
 
@@ -105,6 +108,15 @@ class VectorSearchTool(BaseAgent):
             Directory containing prompt templates.
         default_model : str or None, default=None
             Default model identifier to use when not defined in config.
+        store_name : str or None, default=None
+            Name of the vector store to query.
+        max_concurrent_searches : int, default=MAX_CONCURRENT_SEARCHES
+            Maximum number of concurrent vector search tasks to run.
+        vector_storage : VectorStorage or None, default=None
+            Optional preconfigured vector storage instance to reuse.
+        vector_storage_factory : callable, default=None
+            Factory for constructing a :class:`VectorStorage` when one is not
+            provided. Receives ``store_name`` as an argument.
 
         Returns
         -------
@@ -112,6 +124,10 @@ class VectorSearchTool(BaseAgent):
         """
         self._vector_storage: Optional[VectorStorage] = None
         self._store_name = store_name or "editorial"
+        self._vector_storage_factory = vector_storage_factory
+        if vector_storage is not None:
+            self._vector_storage = vector_storage
+        self._max_concurrent_searches = max_concurrent_searches
         config = AgentConfig(
             name="vector_search",
             description="Perform vector searches based on a search plan.",
@@ -131,7 +147,10 @@ class VectorSearchTool(BaseAgent):
             Vector storage helper for executing searches.
         """
         if self._vector_storage is None:
-            self._vector_storage = VectorStorage(store_name=self._store_name)
+            if self._vector_storage_factory is not None:
+                self._vector_storage = self._vector_storage_factory(self._store_name)
+            else:
+                self._vector_storage = VectorStorage(store_name=self._store_name)
         return self._vector_storage
 
     async def run_agent(
@@ -150,7 +169,7 @@ class VectorSearchTool(BaseAgent):
             Collection of results for the completed searches.
         """
         with custom_span("Search vector store"):
-            semaphore = asyncio.Semaphore(MAX_CONCURRENT_SEARCHES)
+            semaphore = asyncio.Semaphore(self._max_concurrent_searches)
 
             async def _bounded_search(
                 item: VectorSearchItemStructure,
@@ -174,11 +193,15 @@ class VectorSearchTool(BaseAgent):
                 asyncio.create_task(_bounded_search(item))
                 for item in search_plan.searches
             ]
-            results_list = await asyncio.gather(*tasks)
+            results_list = await asyncio.gather(*tasks, return_exceptions=True)
             results = VectorSearchItemResultsStructure()
-            for result in results_list:
+            for item, result in zip(search_plan.searches, results_list):
+                if isinstance(result, BaseException):
+                    results.errors.append(f"Search for '{item.query}' failed: {result}")
+                    continue
                 if result is not None:
                     results.append(result)
+
             return results
 
     async def run_search(
@@ -296,6 +319,9 @@ class VectorSearch(BaseAgent):
         prompt_dir: Optional[Path] = None,
         default_model: Optional[str] = None,
         vector_store_name: Optional[str] = None,
+        max_concurrent_searches: int = MAX_CONCURRENT_SEARCHES,
+        vector_storage: Optional[VectorStorage] = None,
+        vector_storage_factory: Optional[Callable[[str], VectorStorage]] = None,
     ) -> None:
         """Create the main VectorSearch agent.
 
@@ -307,6 +333,15 @@ class VectorSearch(BaseAgent):
             Directory containing prompt templates.
         default_model : str or None, default=None
             Default model identifier to use when not defined in config.
+        vector_store_name : str or None, default=None
+            Name of the vector store to query.
+        max_concurrent_searches : int, default=MAX_CONCURRENT_SEARCHES
+            Maximum number of concurrent search tasks to run.
+        vector_storage : VectorStorage or None, default=None
+            Optional preconfigured vector storage instance to reuse.
+        vector_storage_factory : callable, default=None
+            Factory used to construct a :class:`VectorStorage` when one is not
+            provided. Receives ``vector_store_name`` as an argument.
 
         Returns
         -------
@@ -324,6 +359,9 @@ class VectorSearch(BaseAgent):
         )
         self._prompt_dir = prompt_dir
         self._vector_store_name = vector_store_name
+        self._max_concurrent_searches = max_concurrent_searches
+        self._vector_storage = vector_storage
+        self._vector_storage_factory = vector_storage_factory
 
     async def run_agent(self, search_query: str) -> VectorSearchStructure:
         """Execute the entire research workflow for ``search_query``.
@@ -347,13 +385,19 @@ class VectorSearch(BaseAgent):
                 prompt_dir=self._prompt_dir,
                 default_model=self.model,
                 store_name=self._vector_store_name,
+                max_concurrent_searches=self._max_concurrent_searches,
+                vector_storage=self._vector_storage,
+                vector_storage_factory=self._vector_storage_factory,
             )
             writer = VectorSearchWriter(
                 prompt_dir=self._prompt_dir, default_model=self.model
             )
-            search_plan = await planner.run_agent(query=search_query)
-            search_results = await tool.run_agent(search_plan=search_plan)
-            search_report = await writer.run_agent(search_query, search_results)
+            with custom_span("vector_search.plan"):
+                search_plan = await planner.run_agent(query=search_query)
+            with custom_span("vector_search.search"):
+                search_results = await tool.run_agent(search_plan=search_plan)
+            with custom_span("vector_search.write"):
+                search_report = await writer.run_agent(search_query, search_results)
         return VectorSearchStructure(
             query=search_query,
             plan=search_plan,

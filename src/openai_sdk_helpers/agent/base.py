@@ -88,10 +88,14 @@ class BaseAgent:
         else:
             prompt_path = None
 
-        if prompt_path is not None and prompt_path.exists():
+        if prompt_path is None:
+            self._template = Template("")
+        elif prompt_path.exists():
             self._template = Template(prompt_path.read_text())
         else:
-            self._template = Template("")
+            raise FileNotFoundError(
+                f"Prompt template for agent '{name}' not found at {prompt_path}."
+            )
 
         self.agent_name = name
         self.description = description

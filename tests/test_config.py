@@ -1,3 +1,5 @@
+import pytest
+
 from openai_sdk_helpers.config import OpenAISettings
 
 
@@ -56,3 +58,14 @@ def test_create_client_uses_kwargs(monkeypatch):
     assert kwargs == {"api_key": "another-key", "base_url": "http://localhost"}
     assert client.api_key == "another-key"
     assert client.base_url == "http://localhost"
+
+
+def test_from_env_requires_api_key(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_ORG_ID", raising=False)
+    monkeypatch.delenv("OPENAI_PROJECT_ID", raising=False)
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.delenv("OPENAI_MODEL", raising=False)
+
+    with pytest.raises(ValueError, match="OPENAI_API_KEY is required"):
+        OpenAISettings.from_env()

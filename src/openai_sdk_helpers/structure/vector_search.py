@@ -29,6 +29,9 @@ class VectorSearchItemResultStructure(BaseStructure):
 class VectorSearchItemResultsStructure(BaseStructure):
     """Collection of search results returned from multiple queries.
 
+    Failed searches are recorded in ``errors`` to allow callers to inspect
+    partial outcomes without losing visibility into issues.
+
     Methods
     -------
     append(item)
@@ -38,6 +41,7 @@ class VectorSearchItemResultsStructure(BaseStructure):
     item_results: List[VectorSearchItemResultStructure] = spec_field(
         "item_results", default_factory=list
     )
+    errors: List[str] = spec_field("errors", default_factory=list)
 
     def append(self, item: VectorSearchItemResultStructure) -> None:
         """Add a search result to the collection.
