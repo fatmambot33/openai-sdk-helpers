@@ -91,6 +91,8 @@ class BaseAgent:
         if prompt_path is not None and prompt_path.exists():
             self._template = Template(prompt_path.read_text())
         else:
+            # TODO: Raise a descriptive error when the prompt template is missing
+            # to avoid silently rendering an empty template.
             self._template = Template("")
 
         self.agent_name = name

@@ -21,6 +21,8 @@ from .base import BaseAgent, _run_agent
 from .config import AgentConfig
 from .utils import run_coro_sync
 
+# TODO: Make the maximum concurrency configurable instead of relying on a
+# module-level constant.
 MAX_CONCURRENT_SEARCHES = 10
 
 
@@ -131,6 +133,8 @@ class VectorSearchTool(BaseAgent):
             Vector storage helper for executing searches.
         """
         if self._vector_storage is None:
+            # TODO: Accept an injected VectorStorage (or factory) to simplify
+            # testing and enable alternative backends without patching globals.
             self._vector_storage = VectorStorage(store_name=self._store_name)
         return self._vector_storage
 
@@ -174,6 +178,8 @@ class VectorSearchTool(BaseAgent):
                 asyncio.create_task(_bounded_search(item))
                 for item in search_plan.searches
             ]
+            # TODO: Preserve partial results by handling per-task exceptions
+            # instead of allowing asyncio.gather to cancel sibling searches.
             results_list = await asyncio.gather(*tasks)
             results = VectorSearchItemResultsStructure()
             for result in results_list:
@@ -340,6 +346,8 @@ class VectorSearch(BaseAgent):
         """
         trace_id = gen_trace_id()
         with trace("VectorSearch trace", trace_id=trace_id):
+            # TODO: Emit spans for each stage (plan/search/write) to improve
+            # observability in distributed traces.
             planner = VectorSearchPlanner(
                 prompt_dir=self._prompt_dir, default_model=self.model
             )

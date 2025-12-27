@@ -105,6 +105,8 @@ class OpenAISettings(BaseModel):
             or os.getenv("OPENAI_MODEL"),
         }
 
+        # TODO: Validate required OpenAI credentials here (or in a dedicated
+        # helper) to fail fast when API settings are missing.
         return cls(**values)
 
     def client_kwargs(self) -> Dict[str, Any]:
