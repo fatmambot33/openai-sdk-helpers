@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .agent_blueprint import AgentBlueprint
 from .plan import AgentEnum, AgentTaskStructure, PlanStructure
 from .base import BaseStructure, SchemaOptions, spec_field
 from .prompt import PromptStructure
@@ -33,6 +34,7 @@ __all__ = [
     "BaseStructure",
     "SchemaOptions",
     "spec_field",
+    "AgentBlueprint",
     "AgentEnum",
     "AgentTaskStructure",
     "PlanStructure",
