@@ -641,7 +641,6 @@ def spec_field(
     Any
         Pydantic ``Field`` configured with a default title and null behavior.
     """
-
     field_kwargs: Dict[str, Any] = {"title": name.replace("_", " ").title()}
     field_kwargs.update(overrides)
 
