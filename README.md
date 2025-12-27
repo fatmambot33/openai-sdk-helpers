@@ -64,14 +64,22 @@ print(report.report)
 Use the built-in text helpers when you need lightweight single-step agents.
 
 ```python
-from openai_sdk_helpers.agent import SummarizerAgent, TranslatorAgent
+from openai_sdk_helpers.agent import (
+    SummarizerAgent,
+    TranslatorAgent,
+    ValidatorAgent,
+)
 
 
 summarizer = SummarizerAgent(default_model="gpt-4o-mini")
 translator = TranslatorAgent(default_model="gpt-4o-mini")
+validator = ValidatorAgent(default_model="gpt-4o-mini")
 
 summary = summarizer.run_sync("Long-form content to condense")
 translation = translator.run_sync("Bonjour", target_language="English")
+guardrails = validator.run_sync(
+    "Share meeting notes with names removed", agent_output=summary.text
+)
 ```
 
 You can plug in your own prompt templates by placing matching `.jinja` files in

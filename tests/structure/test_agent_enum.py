@@ -6,7 +6,9 @@ def test_agent_enum_includes_text_agents():
 
     assert AgentEnum.SUMMARIZER.value == "SummarizerAgent"
     assert AgentEnum.TRANSLATOR.value == "TranslatorAgent"
+    assert AgentEnum.VALIDATOR.value == "ValidatorAgent"
 
     crosswalk = AgentEnum.CROSSWALK()
     assert crosswalk["SUMMARIZER"]["value"] == "SummarizerAgent"
     assert crosswalk["TRANSLATOR"]["value"] == "TranslatorAgent"
+    assert crosswalk["VALIDATOR"]["value"] == "ValidatorAgent"
