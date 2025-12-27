@@ -17,6 +17,8 @@ class TranslatorAgent(BaseAgent):
     -------
     run_agent(text, target_language, context)
         Translate the supplied text into the target language.
+    run_sync(text, target_language, context)
+        Translate the supplied text synchronously.
     """
 
     def __init__(
@@ -77,6 +79,39 @@ class TranslatorAgent(BaseAgent):
 
         result: str = await _run_agent(
             agent=self.get_agent(),
+            agent_input=text,
+            agent_context=template_context,
+            output_type=str,
+        )
+        return result
+
+    def run_sync(
+        self,
+        text: str,
+        target_language: str,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> str:
+        """Synchronously translate ``text`` to ``target_language``.
+
+        Parameters
+        ----------
+        text : str
+            Source content to translate.
+        target_language : str
+            Language to translate the content into.
+        context : dict, optional
+            Additional context values to merge into the prompt. Default ``None``.
+
+        Returns
+        -------
+        str
+            Translated text returned by the agent.
+        """
+        template_context: Dict[str, Any] = {"target_language": target_language}
+        if context:
+            template_context.update(context)
+
+        result: str = super().run_sync(
             agent_input=text,
             agent_context=template_context,
             output_type=str,

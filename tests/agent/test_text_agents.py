@@ -102,3 +102,30 @@ def test_translator_default_prompt():
 
     assert "professional translator" in prompt
     assert "target language" in prompt
+
+
+def test_translator_run_sync_forwards_context():
+    """TranslatorAgent.run_sync should pass the target language into context."""
+
+    agent = TranslatorAgent(default_model="gpt-4o-mini")
+    fake_agent = MagicMock()
+    fake_result = MagicMock()
+    fake_result.final_output_as.return_value = "translated"
+
+    with (
+        patch.object(agent, "get_agent", return_value=fake_agent),
+        patch(
+            "openai_sdk_helpers.agent.base._run_agent_sync", return_value=fake_result
+        ) as mock_run_sync,
+    ):
+        result = agent.run_sync(
+            "Hola", target_language="English", context={"formality": "casual"}
+        )
+
+    mock_run_sync.assert_called_once_with(
+        fake_agent,
+        "Hola",
+        agent_context={"target_language": "English", "formality": "casual"},
+    )
+    fake_result.final_output_as.assert_called_once_with(str)
+    assert result == "translated"
