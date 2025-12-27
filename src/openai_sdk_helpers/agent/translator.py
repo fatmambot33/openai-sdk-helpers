@@ -87,34 +87,52 @@ class TranslatorAgent(BaseAgent):
 
     def run_sync(
         self,
-        text: str,
-        target_language: str,
-        context: Optional[Dict[str, Any]] = None,
+        agent_input: str,
+        agent_context: Optional[Dict[str, Any]] = None,
+        output_type: Optional[Any] = None,
+        *,
+        target_language: Optional[str] = None,
+        **kwargs: Any,
     ) -> str:
-        """Synchronously translate ``text`` to ``target_language``.
+        """Translate ``agent_input`` to ``target_language`` synchronously.
 
         Parameters
         ----------
-        text : str
+        agent_input : str
             Source content to translate.
-        target_language : str
-            Language to translate the content into.
-        context : dict, optional
+        agent_context : dict, optional
             Additional context values to merge into the prompt. Default ``None``.
+        output_type : type or None, optional
+            Optional output type cast for the response. Default ``None``.
+        target_language : str, optional
+            Target language to translate the content into. Required unless supplied
+            within ``agent_context`` or ``kwargs``.
+        **kwargs
+            Optional keyword arguments. ``context`` is accepted as an alias for
+            ``agent_context`` for backward compatibility.
 
         Returns
         -------
         str
             Translated text returned by the agent.
         """
-        template_context: Dict[str, Any] = {"target_language": target_language}
-        if context:
-            template_context.update(context)
+        merged_context: Dict[str, Any] = {}
+
+        if agent_context:
+            merged_context.update(agent_context)
+        if "context" in kwargs and kwargs["context"]:
+            merged_context.update(kwargs["context"])
+        if target_language:
+            merged_context["target_language"] = target_language
+
+        if "target_language" not in merged_context:
+            msg = "target_language is required for translation"
+            raise ValueError(msg)
 
         result: str = super().run_sync(
-            agent_input=text,
-            agent_context=template_context,
-            output_type=str,
+            agent_input=agent_input,
+            agent_context=merged_context,
+            output_type=output_type or str,
         )
         return result
 
