@@ -105,9 +105,17 @@ class OpenAISettings(BaseModel):
             or os.getenv("OPENAI_MODEL"),
         }
 
-        # TODO: Validate required OpenAI credentials here (or in a dedicated
-        # helper) to fail fast when API settings are missing.
-        return cls(**values)
+        settings = cls(**values)
+        if not settings.api_key:
+            source_hint = (
+                f" from {dotenv_path}" if dotenv_path is not None else " from environment"
+            )
+            raise ValueError(
+                "OPENAI_API_KEY is required to configure the OpenAI client"
+                f" and was not found{source_hint}."
+            )
+
+        return settings
 
     def client_kwargs(self) -> Dict[str, Any]:
         """Return keyword arguments for constructing an ``OpenAI`` client.

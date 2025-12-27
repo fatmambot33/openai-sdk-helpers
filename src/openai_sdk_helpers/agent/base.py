@@ -88,12 +88,18 @@ class BaseAgent:
         else:
             prompt_path = None
 
-        if prompt_path is not None and prompt_path.exists():
+        if prompt_path is None:
+            raise ValueError(
+                "Prompt template path is required for agent "
+                f"'{name}'. Provide a template_path or prompt_dir."
+            )
+
+        if prompt_path.exists():
             self._template = Template(prompt_path.read_text())
         else:
-            # TODO: Raise a descriptive error when the prompt template is missing
-            # to avoid silently rendering an empty template.
-            self._template = Template("")
+            raise FileNotFoundError(
+                f"Prompt template for agent '{name}' not found at {prompt_path}."
+            )
 
         self.agent_name = name
         self.description = description
