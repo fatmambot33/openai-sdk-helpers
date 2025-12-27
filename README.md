@@ -23,6 +23,7 @@ application-specific prompts and tools to the consuming project.
   predictable inputs and outputs.
 - **Vector and web search flows** that coordinate planning, execution, and
   reporting.
+- **Reusable text agents** for summarization and translation tasks.
 
 ## Installation
 
@@ -58,9 +59,28 @@ report = vector_search.run_agent_sync("Explain quantum entanglement for beginner
 print(report.report)
 ```
 
+### Text utilities
+
+Use the built-in text helpers when you need lightweight single-step agents.
+
+```python
+from openai_sdk_helpers.agent import SummarizerAgent, TranslatorAgent
+
+
+summarizer = SummarizerAgent(default_model="gpt-4o-mini")
+translator = TranslatorAgent(default_model="gpt-4o-mini")
+
+summary = summarizer.run_sync("Long-form content to condense")
+translation = translator.run_sync("Bonjour", target_language="English")
+```
+
 You can plug in your own prompt templates by placing matching `.jinja` files in
 the provided `prompt_dir` and naming them after the agent (for example,
 `vector_planner.jinja`).
+
+The library also ships default prompts for the bundled text agents under
+`src/openai_sdk_helpers/prompt`, which are used automatically when no custom
+prompt directory is provided.
 
 ### Centralized OpenAI configuration
 

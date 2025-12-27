@@ -6,6 +6,7 @@ from .base import BaseAgent
 from .config import AgentConfig
 from .project_manager import ProjectManager
 from .runner import run, run_streamed, run_sync
+from .text import SummarizerAgent, TranslatorAgent
 from .utils import run_coro_sync
 from .vector_search import VectorSearch
 from .web_search import WebAgentSearch
@@ -18,6 +19,8 @@ __all__ = [
     "run_sync",
     "run_streamed",
     "run_coro_sync",
+    "SummarizerAgent",
+    "TranslatorAgent",
     "VectorSearch",
     "WebAgentSearch",
 ]
