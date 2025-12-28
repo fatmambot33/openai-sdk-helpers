@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import threading
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Callable, Dict, List, Mapping
 
 from ..base import BaseStructure, spec_field
@@ -143,7 +143,7 @@ class PlanStructure(BaseStructure):
                 raise KeyError(f"No agent registered for '{callable_key}'.")
 
             agent_callable = agent_registry[callable_key]
-            task.start_date = datetime.utcnow()
+            task.start_date = datetime.now(UTC)
             task.status = "running"
 
             try:
@@ -155,7 +155,7 @@ class PlanStructure(BaseStructure):
             except Exception as exc:  # pragma: no cover - defensive guard
                 task.status = "error"
                 task.results = [f"Task error: {exc}"]
-                task.end_date = datetime.utcnow()
+                task.end_date = datetime.now(UTC)
                 if halt_on_error:
                     break
                 aggregated_results.extend(task.results)
@@ -165,7 +165,7 @@ class PlanStructure(BaseStructure):
             task.results = normalized
             aggregated_results.extend(normalized)
             task.status = "done"
-            task.end_date = datetime.utcnow()
+            task.end_date = datetime.now(UTC)
 
         return aggregated_results
 

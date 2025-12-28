@@ -365,7 +365,7 @@ class BaseStructure(BaseModel):
                 )
             return False
 
-        for name, field in self.model_fields.items():
+        for name, field in self.__class__.model_fields.items():
             if name not in payload:
                 continue
             if not is_list_field(field):

@@ -6,7 +6,7 @@ import asyncio
 import inspect
 import logging
 import threading
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
@@ -115,7 +115,7 @@ class ProjectManager(BaseAgent, JSONSerializable):
         None
         """
         log("build_instructions", level=logging.INFO)
-        self.start_date = datetime.utcnow()
+        self.start_date = datetime.now(UTC)
         self.prompt = prompt
         self.brief = self._build_brief_fn(prompt)
         self.save()
@@ -185,7 +185,7 @@ class ProjectManager(BaseAgent, JSONSerializable):
             return self.summary
 
         self.summary = self._summarize_fn(results)
-        self.end_date = datetime.utcnow()
+        self.end_date = datetime.now(UTC)
         self.save()
         return self.summary
 
@@ -216,7 +216,7 @@ class ProjectManager(BaseAgent, JSONSerializable):
             Location of the JSON artifact for the current run.
         """
         if not self.start_date:
-            self.start_date = datetime.utcnow()
+            self.start_date = datetime.now(UTC)
         start_date_str = self.start_date.strftime(DATETIME_FMT)
         return self._module_data_path / self._module_name / f"{start_date_str}.json"
 
@@ -383,7 +383,7 @@ class ProjectManager(BaseAgent, JSONSerializable):
     def _get_run_directory(self) -> Path:
         """Return (and create) the directory used to persist task artifacts."""
         if not hasattr(self, "_run_directory"):
-            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
             self._run_directory = (
                 self._module_data_path
                 / Path(self._module_name)

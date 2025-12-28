@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -16,11 +16,12 @@ def mock_agent():
     return MagicMock()
 
 
-@patch("openai_sdk_helpers.agent.runner._run_agent")
+@patch("openai_sdk_helpers.agent.runner._run_agent", new_callable=AsyncMock)
 def test_run_returns_coroutine(mock_run_agent, mock_agent):
     """Test that run() returns a coroutine."""
     coro = runner.run(mock_agent, "test_input")
     assert asyncio.iscoroutine(coro)
+    asyncio.run(coro)
 
 
 @patch("openai_sdk_helpers.agent.runner._run_agent_sync")
