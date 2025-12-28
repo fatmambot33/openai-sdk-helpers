@@ -1,7 +1,6 @@
 """Tests for the BaseStructure class."""
 
 from enum import Enum
-from pathlib import Path
 from typing import List, Optional
 
 import pytest
@@ -9,6 +8,12 @@ from pydantic import Field
 from pydantic.fields import FieldInfo
 
 from openai_sdk_helpers.structure.base import BaseStructure, SchemaOptions, spec_field
+from openai_sdk_helpers.structure.responses import (
+    assistant_format,
+    assistant_tool_definition,
+    response_format,
+    response_tool_definition,
+)
 
 
 class Color(Enum):
@@ -95,6 +100,23 @@ def test_get_schema_with_nullable_default():
     else:
         assert "null" in headline_schema["type"]
     assert "required" in schema and "headline" in schema["required"]
+
+
+def test_convenience_wrappers_for_response_helpers():
+    """Ensure BaseStructure wraps the response helper utilities."""
+
+    assistant_tool = DummyStructure.assistant_tool_definition("demo", "desc")
+    assert assistant_tool == assistant_tool_definition(DummyStructure, "demo", "desc")
+
+    assistant_schema = DummyStructure.assistant_format()
+    assert assistant_schema == assistant_format(DummyStructure)
+
+    completion_tool = DummyStructure.response_tool_definition("demo", "desc")
+    assert completion_tool == response_tool_definition(DummyStructure, "demo", "desc")
+
+    completion_format = DummyStructure.response_format()
+    expected_format = response_format(DummyStructure)
+    assert completion_format == expected_format
 
 
 def test_to_json():

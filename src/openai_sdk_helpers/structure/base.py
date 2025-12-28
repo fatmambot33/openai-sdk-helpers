@@ -46,12 +46,20 @@ class BaseStructure(BaseModel):
 
     Methods
     -------
+    assistant_format()
+        Build a response format payload for Assistant APIs.
+    assistant_tool_definition(name, description)
+        Build a function tool definition payload for Assistant APIs.
     get_prompt(add_enum_values)
         Format structured prompt lines into a single output string.
     get_input_prompt_list(add_enum_values)
         Build a structured prompt including inherited fields.
     get_schema(force_required)
         Generate a JSON schema for the structure.
+    response_format()
+        Build a response format payload for chat completions.
+    response_tool_definition(tool_name, tool_description)
+        Build a function tool definition payload for chat completions.
     save_schema_to_file(force_required)
         Persist the schema to disk within the application data path.
     to_json()
@@ -180,24 +188,48 @@ class BaseStructure(BaseModel):
         return prompt_lines
 
     @classmethod
-    def response_tool_definition(
-        cls,
-        tool_name: str,
-        tool_description: str,
-        force_required: bool = False,
-    ) -> dict:
-        """Build a tool definition for OpenAI chat completions.
+    def assistant_tool_definition(cls, name: str, description: str) -> dict:
+        """Build an assistant function tool definition for this structure.
 
         Parameters
         ----------
-        structure : type[BaseStructure]
-            Structure class that defines the tool schema.
+        name : str
+            Name of the function tool.
+        description : str
+            Description of what the function tool does.
+
+        Returns
+        -------
+        dict
+            Assistant tool definition payload.
+        """
+        from .responses import assistant_tool_definition
+
+        return assistant_tool_definition(cls, name, description)
+
+    @classmethod
+    def assistant_format(cls) -> dict:
+        """Build an assistant response format definition for this structure.
+
+        Returns
+        -------
+        dict
+            Assistant response format definition.
+        """
+        from .responses import assistant_format
+
+        return assistant_format(cls)
+
+    @classmethod
+    def response_tool_definition(cls, tool_name: str, tool_description: str) -> dict:
+        """Build a chat completion tool definition for this structure.
+
+        Parameters
+        ----------
         tool_name : str
             Name of the function tool.
         tool_description : str
             Description of what the function tool does.
-        force_required : bool, default=False
-            When ``True``, mark all object properties as required.
 
         Returns
         -------
@@ -206,22 +238,11 @@ class BaseStructure(BaseModel):
         """
         from .responses import response_tool_definition
 
-        return response_tool_definition(
-            cls,
-            tool_name,
-            tool_description,
-        )
+        return response_tool_definition(cls, tool_name, tool_description)
 
     @classmethod
-    def get_reponse_format(cls) -> ResponseTextConfigParam:
-        """Build a response format for OpenAI chat completions.
-
-        Parameters
-        ----------
-        cls : type[BaseStructure]
-            Structure class that defines the response schema.
-        force_required : bool, default=False
-            When ``True``, mark all object properties as required.
+    def response_format(cls) -> ResponseTextConfigParam:
+        """Build a chat completion response format for this structure.
 
         Returns
         -------

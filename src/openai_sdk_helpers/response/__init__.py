@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from .base import ResponseBase
 from .messages import ResponseMessage, ResponseMessages
-from .runner import run
+from .runner import run, run_async, run_streamed
 from .tool_call import ResponseToolCall
 
 __all__ = [
@@ -12,5 +12,7 @@ __all__ = [
     "ResponseMessage",
     "ResponseMessages",
     "run",
+    "run_async",
+    "run_streamed",
     "ResponseToolCall",
 ]
