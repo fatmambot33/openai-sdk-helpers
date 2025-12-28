@@ -136,7 +136,6 @@ class PlanStructure(BaseStructure):
             If a task does not have a corresponding callable in
             ``agent_registry``.
         """
-
         aggregated_results: list[str] = []
         for task in self.tasks:
             callable_key = self._resolve_registry_key(task.task_type)
@@ -173,7 +172,6 @@ class PlanStructure(BaseStructure):
     @staticmethod
     def _resolve_registry_key(task_type: AgentEnum | str) -> str:
         """Return a normalized registry key for the given ``task_type``."""
-
         if isinstance(task_type, AgentEnum):
             return task_type.value
         if task_type in AgentEnum.__members__:
@@ -206,7 +204,6 @@ class PlanStructure(BaseStructure):
         Any
             Raw output from the callable.
         """
-
         task_context = list(task.context or [])
         combined_context = task_context + list(aggregated_context)
 
@@ -223,7 +220,6 @@ class PlanStructure(BaseStructure):
     @staticmethod
     def _normalize_results(result: Any) -> list[str]:
         """Convert callable outputs into a list of strings."""
-
         if result is None:
             return []
         if inspect.isawaitable(result):
@@ -235,7 +231,6 @@ class PlanStructure(BaseStructure):
     @staticmethod
     def _await_result(result: Any) -> Any:
         """Await the provided result, handling running event loops."""
-
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:

@@ -107,7 +107,6 @@ class AgentBlueprint(BaseStructure):
         PlanStructure
             Ordered list of tasks representing the build lifecycle.
         """
-
         tasks = [
             AgentTaskStructure(
                 task_type=AgentEnum.PLANNER,

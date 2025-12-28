@@ -27,10 +27,12 @@ def test_execute_runs_tasks_and_tracks_status():
         ]
     )
 
-    results = plan.execute({
-        AgentEnum.DESIGNER: designer_agent,
-        AgentEnum.BUILDER: builder_agent,
-    })
+    results = plan.execute(
+        {
+            AgentEnum.DESIGNER: designer_agent,
+            AgentEnum.BUILDER: builder_agent,
+        }
+    )
 
     assert results == ["design draft", "artifact", "tests"]
 
@@ -66,7 +68,9 @@ def test_execute_raises_when_agent_missing():
 def test_execute_continues_on_error_when_configured():
     """Continue executing tasks when ``halt_on_error`` is False."""
 
-    def failing_agent(prompt: str, context: list[str] | None = None) -> str:  # noqa: ARG001
+    def failing_agent(
+        prompt: str, context: list[str] | None = None
+    ) -> str:  # noqa: ARG001
         raise ValueError("boom")
 
     def builder_agent(prompt: str, context: list[str] | None = None) -> str:
