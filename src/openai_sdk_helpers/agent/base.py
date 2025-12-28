@@ -40,6 +40,8 @@ class AgentBase:
     get_agent()
         Construct the configured :class:`agents.Agent` instance.
     run(agent_input, agent_context, output_type)
+        Execute the agent asynchronously (alias of ``run_async``).
+    run_async(agent_input, agent_context, output_type)
         Execute the agent asynchronously and optionally cast the result.
     run_sync(agent_input, agent_context, output_type)
         Execute the agent synchronously.
@@ -216,7 +218,7 @@ class AgentBase:
 
         return Agent(**agent_config)
 
-    async def run(
+    async def run_async(
         self,
         agent_input: str,
         agent_context: Optional[Dict[str, Any]] = None,
@@ -247,6 +249,41 @@ class AgentBase:
             output_type=output_type,
         )
 
+    def run(
+        self,
+        agent_input: str,
+        agent_context: Optional[Dict[str, Any]] = None,
+        output_type: Optional[Any] = None,
+    ) -> Any:
+        """Execute the agent synchronously.
+
+        This convenience method mirrors :meth:`run_sync` so callers can use the
+        shorter ``run`` name while still running the agent in a blocking
+        manner.
+
+        Parameters
+        ----------
+        agent_input
+            Prompt or query for the agent.
+        agent_context
+            Optional dictionary passed to the agent. Default ``None``.
+        output_type
+            Optional type used to cast the final output. Default ``None``.
+
+        Returns
+        -------
+        Any
+            Agent result, optionally converted to ``output_type``.
+        """
+        result = _run_agent_sync(
+            self.get_agent(), agent_input, agent_context=agent_context
+        )
+        if self._output_type and not output_type:
+            output_type = self._output_type
+        if output_type:
+            return result.final_output_as(output_type)
+        return result
+
     def run_sync(
         self,
         agent_input: str,
@@ -269,16 +306,11 @@ class AgentBase:
         Any
             Agent result, optionally converted to ``output_type``.
         """
-        result = _run_agent_sync(
-            self.get_agent(),
-            agent_input,
+        return self.run(
+            agent_input=agent_input,
             agent_context=agent_context,
+            output_type=output_type,
         )
-        if self._output_type and not output_type:
-            output_type = self._output_type
-        if output_type:
-            return result.final_output_as(output_type)
-        return result
 
     def run_streamed(
         self,

@@ -14,7 +14,7 @@ from agents import Agent, RunResult, RunResultStreaming
 from .base import _run_agent, _run_agent_streamed, _run_agent_sync
 
 
-async def run_agent(
+async def run_async(
     agent: Agent,
     agent_input: str,
     agent_context: Optional[Dict[str, Any]] = None,
@@ -46,7 +46,7 @@ async def run_agent(
     )
 
 
-def run_agent_sync(
+def run(
     agent: Agent,
     agent_input: str,
     agent_context: Optional[Dict[str, Any]] = None,
@@ -80,7 +80,7 @@ def run_agent_sync(
     return result
 
 
-def run_agent_streamed(
+def run_streamed(
     agent: Agent,
     agent_input: str,
     agent_context: Optional[Dict[str, Any]] = None,
@@ -114,4 +114,4 @@ def run_agent_streamed(
     return result
 
 
-__all__ = ["run_agent", "run_agent_sync", "run_agent_streamed"]
+__all__ = ["run", "run_async", "run_streamed"]

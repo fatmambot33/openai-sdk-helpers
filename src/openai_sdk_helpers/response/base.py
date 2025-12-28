@@ -53,6 +53,12 @@ class ResponseBase(Generic[T]):
         Generate a response asynchronously and return parsed output.
     run_response(content, attachments)
         Synchronous wrapper around ``run_response_async``.
+    run_async(content, attachments)
+        Alias for ``run_response_async`` using simplified naming.
+    run(content, attachments)
+        Alias for ``run_response`` using simplified naming.
+    run_streamed(content, attachments)
+        Await ``run_async`` to mirror the agent API.
     save(filepath)
         Serialize the message history to disk.
     close()
@@ -416,6 +422,80 @@ class ResponseBase(Generic[T]):
         thread.start()
         thread.join()
         return result
+
+    async def run_async(
+        self,
+        content: Union[str, List[str]],
+        attachments: Optional[Union[str, List[str]]] = None,
+    ) -> Optional[T]:
+        """Generate a response asynchronously.
+
+        This is an alias for :meth:`run_response_async` using the simplified
+        ``run_async`` naming that mirrors agent helpers.
+
+        Parameters
+        ----------
+        content
+            Prompt text or list of texts.
+        attachments
+            Optional file path or list of paths to upload and attach.
+
+        Returns
+        -------
+        Optional[T]
+            Parsed response object or ``None``.
+        """
+        return await self.run_response_async(content=content, attachments=attachments)
+
+    def run(
+        self,
+        content: Union[str, List[str]],
+        attachments: Optional[Union[str, List[str]]] = None,
+    ) -> Optional[T]:
+        """Generate a response synchronously.
+
+        This is an alias for :meth:`run_response` using the simplified ``run``
+        naming used by agents for convenience.
+
+        Parameters
+        ----------
+        content
+            Prompt text or list of texts.
+        attachments
+            Optional file path or list of paths to upload and attach.
+
+        Returns
+        -------
+        Optional[T]
+            Parsed response object or ``None``.
+        """
+        return self.run_response(content=content, attachments=attachments)
+
+    def run_streamed(
+        self,
+        content: Union[str, List[str]],
+        attachments: Optional[Union[str, List[str]]] = None,
+    ) -> Optional[T]:
+        """Generate a response asynchronously and return the awaited result.
+
+        Streaming is not yet supported for responses, so this helper simply
+        awaits :meth:`run_async` to mirror the agent API.
+
+        Parameters
+        ----------
+        content
+            Prompt text or list of texts.
+        attachments
+            Optional file path or list of paths to upload and attach.
+
+        Returns
+        -------
+        Optional[T]
+            Parsed response object or ``None``.
+        """
+        return asyncio.run(
+            self.run_response_async(content=content, attachments=attachments)
+        )
 
     def save(self, filepath: Optional[str | Path] = None) -> None:
         """Serialize the message history to a JSON file."""
