@@ -95,3 +95,48 @@ def test_execute_continues_on_error_when_configured():
     assert second_task.status == "done"
     assert first_task.start_date is not None and first_task.end_date is not None
     assert second_task.start_date is not None and second_task.end_date is not None
+
+
+def test_execute_forwards_task_context_alongside_history():
+    """Forward static task context and accumulated results to agents."""
+
+    captured = []
+
+    def planner_agent(prompt: str, context: list[str] | None = None) -> str:
+        captured.append(("planner", prompt, list(context or [])))
+        return "scoped"
+
+    def validator_agent(prompt: str, context: list[str] | None = None) -> str:
+        captured.append(("validator", prompt, list(context or [])))
+        return "validated"
+
+    plan = PlanStructure(
+        tasks=[
+            AgentTaskStructure(
+                task_type=AgentEnum.PLANNER,
+                prompt="Scope mission",
+                context=["guardrail: limit scope"],
+            ),
+            AgentTaskStructure(
+                task_type=AgentEnum.VALIDATOR,
+                prompt="Review outputs",
+                context=["tool: safety-check"],
+            ),
+        ]
+    )
+
+    results = plan.execute(
+        {
+            AgentEnum.PLANNER: planner_agent,
+            AgentEnum.VALIDATOR: validator_agent,
+        }
+    )
+
+    assert results == ["scoped", "validated"]
+
+    planner_call, validator_call = captured
+    assert planner_call[2] == ["guardrail: limit scope"]
+    assert planner_call[1].endswith("guardrail: limit scope")
+
+    assert validator_call[2] == ["tool: safety-check", "scoped"]
+    assert "tool: safety-check" in validator_call[1]

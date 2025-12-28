@@ -207,13 +207,16 @@ class PlanStructure(BaseStructure):
             Raw output from the callable.
         """
 
+        task_context = list(task.context or [])
+        combined_context = task_context + list(aggregated_context)
+
         prompt_with_context = task.prompt
-        if aggregated_context:
-            context_block = "\n".join(aggregated_context)
+        if combined_context:
+            context_block = "\n".join(combined_context)
             prompt_with_context = f"{task.prompt}\n\nContext:\n{context_block}"
 
         try:
-            return agent_callable(prompt_with_context, context=aggregated_context)
+            return agent_callable(prompt_with_context, context=combined_context)
         except TypeError:
             return agent_callable(prompt_with_context)
 
