@@ -33,6 +33,9 @@ Install the package directly from PyPI to reuse it across projects:
 pip install openai-sdk-helpers
 ```
 
+Type information ships with the published wheel via `py.typed`, so external
+projects can rely on the bundled annotations without adding custom stubs.
+
 For local development, install with editable sources and the optional dev
 dependencies:
 
@@ -82,13 +85,16 @@ guardrails = validator.run_sync(
 )
 ```
 
-You can plug in your own prompt templates by placing matching `.jinja` files in
-the provided `prompt_dir` and naming them after the agent (for example,
-`vector_planner.jinja`).
+Prompt templates are optional for the built-in text helpers. They already ship
+with defaults under `src/openai_sdk_helpers/prompt`, so you do **not** need to
+create placeholder files when installing from PyPI. Only pass a `prompt_dir`
+when you have real replacements you want to load.
 
-The library also ships default prompts for the bundled text agents under
-`src/openai_sdk_helpers/prompt`, which are used automatically when no custom
-prompt directory is provided.
+The vector search workflow expects real prompts for each agent (for example,
+`vector_planner.jinja`, `vector_search.jinja`, and `vector_writer.jinja`). If
+you point `prompt_dir` at a folder that does not contain those files, agent
+construction fails with a `FileNotFoundError`. Skip `prompt_dir` entirely unless
+you have working templates ready.
 
 ### Centralized OpenAI configuration
 
