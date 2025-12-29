@@ -23,10 +23,11 @@ class DummyClient:
     def __init__(self) -> None:
         self.files_created: list[DummyFile] = []
         self.stores: list[DummyVectorStore] = []
+        self.file_contents: dict[str, bytes] = {}
 
     @property
     def files(self):
-        return SimpleNamespace(create=self._create_file)
+        return SimpleNamespace(create=self._create_file, content=self._file_content)
 
     @property
     def vector_stores(self):
@@ -72,8 +73,13 @@ class DummyClient:
     def _create_file(self, file, purpose: str):
         file_path, _file_data = file
         new_file = DummyFile(id=f"file-{len(self.files_created)}", path=file_path)
+        self.file_contents[new_file.id] = _file_data
         self.files_created.append(new_file)
         return new_file
+
+    def _file_content(self, file_id: str):
+        content = self.file_contents.get(file_id, b"")
+        return SimpleNamespace(read=lambda: content)
 
 
 @pytest.fixture()
@@ -134,6 +140,24 @@ def test_summarize_handles_empty_results(dummy_client, monkeypatch):
 
     summary = storage.summarize("query")
     assert summary is None
+
+
+def test_download_files(tmp_path, dummy_client, monkeypatch):
+    monkeypatch.setenv("OPENAI_MODEL", "test-model")
+    storage = VectorStorage("download-store", client=dummy_client)
+
+    file_path = tmp_path / "download_me.txt"
+    file_path.write_text("content to download")
+
+    upload = storage.upload_file(str(file_path))
+    output_dir = tmp_path / "downloads"
+
+    stats = storage.download_files(str(output_dir))
+
+    downloaded_path = output_dir / file_path.name
+    assert stats.total == 1
+    assert stats.success == 1
+    assert downloaded_path.read_text() == "content to download"
 
 
 def test_delete_files_and_store_cleanup(tmp_path, dummy_client, monkeypatch):

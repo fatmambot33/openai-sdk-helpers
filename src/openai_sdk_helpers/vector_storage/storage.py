@@ -437,6 +437,66 @@ class VectorStorage:
                 level=logging.ERROR,
             )
 
+    def download_files(self, output_dir: str) -> VectorStorageFileStats:
+        """Download every file in the vector store to a local directory.
+
+        Parameters
+        ----------
+        output_dir
+            Destination directory where the files will be written. The
+            directory is created when it does not already exist.
+
+        Returns
+        -------
+        VectorStorageFileStats
+            Aggregated statistics describing the download results.
+        """
+        os.makedirs(output_dir, exist_ok=True)
+
+        try:
+            files = self._client.vector_stores.files.list(
+                vector_store_id=self._vector_storage.id
+            )
+            store_files = list(getattr(files, "data", files))
+        except Exception as exc:
+            log(
+                f"Failed to list files for download: {exc}", level=logging.ERROR
+            )
+            return VectorStorageFileStats(
+                total=0,
+                fail=1,
+                errors=[
+                    VectorStorageFileInfo(
+                        name="", id="", status="error", error=str(exc)
+                    )
+                ],
+            )
+
+        stats = VectorStorageFileStats(total=len(store_files))
+
+        for file_ref in store_files:
+            file_id = getattr(file_ref, "id", "")
+            attributes = getattr(file_ref, "attributes", {}) or {}
+            file_name = attributes.get("file_name") or file_id
+            target_path = os.path.join(output_dir, file_name)
+
+            try:
+                content = self._client.files.content(file_id=file_id)
+                data = content.read() if hasattr(content, "read") else content
+                with open(target_path, "wb") as handle:
+                    handle.write(data)
+                stats.success += 1
+            except Exception as exc:
+                log(f"Failed to download {file_id}: {exc}", level=logging.ERROR)
+                stats.fail += 1
+                stats.errors.append(
+                    VectorStorageFileInfo(
+                        name=file_name, id=file_id, status="error", error=str(exc)
+                    )
+                )
+
+        return stats
+
     def search(
         self, query: str, top_k: int = 5
     ) -> Optional[SyncPage[VectorStoreSearchResponse]]:
