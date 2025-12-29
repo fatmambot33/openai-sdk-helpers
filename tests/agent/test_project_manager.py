@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -157,3 +158,48 @@ def test_normalize_results(project_manager):
     assert project_manager._normalize_results(None) == []
     assert project_manager._normalize_results("test") == ["test"]
     assert project_manager._normalize_results(["test1", "test2"]) == ["test1", "test2"]
+
+
+def test_resolve_result_handles_completed_future(project_manager):
+    """ProjectManager should unwrap results from completed futures."""
+    loop = asyncio.new_event_loop()
+    future: asyncio.Future[str] = loop.create_future()
+    future.set_result("ready")
+
+    assert project_manager._resolve_result(future) == "ready"
+    loop.close()
+
+
+def test_resolve_result_waits_on_running_loop_future(project_manager):
+    """ProjectManager should wait for futures tied to running event loops."""
+
+    loop = asyncio.new_event_loop()
+    result: asyncio.Future[str] = loop.create_future()
+
+    def run_loop() -> None:
+        asyncio.set_event_loop(loop)
+        loop.run_forever()
+
+    thread = threading.Thread(target=run_loop, daemon=True)
+    thread.start()
+    loop.call_soon_threadsafe(result.set_result, "from-loop")
+
+    try:
+        assert project_manager._resolve_result(result) == "from-loop"
+    finally:
+        loop.call_soon_threadsafe(loop.stop)
+        thread.join()
+        loop.close()
+
+
+def test_run_task_in_thread_awaits_async_callable(project_manager):
+    """_run_task_in_thread should await asynchronous agent callables."""
+
+    async def async_agent(prompt: str, context: list[str] | None = None) -> str:
+        await asyncio.sleep(0)
+        return f"{prompt}::{len(context or [])}"
+
+    task = TaskStructure(prompt="async-task", task_type=AgentEnum.SUMMARIZER)
+    result = project_manager._run_task_in_thread(task, async_agent, ["ctx"])
+
+    assert result == "async-task\n\nContext:\nctx::1"

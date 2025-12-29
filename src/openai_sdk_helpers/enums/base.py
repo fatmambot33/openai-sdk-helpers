@@ -6,11 +6,23 @@ from enum import Enum
 
 
 class CrosswalkJSONEnum(str, Enum):
-    """Enum base class with crosswalk metadata hooks."""
+    """Enum base class with crosswalk metadata hooks.
+
+    Methods
+    -------
+    CROSSWALK()
+        Return metadata describing enum values keyed by name.
+    """
 
     @classmethod
     def CROSSWALK(cls) -> dict[str, dict[str, object]]:
-        """Return metadata describing enum values."""
+        """Return metadata describing enum values keyed by name.
+
+        Returns
+        -------
+        dict[str, dict[str, object]]
+            Mapping of enum member names to structured metadata details.
+        """
         raise NotImplementedError("CROSSWALK must be implemented by subclasses.")
 
 

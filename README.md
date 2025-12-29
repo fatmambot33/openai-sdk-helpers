@@ -141,6 +141,25 @@ pytest -q --cov=src --cov-report=term-missing --cov-fail-under=70
 - `src/openai_sdk_helpers/vector_storage`: Minimal vector store abstraction.
 - `tests/`: Unit tests covering core modules and structures.
 
+## Key modules
+
+The package centers around a handful of cohesive building blocks:
+
+- `openai_sdk_helpers.agent.project_manager.ProjectManager` coordinates prompt
+  creation, plan building, task execution, and summarization while persisting
+  intermediate artifacts to disk.
+- `openai_sdk_helpers.agent.vector_search.VectorSearch` bundles the planners,
+  executors, and summarizers required to run a multi-turn vector search flow
+  from a single entry point.
+- `openai_sdk_helpers.agent.summarizer.SummarizerAgent`,
+  `agent.translator.TranslatorAgent`, and `agent.validator.ValidatorAgent`
+  expose streamlined text-processing utilities that reuse shared prompt
+  templates.
+- `openai_sdk_helpers.response` contains the response runners and helpers used
+  to normalize outputs from agents, including streaming responses.
+- `openai_sdk_helpers.utils` holds JSON serialization helpers, logging
+  utilities, and common validation helpers used across modules.
+
 ## Contributing
 
 Contributions are welcome! Please accompany functional changes with relevant
