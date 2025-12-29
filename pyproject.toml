@@ -50,8 +50,10 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build]
-packages = ["src/openai_sdk_helpers"]
 include = ["src/openai_sdk_helpers/prompt/*.jinja"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/openai_sdk_helpers"]
 
 [tool.pyright]
 extraPaths = ["src"]
