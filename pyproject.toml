@@ -1,6 +1,6 @@
 [project]
 name = "openai-sdk-helpers"
-version = "0.0.2"
+version = "0.0.3"
 requires-python = ">=3.10"
 readme = "README.md"
 description = "Composable helpers for OpenAI SDK agents, prompts, and storage"
