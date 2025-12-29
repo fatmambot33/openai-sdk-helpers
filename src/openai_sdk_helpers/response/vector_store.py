@@ -22,7 +22,7 @@ def attach_vector_store(
     response
         Response instance whose tool configuration is updated.
     vector_stores
-        Single vector store name/ID or a sequence of names/IDs to attach.
+        Single vector store name or a sequence of names to attach.
     api_key : str, optional
         API key used when the response does not already have a client. Default
         ``None``.
@@ -54,7 +54,7 @@ def attach_vector_store(
 
     for store in requested_stores:
         match = next(
-            (vs.id for vs in available_stores if vs.id == store or vs.name == store),
+            (vs.id for vs in available_stores if vs.name == store),
             None,
         )
         if match is None:

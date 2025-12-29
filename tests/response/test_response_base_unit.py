@@ -98,19 +98,19 @@ def test_attach_vector_store_merges_ids(response_base):
     """Merge new vector stores into an existing file_search tool."""
 
     response_base._tools.append(
-        {"type": "file_search", "vector_store_ids": ["existing"]}
+        {"type": "file_search", "vector_store_ids": ["vs_existing"]}
     )
     response_base._client.vector_stores.list.return_value.data = [
-        SimpleNamespace(id="existing", name="existing"),
+        SimpleNamespace(id="vs_existing", name="existing-store"),
         SimpleNamespace(id="vs_new", name="store-two"),
     ]
 
     resolved_ids = attach_vector_store(
-        response_base, ["existing", "store-two", "vs_new"]
+        response_base, ["existing-store", "store-two"]
     )
 
-    assert resolved_ids == ["existing", "vs_new"]
-    assert response_base._tools[0]["vector_store_ids"] == ["existing", "vs_new"]
+    assert resolved_ids == ["vs_existing", "vs_new"]
+    assert response_base._tools[0]["vector_store_ids"] == ["vs_existing", "vs_new"]
 
 
 def test_attach_vector_store_raises_for_missing_store(response_base):
