@@ -24,3 +24,13 @@ def test_prompt_renderer_renders_template(tmp_path):
 def test_prompt_renderer_defaults_to_package_dir():
     renderer = PromptRenderer()
     assert renderer.base_dir.exists()
+
+
+def test_prompt_renderer_ships_builtin_templates():
+    renderer = PromptRenderer()
+    template_path = renderer.base_dir / "summarizer.jinja"
+
+    assert template_path.exists()
+    content = template_path.read_text().strip()
+
+    assert "summarize" in content.lower()
