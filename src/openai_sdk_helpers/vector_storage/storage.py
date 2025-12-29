@@ -459,9 +459,7 @@ class VectorStorage:
             )
             store_files = list(getattr(files, "data", files))
         except Exception as exc:
-            log(
-                f"Failed to list files for download: {exc}", level=logging.ERROR
-            )
+            log(f"Failed to list files for download: {exc}", level=logging.ERROR)
             return VectorStorageFileStats(
                 total=0,
                 fail=1,

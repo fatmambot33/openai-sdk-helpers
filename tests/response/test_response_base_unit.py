@@ -105,9 +105,7 @@ def test_attach_vector_store_merges_ids(response_base):
         SimpleNamespace(id="vs_new", name="store-two"),
     ]
 
-    resolved_ids = attach_vector_store(
-        response_base, ["existing-store", "store-two"]
-    )
+    resolved_ids = attach_vector_store(response_base, ["existing-store", "store-two"])
 
     assert resolved_ids == ["vs_existing", "vs_new"]
     assert response_base._tools[0]["vector_store_ids"] == ["vs_existing", "vs_new"]
