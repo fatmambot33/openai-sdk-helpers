@@ -131,8 +131,7 @@ class OpenAISettings(BaseModel):
             "max_retries": overrides.get("max_retries")
             or env_file_values.get("OPENAI_MAX_RETRIES")
             or os.getenv("OPENAI_MAX_RETRIES"),
-            "extra_client_kwargs": overrides.get("extra_client_kwargs")
-            or {},
+            "extra_client_kwargs": overrides.get("extra_client_kwargs") or {},
         }
 
         settings = cls(**values)
