@@ -1,6 +1,6 @@
 [project]
 name = "openai-sdk-helpers"
-version = "0.0.5"
+version = "0.0.6"
 requires-python = ">=3.10"
 readme = "README.md"
 description = "Composable helpers for OpenAI SDK agents, prompts, and storage"
@@ -50,10 +50,15 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build]
-include = ["src/openai_sdk_helpers/prompt/*.jinja"]
+# Ship the entire package tree so Python modules are included alongside the
+# bundled prompt templates.
+include = ["src/openai_sdk_helpers"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/openai_sdk_helpers"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/openai_sdk_helpers"]
 
 [tool.pyright]
 extraPaths = ["src"]
