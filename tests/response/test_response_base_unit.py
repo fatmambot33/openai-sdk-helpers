@@ -153,4 +153,4 @@ def test_get_last_message_handles_missing_role(response_base):
         ResponseMessage(role="user", content={"role": "user", "content": "hi"})
     )
 
-    assert response_base.get_last_message(role="assistant") is None
+    assert response_base.get_last_assistant_message() is None

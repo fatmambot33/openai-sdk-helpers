@@ -76,7 +76,7 @@ def test_get_agent(mock_agent, mock_config):
     agent.get_agent()
     mock_agent.assert_called_once_with(
         name="test_agent",
-        instructions="",
+        instructions=".",
         model="test_model",
     )
 
