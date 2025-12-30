@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -18,36 +17,7 @@ from openai_sdk_helpers.streamlit_app import (
 )
 from openai_sdk_helpers.structure.base import BaseStructure
 from openai_sdk_helpers.utils import ensure_list
-from openai_sdk_helpers.utils.core import _to_jsonable
-
-def _coerce_jsonable(value: Any) -> Any:
-    """Convert ``value`` into a JSON-serializable representation.
-
-    Parameters
-    ----------
-    value : Any
-        Object to convert into a JSON-friendly structure.
-
-    Returns
-    -------
-    Any
-        JSON-serializable representation of ``value``.
-    """
-
-    if value is None:
-        return None
-    if isinstance(value, BaseStructure):
-        return value.model_dump()
-    if isinstance(value, ResponseBase):
-        return _coerce_jsonable(value.messages.to_json())
-    if is_dataclass(value):
-        return {key: _coerce_jsonable(item) for key, item in asdict(value).items()}
-    coerced = _to_jsonable(value)
-    try:
-        json.dumps(coerced)
-        return coerced
-    except TypeError:
-        return str(coerced)
+from openai_sdk_helpers.utils.core import coerce_jsonable
 
 
 def _extract_assistant_text(response: ResponseBase[Any]) -> str:
@@ -126,7 +96,7 @@ def _build_raw_output(result: Any, response: ResponseBase[Any]) -> Dict[str, Any
     """
 
     return {
-        "parsed": _coerce_jsonable(result),
+        "parsed": coerce_jsonable(result),
         "conversation": response.messages.to_json(),
     }
 

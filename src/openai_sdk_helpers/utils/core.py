@@ -195,6 +195,39 @@ def _to_jsonable(value: Any) -> Any:
     return value
 
 
+def coerce_jsonable(value: Any) -> Any:
+    """Convert ``value`` into a JSON-serializable representation.
+
+    Parameters
+    ----------
+    value : Any
+        Object to convert into a JSON-friendly structure.
+
+    Returns
+    -------
+    Any
+        JSON-serializable representation of ``value``.
+    """
+
+    from openai_sdk_helpers.response.base import ResponseBase
+    from openai_sdk_helpers.structure.base import BaseStructure
+
+    if value is None:
+        return None
+    if isinstance(value, BaseStructure):
+        return value.model_dump()
+    if isinstance(value, ResponseBase):
+        return coerce_jsonable(value.messages.to_json())
+    if is_dataclass(value) and not isinstance(value, type):
+        return {key: coerce_jsonable(item) for key, item in asdict(value).items()}
+    coerced = _to_jsonable(value)
+    try:
+        json.dumps(coerced)
+        return coerced
+    except TypeError:
+        return str(coerced)
+
+
 class customJSONEncoder(json.JSONEncoder):
     """Encode common helper types like enums and paths.
 

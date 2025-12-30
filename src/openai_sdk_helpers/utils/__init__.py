@@ -5,6 +5,7 @@ from __future__ import annotations
 from .core import (
     JSONSerializable,
     check_filepath,
+    coerce_jsonable,
     coerce_dict,
     coerce_optional_float,
     coerce_optional_int,
@@ -19,6 +20,7 @@ __all__ = [
     "coerce_optional_float",
     "coerce_optional_int",
     "coerce_dict",
+    "coerce_jsonable",
     "JSONSerializable",
     "customJSONEncoder",
     "log",
