@@ -10,6 +10,12 @@ from dotenv import dotenv_values
 from openai import OpenAI
 from pydantic import BaseModel, ConfigDict, Field
 
+from openai_sdk_helpers.utils import (
+    coerce_dict,
+    coerce_optional_float,
+    coerce_optional_int,
+)
+
 
 class OpenAISettings(BaseModel):
     """Configuration helpers for constructing OpenAI clients.
@@ -109,7 +115,18 @@ class OpenAISettings(BaseModel):
         else:
             env_file_values = dotenv_values()
 
-        values: Dict[str, Optional[str]] = {
+        timeout_raw = (
+            overrides.get("timeout")
+            or env_file_values.get("OPENAI_TIMEOUT")
+            or os.getenv("OPENAI_TIMEOUT")
+        )
+        max_retries_raw = (
+            overrides.get("max_retries")
+            or env_file_values.get("OPENAI_MAX_RETRIES")
+            or os.getenv("OPENAI_MAX_RETRIES")
+        )
+
+        values: Dict[str, Any] = {
             "api_key": overrides.get("api_key")
             or env_file_values.get("OPENAI_API_KEY")
             or os.getenv("OPENAI_API_KEY"),
@@ -125,13 +142,9 @@ class OpenAISettings(BaseModel):
             "default_model": overrides.get("default_model")
             or env_file_values.get("OPENAI_MODEL")
             or os.getenv("OPENAI_MODEL"),
-            "timeout": overrides.get("timeout")
-            or env_file_values.get("OPENAI_TIMEOUT")
-            or os.getenv("OPENAI_TIMEOUT"),
-            "max_retries": overrides.get("max_retries")
-            or env_file_values.get("OPENAI_MAX_RETRIES")
-            or os.getenv("OPENAI_MAX_RETRIES"),
-            "extra_client_kwargs": overrides.get("extra_client_kwargs") or {},
+            "timeout": coerce_optional_float(timeout_raw),
+            "max_retries": coerce_optional_int(max_retries_raw),
+            "extra_client_kwargs": coerce_dict(overrides.get("extra_client_kwargs")),
         }
 
         settings = cls(**values)

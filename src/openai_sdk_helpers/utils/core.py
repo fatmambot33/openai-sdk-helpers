@@ -8,7 +8,99 @@ from dataclasses import asdict, is_dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, TypeVar
+from typing import Any, Dict, Iterable, List, Mapping, Optional, TypeVar
+
+
+def coerce_optional_float(value: Any) -> Optional[float]:
+    """Return a float when the provided value can be coerced, otherwise ``None``.
+
+    Parameters
+    ----------
+    value : Any
+        Value to convert into a float. Strings must be parseable as floats.
+
+    Returns
+    -------
+    float | None
+        Converted float value or ``None`` if the input is ``None``.
+
+    Raises
+    ------
+    ValueError
+        If a non-empty string cannot be converted to a float.
+    TypeError
+        If the value is not a float-compatible type.
+    """
+    if value is None:
+        return None
+    if isinstance(value, (float, int)):
+        return float(value)
+    if isinstance(value, str) and value.strip():
+        try:
+            return float(value)
+        except ValueError as exc:
+            raise ValueError("timeout must be a float-compatible value") from exc
+    raise TypeError("timeout must be a float, int, str, or None")
+
+
+def coerce_optional_int(value: Any) -> Optional[int]:
+    """Return an int when the provided value can be coerced, otherwise ``None``.
+
+    Parameters
+    ----------
+    value : Any
+        Value to convert into an int. Strings must be parseable as integers.
+
+    Returns
+    -------
+    int | None
+        Converted integer value or ``None`` if the input is ``None``.
+
+    Raises
+    ------
+    ValueError
+        If a non-empty string cannot be converted to an integer.
+    TypeError
+        If the value is not an int-compatible type.
+    """
+    if value is None:
+        return None
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    if isinstance(value, str) and value.strip():
+        try:
+            return int(value)
+        except ValueError as exc:
+            raise ValueError("max_retries must be an int-compatible value") from exc
+    raise TypeError("max_retries must be an int, str, or None")
+
+
+def coerce_dict(value: Any) -> Dict[str, Any]:
+    """Return a string-keyed dictionary built from ``value`` if possible.
+
+    Parameters
+    ----------
+    value : Any
+        Mapping-like value to convert. ``None`` yields an empty dictionary.
+
+    Returns
+    -------
+    dict[str, Any]
+        Dictionary representation of ``value``.
+
+    Raises
+    ------
+    TypeError
+        If the value cannot be treated as a mapping.
+    """
+    if value is None:
+        return {}
+    if isinstance(value, Mapping):
+        return dict(value)
+    raise TypeError("extra_client_kwargs must be a mapping or None")
+
 
 T = TypeVar("T")
 _configured_logging = False
