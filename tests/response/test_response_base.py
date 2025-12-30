@@ -23,7 +23,7 @@ def test_response_base_initialization(mock_openai_client):
             schema=None,
             output_structure=None,
             tool_handlers={},
-            model="gpt-4o",
+            model="gpt-4o-mini",
             api_key="test_api_key",
         )
         assert instance._instructions == "Test instructions"

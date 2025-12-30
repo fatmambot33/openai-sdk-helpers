@@ -208,7 +208,7 @@ class AgentBase:
         agent_config: Dict[str, Any] = {
             "name": self.agent_name,
             "instructions": self._build_prompt_from_jinja()
-            or "You are a helpful assistant.",
+            or ".",
             "model": self.model,
         }
         if self._output_type:

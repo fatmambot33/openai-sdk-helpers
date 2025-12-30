@@ -143,7 +143,7 @@ def test_get_last_message_returns_latest_assistant(response_base):
     )
     response_base.messages.messages.extend([first_assistant, latest_assistant])
 
-    assert response_base.get_last_message() is latest_assistant
+    assert response_base.get_last_assistant_message() is latest_assistant
 
 
 def test_get_last_message_handles_missing_role(response_base):
