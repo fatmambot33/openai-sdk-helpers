@@ -30,14 +30,14 @@ class StreamlitAppConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
-    response: BaseResponse[BaseStructure] | type[
-        BaseResponse
-    ] | Callable | None = Field(
-        default=None,
-        description=(
-            "Configured ``BaseResponse`` subclass, instance, or callable that returns"
-            " a response instance."
-        ),
+    response: BaseResponse[BaseStructure] | type[BaseResponse] | Callable | None = (
+        Field(
+            default=None,
+            description=(
+                "Configured ``BaseResponse`` subclass, instance, or callable that returns"
+                " a response instance."
+            ),
+        )
     )
     display_title: str = Field(
         default="Example copilot",
