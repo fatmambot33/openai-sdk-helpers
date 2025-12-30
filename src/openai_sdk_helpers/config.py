@@ -13,7 +13,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 def _coerce_optional_float(value: Any) -> Optional[float]:
     """Return a float when the provided value can be coerced, otherwise ``None``."""
-
     if value is None:
         return None
     if isinstance(value, (float, int)):
@@ -28,7 +27,6 @@ def _coerce_optional_float(value: Any) -> Optional[float]:
 
 def _coerce_optional_int(value: Any) -> Optional[int]:
     """Return an int when the provided value can be coerced, otherwise ``None``."""
-
     if value is None:
         return None
     if isinstance(value, int) and not isinstance(value, bool):
@@ -45,7 +43,6 @@ def _coerce_optional_int(value: Any) -> Optional[int]:
 
 def _coerce_dict(value: Any) -> Dict[str, Any]:
     """Return a string-keyed dictionary built from ``value`` if possible."""
-
     if value is None:
         return {}
     if isinstance(value, Mapping):
