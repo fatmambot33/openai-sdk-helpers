@@ -137,3 +137,40 @@ def test_response_base_builds_streamlit_config() -> None:
     response_instance = config.build_response()
 
     assert isinstance(response_instance, _DummyResponse)
+
+
+def test_config_accepts_response_alias(tmp_path: Path) -> None:
+    config_path = _write_config(
+        tmp_path,
+        """
+from tests.test_streamlit_configuration import _DummyResponse
+
+APP_CONFIG = {"response": _DummyResponse, "display_title": "Alias title"}
+""",
+    )
+
+    config = StreamlitAppConfig.load_app_config(config_path=config_path)
+
+    assert config.display_title == "Alias title"
+    response_instance = config.build_response()
+
+    assert isinstance(response_instance, ResponseBase)
+    assert response_instance.__class__.__name__ == "_DummyResponse"
+
+
+def test_config_accepts_response_class_directly(tmp_path: Path) -> None:
+    config_path = _write_config(
+        tmp_path,
+        """
+from tests.test_streamlit_configuration import _DummyResponse
+
+APP_CONFIG = _DummyResponse
+""",
+    )
+
+    config = StreamlitAppConfig.load_app_config(config_path=config_path)
+
+    response_instance = config.build_response()
+
+    assert isinstance(response_instance, ResponseBase)
+    assert response_instance.__class__.__name__ == "_DummyResponse"

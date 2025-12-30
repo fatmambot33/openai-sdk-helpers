@@ -207,11 +207,72 @@ def _extract_config(module: ModuleType) -> StreamlitAppConfig:
     if isinstance(raw_config, StreamlitAppConfig):
         return raw_config
     if isinstance(raw_config, dict):
-        return StreamlitAppConfig(**raw_config)
+        return _config_from_mapping(raw_config)
+    if isinstance(raw_config, ResponseBase):
+        return StreamlitAppConfig(build_response=lambda: raw_config)
+    if isinstance(raw_config, type) and issubclass(raw_config, ResponseBase):
+        return raw_config.build_streamlit_config()  # type: ignore[return-value]
+    if callable(raw_config):
+        return StreamlitAppConfig(build_response=_coerce_response_builder(raw_config))
 
     raise TypeError(
-        "APP_CONFIG must be a dict or StreamlitAppConfig instance."
+        "APP_CONFIG must be a dict, callable, ResponseBase, or StreamlitAppConfig."
     )
+
+
+def _coerce_response_builder(candidate: object) -> ResponseFactory:
+    """Convert a response candidate into a builder callable.
+
+    Parameters
+    ----------
+    candidate : object
+        Input from developer configuration representing the response session.
+
+    Returns
+    -------
+    ResponseFactory
+        Callable that yields a configured :class:`ResponseBase` instance.
+
+    Raises
+    ------
+    TypeError
+        If ``candidate`` cannot be turned into a response factory.
+    """
+
+    if isinstance(candidate, ResponseBase):
+        return lambda: candidate
+    if isinstance(candidate, type) and issubclass(candidate, ResponseBase):
+        return lambda: candidate()
+    if callable(candidate):
+        return candidate
+    raise TypeError("response must be a ResponseBase, subclass, or callable")
+
+
+def _config_from_mapping(raw_config: dict) -> StreamlitAppConfig:
+    """Build :class:`StreamlitAppConfig` from a mapping with aliases.
+
+    The mapping may provide ``build_response`` directly or a ``response`` key
+    containing a :class:`ResponseBase` instance, subclass, or callable.
+
+    Parameters
+    ----------
+    raw_config : dict
+        Developer-supplied mapping from the configuration module.
+
+    Returns
+    -------
+    StreamlitAppConfig
+        Validated configuration derived from ``raw_config``.
+    """
+
+    config_kwargs = dict(raw_config)
+    if "response" in config_kwargs and "build_response" not in config_kwargs:
+        response_candidate = config_kwargs.pop("response")
+        config_kwargs["build_response"] = _coerce_response_builder(
+            response_candidate
+        )
+
+    return StreamlitAppConfig(**config_kwargs)
 
 
 def load_app_config(

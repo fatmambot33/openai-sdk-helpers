@@ -53,7 +53,8 @@ class ExampleResponse(ResponseBase[ExampleResponsePayload]):
         )
 
 
-APP_CONFIG = ExampleResponse.build_streamlit_config(
-    display_title="Example assistant chat",
-    description="Config-driven chat experience for internal demos.",
-)
+APP_CONFIG = {
+    "response": ExampleResponse,
+    "display_title": "Example assistant chat",
+    "description": "Config-driven chat experience for internal demos.",
+}
