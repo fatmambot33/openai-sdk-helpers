@@ -37,6 +37,7 @@ check_filepath = utils_mod.check_filepath
 customJSONEncoder = utils_mod.customJSONEncoder
 ensure_list = utils_mod.ensure_list
 log = utils_mod.log
+coerce_jsonable = utils_mod.coerce_jsonable
 
 
 def test_ensure_list_behavior():
@@ -106,3 +107,25 @@ def test_log_is_idempotent(caplog):
     log("second")
     assert any(record.message == "first" for record in caplog.records)
     assert any(record.message == "second" for record in caplog.records)
+
+
+def test_coerce_jsonable_serializes_structures_and_dataclasses():
+    from openai_sdk_helpers.structure.base import BaseStructure
+
+    class ExampleStructure(BaseStructure):
+        message: str
+
+    @dataclass
+    class Wrapper:
+        content: Path
+
+    payload = {
+        "structure": ExampleStructure(message="hello"),
+        "wrapper": Wrapper(content=Path("a/b")),
+    }
+
+    serialized = coerce_jsonable(payload)
+
+    assert serialized["structure"]["message"] == "hello"
+    assert serialized["wrapper"]["content"] == "a/b"
+    assert json.dumps(serialized)

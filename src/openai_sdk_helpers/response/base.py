@@ -10,11 +10,13 @@ import threading
 import uuid
 from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Generic,
     List,
     Optional,
+    Sequence,
     Tuple,
     Type,
     TypeVar,
@@ -32,13 +34,19 @@ from openai.types.responses.response_input_param import ResponseInputItemParam
 from openai.types.responses.response_input_text_param import ResponseInputTextParam
 from openai.types.responses.response_output_message import ResponseOutputMessage
 
-from .messages import ResponseMessages
+from .messages import ResponseMessage, ResponseMessages
 from ..structure import BaseStructure
 from ..utils import ensure_list, log
+
+if TYPE_CHECKING:
+    from openai_sdk_helpers.streamlit_app.configuration import StreamlitAppConfig
 
 T = TypeVar("T", bound=BaseStructure)
 ToolHandler = Callable[[ResponseFunctionToolCall], Union[str, Any]]
 ProcessContent = Callable[[str], Tuple[str, List[str]]]
+
+
+RB = TypeVar("RB", bound="ResponseBase[BaseStructure]")
 
 
 class ResponseBase(Generic[T]):
@@ -55,6 +63,8 @@ class ResponseBase(Generic[T]):
         Synchronous wrapper around ``run_async``.
     run_streamed(content, attachments)
         Await ``run_async`` to mirror the agent API.
+    build_streamlit_config(...)
+        Construct a :class:`StreamlitAppConfig` using this class as the builder.
     save(filepath)
         Serialize the message history to disk.
     close()
@@ -444,6 +454,69 @@ class ResponseBase(Generic[T]):
             Parsed response object or ``None``.
         """
         return asyncio.run(self.run_async(content=content, attachments=attachments))
+
+    def get_last_message(self, role: str = "assistant") -> ResponseMessage | None:
+        """Return the most recent message for the given role.
+
+        Parameters
+        ----------
+        role : str, default="assistant"
+            Role name to filter messages by.
+
+        Returns
+        -------
+        ResponseMessage or None
+            Latest message matching ``role`` or ``None`` when absent.
+        """
+        for message in reversed(self.messages.messages):
+            if message.role == role:
+                return message
+        return None
+
+    @classmethod
+    def build_streamlit_config(
+        cls: type[RB],
+        *,
+        display_title: str = "Example copilot",
+        description: str | None = None,
+        system_vector_store: Sequence[str] | str | None = None,
+        preserve_vector_stores: bool = False,
+        model: str | None = None,
+    ) -> "StreamlitAppConfig":
+        """Construct a :class:`StreamlitAppConfig` using ``cls`` as the builder.
+
+        Parameters
+        ----------
+        display_title : str, default="Example copilot"
+            Title displayed at the top of the Streamlit page.
+        description : str or None, default=None
+            Optional short description shown beneath the title.
+        system_vector_store : Sequence[str] | str | None, default=None
+            Optional vector store names to attach as system context.
+        preserve_vector_stores : bool, default=False
+            When ``True``, skip automatic vector store cleanup on close.
+        model : str or None, default=None
+            Optional model hint for display alongside the chat interface.
+
+        Returns
+        -------
+        StreamlitAppConfig
+            Validated configuration bound to ``cls`` as the response builder.
+        """
+        from openai_sdk_helpers.streamlit_app.configuration import StreamlitAppConfig
+
+        normalized_stores = None
+        if system_vector_store is not None:
+            normalized_stores = ensure_list(system_vector_store)
+
+        return StreamlitAppConfig(
+            response=cls,
+            display_title=display_title,
+            description=description,
+            system_vector_store=normalized_stores,
+            preserve_vector_stores=preserve_vector_stores,
+            model=model,
+        )
 
     def save(self, filepath: Optional[str | Path] = None) -> None:
         """Serialize the message history to a JSON file."""

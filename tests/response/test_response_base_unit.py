@@ -11,6 +11,7 @@ import pytest
 
 from openai_sdk_helpers.response import attach_vector_store
 from openai_sdk_helpers.response.base import ResponseBase
+from openai_sdk_helpers.response.messages import ResponseMessage
 
 
 @pytest.fixture
@@ -126,3 +127,22 @@ def test_attach_vector_store_requires_api_key():
 
     with pytest.raises(ValueError):
         attach_vector_store(response, "store-one")
+
+
+def test_get_last_message_returns_latest_assistant(response_base):
+    """Return the most recent assistant message when available."""
+
+    response_base.messages.messages.append(ResponseMessage(role="user", content="hi"))
+    first_assistant = ResponseMessage(role="assistant", content="first")
+    latest_assistant = ResponseMessage(role="assistant", content="second")
+    response_base.messages.messages.extend([first_assistant, latest_assistant])
+
+    assert response_base.get_last_message() is latest_assistant
+
+
+def test_get_last_message_handles_missing_role(response_base):
+    """Return None when the requested role is not present."""
+
+    response_base.messages.messages.append(ResponseMessage(role="user", content="hi"))
+
+    assert response_base.get_last_message(role="assistant") is None

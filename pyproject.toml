@@ -26,6 +26,8 @@ dependencies = [
     "openai-agents",
 
 
+    # Web UI
+    "streamlit",
 ]
 
 [dependency-groups]
