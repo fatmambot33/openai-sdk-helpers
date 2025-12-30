@@ -101,6 +101,7 @@ def coerce_dict(value: Any) -> Dict[str, Any]:
         return dict(value)
     raise TypeError("extra_client_kwargs must be a mapping or None")
 
+
 T = TypeVar("T")
 _configured_logging = False
 
