@@ -57,13 +57,16 @@ APP_CONFIG = {
 }
 
 if __name__ == "__main__":
-    web_seqrch_instance = StreamlitWebSearch()
+    web_search_instance = StreamlitWebSearch()
     import asyncio
 
     result = asyncio.run(
-        web_seqrch_instance.run_async("What is the capital of France?")
+        web_search_instance.run_async("What are the latest advancements in AI?")
     )
     if result:
-        print(result.print())
+        print(web_search_instance.get_last_tool_message())
     else:
         print("No result returned.")
+    filepath = f"./data/{web_search_instance.name}.{web_search_instance.uuid}.json"
+    web_search_instance.save(filepath)
+    web_search_instance.close()
