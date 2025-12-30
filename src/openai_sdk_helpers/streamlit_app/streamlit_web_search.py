@@ -23,7 +23,7 @@ class StreamlitWebSearch(BaseResponse[WebSearchStructure]):
         super().__init__(
             instructions="Perform web searches and generate reports.",
             tools=[
-                PromptStructure.response_tool_definition(
+                WebSearchStructure.response_tool_definition(
                     tool_name="perform_search",
                     tool_description="Tool to perform web searches and generate reports.",
                 )
@@ -38,14 +38,9 @@ class StreamlitWebSearch(BaseResponse[WebSearchStructure]):
 
 async def perform_search(tool) -> str:
     """Perform a web search and return structured results."""
-    from openai_sdk_helpers.response.tool_call import parse_tool_arguments
-
-    structured_data = parse_tool_arguments(tool.arguments)
-    query = structured_data.get("prompt")
-    if not query:
-        raise ValueError("No prompt provided for web search.")
+    parsed_args = WebSearchStructure.model_validate_json(tool.arguments)
     web_result = await WebAgentSearch(default_model="gpt-4o-mini").run_web_agent_async(
-        query
+        parsed_args.query
     )
     return json.dumps(web_result.to_json(), cls=customJSONEncoder)
 
