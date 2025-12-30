@@ -6,7 +6,7 @@ import importlib.util
 from pathlib import Path
 from types import ModuleType
 from typing import Callable, Sequence
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from openai_sdk_helpers.response.base import ResponseBase
 from openai_sdk_helpers.structure.base import BaseStructure
@@ -25,13 +25,26 @@ class StreamlitAppConfig(BaseModel):
         Return configured system vector stores as a list of names.
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
-    build_response: ResponseFactory = Field(
+    build_response: ResponseFactory | None = Field(
+        default=None,
         description=(
-            "Callable that constructs and returns a preconfigured ``ResponseBase`` "
-            "instance."
-        )
+            "Optional callable that constructs and returns a preconfigured "
+            "``ResponseBase`` instance."
+        ),
+    )
+    response: (
+        ResponseBase[BaseStructure]
+        | type[ResponseBase]
+        | ResponseFactory
+        | None
+    ) = Field(
+        default=None,
+        description=(
+            "``ResponseBase`` subclass or instance used to derive "
+            "``build_response`` when provided."
+        ),
     )
     display_title: str = Field(
         default="Example copilot",
@@ -59,8 +72,8 @@ class StreamlitAppConfig(BaseModel):
 
     @field_validator("build_response")
     @classmethod
-    def validate_builder(cls, value: ResponseFactory) -> ResponseFactory:
-        """Ensure the configuration provides a callable response builder.
+    def validate_builder(cls, value: ResponseFactory | None) -> ResponseFactory | None:
+        """Ensure the configuration provides a callable response builder when set.
 
         Parameters
         ----------
@@ -78,7 +91,7 @@ class StreamlitAppConfig(BaseModel):
             If ``value`` is not callable.
         """
 
-        if not callable(value):
+        if value is not None and not callable(value):
             raise TypeError("build_response must be callable.")
         return value
 
@@ -122,6 +135,22 @@ class StreamlitAppConfig(BaseModel):
         """
 
         return list(self.system_vector_store or [])
+
+    @model_validator(mode="after")
+    def ensure_builder(self) -> "StreamlitAppConfig":
+        """Derive ``build_response`` from ``response`` when missing.
+
+        Raises
+        ------
+        ValueError
+            If neither ``build_response`` nor ``response`` is provided.
+        """
+
+        if self.build_response is None and self.response is not None:
+            self.build_response = _coerce_response_builder(self.response)
+        if self.build_response is None:
+            raise ValueError("Either build_response or response must be provided.")
+        return self
 
     @staticmethod
     def load_app_config(
@@ -209,11 +238,11 @@ def _extract_config(module: ModuleType) -> StreamlitAppConfig:
     if isinstance(raw_config, dict):
         return _config_from_mapping(raw_config)
     if isinstance(raw_config, ResponseBase):
-        return StreamlitAppConfig(build_response=lambda: raw_config)
+        return StreamlitAppConfig(response=raw_config)
     if isinstance(raw_config, type) and issubclass(raw_config, ResponseBase):
-        return raw_config.build_streamlit_config()  # type: ignore[return-value]
+        return StreamlitAppConfig(response=raw_config)
     if callable(raw_config):
-        return StreamlitAppConfig(build_response=_coerce_response_builder(raw_config))
+        return StreamlitAppConfig(response=raw_config)
 
     raise TypeError(
         "APP_CONFIG must be a dict, callable, ResponseBase, or StreamlitAppConfig."
@@ -268,9 +297,7 @@ def _config_from_mapping(raw_config: dict) -> StreamlitAppConfig:
     config_kwargs = dict(raw_config)
     if "response" in config_kwargs and "build_response" not in config_kwargs:
         response_candidate = config_kwargs.pop("response")
-        config_kwargs["build_response"] = _coerce_response_builder(
-            response_candidate
-        )
+        config_kwargs["response"] = response_candidate
 
     return StreamlitAppConfig(**config_kwargs)
 

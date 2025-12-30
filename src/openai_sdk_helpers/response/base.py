@@ -503,11 +503,8 @@ class ResponseBase(Generic[T]):
 
         from openai_sdk_helpers.streamlit_app.configuration import StreamlitAppConfig
 
-        def build_response() -> ResponseBase[BaseStructure]:
-            return cls()  # type: ignore[call-arg]
-
         return StreamlitAppConfig(
-            build_response=build_response,
+            response=cls,
             display_title=display_title,
             description=description,
             system_vector_store=system_vector_store,

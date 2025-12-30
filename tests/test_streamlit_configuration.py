@@ -20,7 +20,7 @@ def test_load_app_config_success(tmp_path: Path) -> None:
     config_path = _write_config(
         tmp_path,
         """
-APP_CONFIG = {"build_response": lambda: None}
+APP_CONFIG = {"response": lambda: None}
 """,
     )
 
@@ -40,6 +40,18 @@ def test_missing_app_config(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path, "build_response = lambda: None\n")
 
     with pytest.raises(ValueError):
+        StreamlitAppConfig.load_app_config(config_path=config_path)
+
+
+def test_missing_response_and_builder(tmp_path: Path) -> None:
+    config_path = _write_config(
+        tmp_path,
+        """
+APP_CONFIG = {}
+""",
+    )
+
+    with pytest.raises(ValidationError):
         StreamlitAppConfig.load_app_config(config_path=config_path)
 
 
@@ -174,3 +186,20 @@ APP_CONFIG = _DummyResponse
 
     assert isinstance(response_instance, ResponseBase)
     assert response_instance.__class__.__name__ == "_DummyResponse"
+
+
+def test_config_accepts_response_instance(tmp_path: Path) -> None:
+    config_path = _write_config(
+        tmp_path,
+        """
+from tests.test_streamlit_configuration import _DummyResponse
+
+APP_CONFIG = _DummyResponse()
+""",
+    )
+
+    config = StreamlitAppConfig.load_app_config(config_path=config_path)
+
+    response_instance = config.build_response()
+
+    assert isinstance(response_instance, ResponseBase)
