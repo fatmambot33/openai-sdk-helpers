@@ -10,44 +10,11 @@ from dotenv import dotenv_values
 from openai import OpenAI
 from pydantic import BaseModel, ConfigDict, Field
 
-
-def _coerce_optional_float(value: Any) -> Optional[float]:
-    """Return a float when the provided value can be coerced, otherwise ``None``."""
-    if value is None:
-        return None
-    if isinstance(value, (float, int)):
-        return float(value)
-    if isinstance(value, str) and value.strip():
-        try:
-            return float(value)
-        except ValueError as exc:
-            raise ValueError("timeout must be a float-compatible value") from exc
-    raise TypeError("timeout must be a float, int, str, or None")
-
-
-def _coerce_optional_int(value: Any) -> Optional[int]:
-    """Return an int when the provided value can be coerced, otherwise ``None``."""
-    if value is None:
-        return None
-    if isinstance(value, int) and not isinstance(value, bool):
-        return value
-    if isinstance(value, float) and value.is_integer():
-        return int(value)
-    if isinstance(value, str) and value.strip():
-        try:
-            return int(value)
-        except ValueError as exc:
-            raise ValueError("max_retries must be an int-compatible value") from exc
-    raise TypeError("max_retries must be an int, str, or None")
-
-
-def _coerce_dict(value: Any) -> Dict[str, Any]:
-    """Return a string-keyed dictionary built from ``value`` if possible."""
-    if value is None:
-        return {}
-    if isinstance(value, Mapping):
-        return dict(value)
-    raise TypeError("extra_client_kwargs must be a mapping or None")
+from openai_sdk_helpers.utils import (
+    coerce_dict,
+    coerce_optional_float,
+    coerce_optional_int,
+)
 
 
 class OpenAISettings(BaseModel):
@@ -175,9 +142,9 @@ class OpenAISettings(BaseModel):
             "default_model": overrides.get("default_model")
             or env_file_values.get("OPENAI_MODEL")
             or os.getenv("OPENAI_MODEL"),
-            "timeout": _coerce_optional_float(timeout_raw),
-            "max_retries": _coerce_optional_int(max_retries_raw),
-            "extra_client_kwargs": _coerce_dict(overrides.get("extra_client_kwargs")),
+            "timeout": coerce_optional_float(timeout_raw),
+            "max_retries": coerce_optional_int(max_retries_raw),
+            "extra_client_kwargs": coerce_dict(overrides.get("extra_client_kwargs")),
         }
 
         settings = cls(**values)
