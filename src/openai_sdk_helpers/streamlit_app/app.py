@@ -17,7 +17,7 @@ from openai_sdk_helpers.streamlit_app import (
     _load_configuration,
 )
 from openai_sdk_helpers.structure.base import BaseStructure
-from openai_sdk_helpers.utils import ensure_list, coerce_jsonable,log
+from openai_sdk_helpers.utils import ensure_list, coerce_jsonable, log
 
 
 def _extract_assistant_text(response: BaseResponse[Any]) -> str:

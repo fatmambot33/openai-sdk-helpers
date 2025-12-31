@@ -10,6 +10,7 @@ from openai_sdk_helpers.utils.core import customJSONEncoder
 
 DEFAULT_MODEL = "gpt-4o-mini"
 
+
 class StreamlitWebSearch(BaseResponse[WebSearchStructure]):
     """Response tuned for a generic chat experience with structured output.
 
