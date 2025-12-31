@@ -139,7 +139,7 @@ class BaseResponse(Generic[T]):
         self._tools = tools if tools is not None else []
         self._schema = schema
         self._output_structure = output_structure
-        self._cleanup_user_vector_storage = True
+        self._cleanup_user_vector_storage = False
         self._cleanup_system_vector_storage = False
 
         if client is None:
