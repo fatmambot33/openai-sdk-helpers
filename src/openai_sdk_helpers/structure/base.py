@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 # Standard library imports
+import ast
 import inspect
 import json
 import logging
-from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
 from collections.abc import Mapping, Sequence
@@ -569,6 +569,45 @@ class BaseStructure(BaseModel):
                 clean_data[field] = None
 
         return cls(**clean_data)
+
+    @classmethod
+    def from_tool_arguments(cls: Type[T], arguments: str) -> T:
+        """Parse tool call arguments which may not be valid JSON.
+
+        The OpenAI API is expected to return well-formed JSON for tool arguments,
+        but minor formatting issues (such as the use of single quotes) can occur.
+        This helper first tries ``json.loads`` and falls back to
+        ``ast.literal_eval`` for simple cases.
+
+        Parameters
+        ----------
+        arguments
+            Raw argument string from the tool call.
+
+        Returns
+        -------
+        dict
+            Parsed dictionary of arguments.
+
+        Raises
+        ------
+        ValueError
+            If the arguments cannot be parsed as JSON.
+
+        Examples
+        --------
+        >>> parse_tool_arguments('{"key": "value"}')["key"]
+        'value'
+        """
+        try:
+            structured_data = json.loads(arguments)
+
+        except json.JSONDecodeError:
+            try:
+                structured_data = ast.literal_eval(arguments)
+            except Exception as exc:  # noqa: BLE001
+                raise ValueError(f"Invalid JSON arguments: {arguments}") from exc
+        return cls.from_raw_input(structured_data)
 
     @staticmethod
     def format_output(label: str, value: Any) -> str:

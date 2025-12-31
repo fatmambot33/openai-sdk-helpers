@@ -17,7 +17,7 @@ from openai_sdk_helpers.streamlit_app import (
     _load_configuration,
 )
 from openai_sdk_helpers.structure.base import BaseStructure
-from openai_sdk_helpers.utils import ensure_list, coerce_jsonable
+from openai_sdk_helpers.utils import ensure_list, coerce_jsonable,log
 
 
 def _extract_assistant_text(response: BaseResponse[Any]) -> str:
@@ -152,6 +152,8 @@ def _reset_chat(close_response: bool = True) -> None:
     """
     response = st.session_state.get("response_instance")
     if close_response and isinstance(response, BaseResponse):
+        filepath = f"./data/{response.name}.{response.uuid}.json"
+        response.save(filepath)
         response.close()
     st.session_state["chat_history"] = []
     st.session_state.pop("response_instance", None)
@@ -210,9 +212,7 @@ def _handle_user_message(prompt: str, config: StreamlitAppConfig) -> None:
     try:
         with st.spinner("Thinking..."):
             result = response.run_sync(content=prompt)
-        print(f"DEBUG APP: result = {result}")
         summary = _render_summary(result, response)
-        print(f"DEBUG APP: summary = {repr(summary)}")
         raw_output = _build_raw_output(result, response)
         st.session_state["chat_history"].append(
             {"role": "assistant", "summary": summary, "raw": raw_output}

@@ -8,6 +8,7 @@ from openai_sdk_helpers.structure.web_search import WebSearchStructure
 from openai_sdk_helpers.structure.prompt import PromptStructure
 from openai_sdk_helpers.utils.core import customJSONEncoder
 
+DEFAULT_MODEL = "gpt-4o-mini"
 
 class StreamlitWebSearch(BaseResponse[WebSearchStructure]):
     """Response tuned for a generic chat experience with structured output.
@@ -23,7 +24,7 @@ class StreamlitWebSearch(BaseResponse[WebSearchStructure]):
         super().__init__(
             instructions="Perform web searches and generate reports.",
             tools=[
-                WebSearchStructure.response_tool_definition(
+                PromptStructure.response_tool_definition(
                     tool_name="perform_search",
                     tool_description="Tool to perform web searches and generate reports.",
                 )
@@ -32,15 +33,17 @@ class StreamlitWebSearch(BaseResponse[WebSearchStructure]):
             output_structure=WebSearchStructure,
             tool_handlers={"perform_search": perform_search},
             client=settings.create_client(),
-            model=settings.default_model or "gpt-4o-mini",
+            model=settings.default_model or DEFAULT_MODEL,
         )
 
 
 async def perform_search(tool) -> str:
     """Perform a web search and return structured results."""
-    parsed_args = WebSearchStructure.from_raw_input(tool.arguments)
-    web_result = await WebAgentSearch(default_model="gpt-4o-mini").run_web_agent_async(
-        parsed_args.query
+
+
+    structured_data = PromptStructure.from_tool_arguments(tool.arguments)
+    web_result = await WebAgentSearch(default_model=DEFAULT_MODEL).run_web_agent_async(
+        structured_data.prompt
     )
     return json.dumps(web_result.to_json(), cls=customJSONEncoder)
 
@@ -56,7 +59,7 @@ if __name__ == "__main__":
     import asyncio
 
     result = asyncio.run(
-        web_search_instance.run_async("What are the latest advancements in AI?")
+        web_search_instance.run_async("What are the 2026 advancements in AI?")
     )
     if result:
         print(web_search_instance.get_last_tool_message())
