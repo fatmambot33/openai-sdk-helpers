@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 DATETIME_FMT = "%Y%m%d_%H%M%S"
+DEFAULT_MODEL = "gpt-4o-mini"
 
 
 def get_data_path(module_name: str) -> Path:

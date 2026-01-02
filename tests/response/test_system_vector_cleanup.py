@@ -1,26 +1,14 @@
 """Minimal test to increase coverage for BaseResponse.close() system vector store cleanup."""
 
-from typing import Any
+from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 
+from openai_sdk_helpers.config import OpenAISettings
 from openai_sdk_helpers.response.base import BaseResponse
 
 
 def test_close_cleans_system_vector_storage(monkeypatch):
-    class DummyVectorStorage:
-        def __init__(self, *a, **kw):
-            self.id = "dummy"
-            self.deleted = False
-
-        def upload_file(self, file_path):
-            class File:
-                id = "fileid"
-
-            return File()
-
-        def delete(self):
-            self.deleted = True
-
     class DummyClient:
         def __init__(self):
             self.api_key: str | None = "sk-dummy"
@@ -38,18 +26,23 @@ def test_close_cleans_system_vector_storage(monkeypatch):
 
             return type("obj", (), {"data": [Store()]})()
 
+    dummy_client = DummyClient()
+    monkeypatch.setattr(
+        "openai_sdk_helpers.config.OpenAI",
+        lambda *_a, **_kw: dummy_client,
+    )
+
+    settings = OpenAISettings(api_key="sk-dummy", default_model="gpt-3.5-turbo")
     base = BaseResponse(
         instructions="hi",
         tools=[],
         schema=None,
         output_structure=None,
         tool_handlers={},
-        model="gpt-3.5-turbo",
-        api_key="sk-dummy",
+        openai_settings=settings,
         system_vector_store=["dummy"],
-        client=DummyClient(),
         module_name="mod",
-        data_path_fn=lambda m: __import__("pathlib").Path("/tmp"),
+        data_path_fn=lambda m: Path("/tmp"),
     )
     # Should always clean system vector storage
     # Simulate close and check no error (system vector store cleanup is now implicit)

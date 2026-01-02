@@ -1,4 +1,4 @@
-def test_dummy_for_coverage():
+def test_dummy_for_coverage(openai_settings):
     """Dummy test to increase coverage by exercising __repr__."""
     from openai_sdk_helpers.response.base import BaseResponse
 
@@ -11,7 +11,6 @@ def test_dummy_for_coverage():
         schema=None,
         output_structure=None,
         tool_handlers={},
-        model="gpt-3",
-        api_key="dummy",
+        openai_settings=openai_settings,
     )
     assert "BaseResponse" in repr(r)

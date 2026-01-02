@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
 from unittest.mock import MagicMock, patch
@@ -15,15 +14,7 @@ from openai_sdk_helpers.response.messages import ResponseMessage
 
 
 @pytest.fixture
-def mock_openai_client():
-    """Return a mock OpenAI client."""
-    client = MagicMock()
-    client.vector_stores.list.return_value.data = []
-    return client
-
-
-@pytest.fixture
-def response_base(mock_openai_client):
+def response_base(openai_settings):
     """Return a BaseResponse instance."""
     return BaseResponse(
         instructions="test instructions",
@@ -31,15 +22,14 @@ def response_base(mock_openai_client):
         schema=None,
         output_structure=None,
         tool_handlers={},
-        client=mock_openai_client,
-        model="test_model",
+        openai_settings=openai_settings,
     )
 
 
-def test_response_base_initialization(response_base):
+def test_response_base_initialization(response_base, openai_settings):
     """Test BaseResponse initialization."""
     assert response_base._instructions == "test instructions"
-    assert response_base._model == "test_model"
+    assert response_base._model == openai_settings.default_model
 
 
 def test_data_path(response_base, tmp_path):

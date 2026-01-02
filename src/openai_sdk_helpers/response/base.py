@@ -24,7 +24,6 @@ from typing import (
     cast,
 )
 
-from openai import OpenAI
 from openai.types.responses.response_function_tool_call import ResponseFunctionToolCall
 from openai.types.responses.response_input_file_param import ResponseInputFileParam
 from openai.types.responses.response_input_message_content_list_param import (
@@ -35,12 +34,13 @@ from openai.types.responses.response_input_text_param import ResponseInputTextPa
 from openai.types.responses.response_output_message import ResponseOutputMessage
 
 from .messages import ResponseMessage, ResponseMessages
+from ..config import OpenAISettings
 from ..structure import BaseStructure
 from ..types import OpenAIClient
 from ..utils import ensure_list, log
 
-if TYPE_CHECKING:
-    from openai_sdk_helpers.streamlit_app.configuration import StreamlitAppConfig
+if TYPE_CHECKING:  # pragma: no cover - only for typing hints
+    from openai_sdk_helpers.streamlit_app.config import StreamlitAppConfig
 
 T = TypeVar("T", bound=BaseStructure)
 ToolHandler = Callable[[ResponseFunctionToolCall], Union[str, Any]]
@@ -80,11 +80,9 @@ class BaseResponse(Generic[T]):
         schema: Optional[Any],
         output_structure: Optional[Type[T]],
         tool_handlers: dict[str, ToolHandler],
+        openai_settings: OpenAISettings,
         process_content: Optional[ProcessContent] = None,
         module_name: Optional[str] = None,
-        client: Optional[OpenAIClient] = None,
-        model: Optional[str] = None,
-        api_key: Optional[str] = None,
         system_vector_store: Optional[list[str]] = None,
         data_path_fn: Optional[Callable[[str], Path]] = None,
         save_path: Optional[Path | str] = None,
@@ -103,16 +101,13 @@ class BaseResponse(Generic[T]):
             Structure type used to parse tool call outputs.
         tool_handlers : dict[str, ToolHandler]
             Mapping of tool names to handler callables.
+        openai_settings : OpenAISettings
+            Fully resolved OpenAI settings supplying authentication and
+            default model information.
         process_content : callable, optional
             Callback that cleans input text and extracts attachments.
         module_name : str, optional
             Module name used to build the data path.
-        client : OpenAI | SupportsOpenAIClient or None, default=None
-            Optional pre-initialized OpenAI-compatible client.
-        model : str or None, default=None
-            Optional OpenAI model name override.
-        api_key : str or None, default=None
-            Optional OpenAI API key override.
         attachments : tuple or list of tuples, optional
             File attachments in the form ``(file_path, tool_type)``.
         data_path_fn : callable or None, default=None
@@ -123,7 +118,7 @@ class BaseResponse(Generic[T]):
         Raises
         ------
         ValueError
-            If API key or model is missing.
+            If API key or model is missing in ``openai_settings``.
         RuntimeError
             If the OpenAI client fails to initialize.
         """
@@ -136,20 +131,22 @@ class BaseResponse(Generic[T]):
         self._tools = tools if tools is not None else []
         self._schema = schema
         self._output_structure = output_structure
-        self._client: OpenAIClient
-        if client is None:
-            if api_key is None:
-                raise ValueError("OpenAI API key is required")
-            try:
-                self._client = OpenAI(api_key=api_key)
-            except Exception as exc:
-                raise RuntimeError("Failed to initialize OpenAI client") from exc
-        else:
-            self._client = client
+        self._openai_settings = openai_settings
 
-        self._model = model
+        if not self._openai_settings.api_key:
+            raise ValueError("OpenAI API key is required")
+
+        self._client: OpenAIClient
+        try:
+            self._client = self._openai_settings.create_client()
+        except Exception as exc:  # pragma: no cover - defensive guard
+            raise RuntimeError("Failed to initialize OpenAI client") from exc
+
+        self._model = self._openai_settings.default_model
         if not self._model:
-            raise ValueError("OpenAI model is required")
+            raise ValueError(
+                "OpenAI model is required. Set 'default_model' on OpenAISettings."
+            )
 
         self.uuid = uuid.uuid4()
         self.name = self.__class__.__name__.lower()
@@ -170,7 +167,7 @@ class BaseResponse(Generic[T]):
                 api_key=(
                     self._client.api_key
                     if hasattr(self._client, "api_key")
-                    else api_key
+                    else self._openai_settings.api_key
                 ),
             )
 
@@ -482,7 +479,7 @@ class BaseResponse(Generic[T]):
         StreamlitAppConfig
             Validated configuration bound to ``cls`` as the response builder.
         """
-        from openai_sdk_helpers.streamlit_app.configuration import StreamlitAppConfig
+        from openai_sdk_helpers.streamlit_app.config import StreamlitAppConfig
 
         normalized_stores = None
         if system_vector_store is not None:

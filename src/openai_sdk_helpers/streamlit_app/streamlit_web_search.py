@@ -7,8 +7,7 @@ from openai_sdk_helpers.response.base import BaseResponse
 from openai_sdk_helpers.structure.web_search import WebSearchStructure
 from openai_sdk_helpers.structure.prompt import PromptStructure
 from openai_sdk_helpers.utils.core import customJSONEncoder
-
-DEFAULT_MODEL = "gpt-4o-mini"
+from openai_sdk_helpers.environment import DEFAULT_MODEL
 
 
 class StreamlitWebSearch(BaseResponse[WebSearchStructure]):
@@ -22,6 +21,8 @@ class StreamlitWebSearch(BaseResponse[WebSearchStructure]):
 
     def __init__(self) -> None:
         settings = OpenAISettings.from_env()
+        if not settings.default_model:
+            settings = settings.model_copy(update={"default_model": DEFAULT_MODEL})
         super().__init__(
             instructions="Perform web searches and generate reports.",
             tools=[
@@ -33,8 +34,7 @@ class StreamlitWebSearch(BaseResponse[WebSearchStructure]):
             schema=WebSearchStructure.response_format(),
             output_structure=WebSearchStructure,
             tool_handlers={"perform_search": perform_search},
-            client=settings.create_client(),
-            model=settings.default_model or DEFAULT_MODEL,
+            openai_settings=settings,
         )
 
 

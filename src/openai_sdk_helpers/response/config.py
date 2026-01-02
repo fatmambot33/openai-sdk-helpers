@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Generic, Optional, Sequence, Type, TypeVar
 from openai.types.responses.response_text_config_param import ResponseTextConfigParam
 
+from ..config import OpenAISettings
 from ..structure.base import BaseStructure
-from ..response.base import BaseResponse
+from ..response.base import BaseResponse, ToolHandler
 
 TIn = TypeVar("TIn", bound="BaseStructure")
 TOut = TypeVar("TOut", bound="BaseStructure")
@@ -25,6 +27,9 @@ class ResponseConfiguration(Generic[TIn, TOut]):
     ----------
     name : str
         Unique configuration identifier. Must be a non-empty string.
+    instructions : str or Path
+        Plain text instructions or a path to a Jinja template file whose
+        contents are loaded at runtime.
     tools : Sequence[object], optional
         Tool definitions associated with the configuration. Default is None.
     schema : ResponseTextConfigParam, optional
@@ -40,14 +45,21 @@ class ResponseConfiguration(Generic[TIn, TOut]):
     ------
     TypeError
         If name is not a non-empty string.
+        If instructions is not a string or Path.
         If tools is provided and is not a sequence.
         If input_structure or output_structure is not a class.
         If input_structure or output_structure does not subclass BaseStructure.
+    ValueError
+        If instructions is a string that is empty or only whitespace.
+    FileNotFoundError
+        If instructions is a Path that does not point to a readable file.
 
     Methods
     -------
     __post_init__()
         Validate configuration invariants and enforce BaseStructure subclassing.
+    instructions_text
+        Return the resolved instruction content as a string.
 
     Examples
     --------
@@ -63,6 +75,7 @@ class ResponseConfiguration(Generic[TIn, TOut]):
     """
 
     name: str
+    instructions: str | Path
     tools: Optional[list]
     schema: Optional[ResponseTextConfigParam]
     input_structure: Optional[Type[TIn]]
@@ -86,6 +99,19 @@ class ResponseConfiguration(Generic[TIn, TOut]):
         if not self.name or not isinstance(self.name, str):
             raise TypeError("Configuration.name must be a non-empty str")
 
+        instructions_value = self.instructions
+        if isinstance(instructions_value, str):
+            if not instructions_value.strip():
+                raise ValueError("Configuration.instructions must be a non-empty str")
+        elif isinstance(instructions_value, Path):
+            instruction_path = instructions_value.expanduser()
+            if not instruction_path.is_file():
+                raise FileNotFoundError(
+                    f"Instruction template not found: {instruction_path}"
+                )
+        else:
+            raise TypeError("Configuration.instructions must be a str or Path")
+
         for attr in ("input_structure", "output_structure"):
             cls = getattr(self, attr)
             if cls is None:
@@ -100,18 +126,54 @@ class ResponseConfiguration(Generic[TIn, TOut]):
         if self.tools is not None and not isinstance(self.tools, Sequence):
             raise TypeError("Configuration.tools must be a Sequence or None")
 
-    def gen_response(self) -> BaseResponse[TOut]:
+    @property
+    def instructions_text(self) -> str:
+        """Return the resolved instruction text.
+
+        Returns
+        -------
+        str
+            Plain-text instructions, loading template files when necessary.
+        """
+        return self._resolve_instructions()
+
+    def _resolve_instructions(self) -> str:
+        if isinstance(self.instructions, Path):
+            instruction_path = self.instructions.expanduser()
+            try:
+                return instruction_path.read_text(encoding="utf-8")
+            except OSError as exc:
+                raise ValueError(
+                    f"Unable to read instructions at '{instruction_path}': {exc}"
+                ) from exc
+        return self.instructions
+
+    def gen_response(
+        self,
+        openai_settings: OpenAISettings,
+        tool_handlers: dict[str, ToolHandler] = {},
+    ) -> BaseResponse[TOut]:
         """Generate a BaseResponse instance based on the configuration.
+
+        Parameters
+        ----------
+        openai_settings : OpenAISettings
+            Authentication and model settings applied to the generated
+            :class:`BaseResponse`.
+        tool_handlers : dict[str, Callable], optional
+            Mapping of tool names to handler callables. Defaults to an empty
+            dictionary when not provided.
 
         Returns
         -------
         BaseResponse[TOut]
-            An instance of BaseResponse configured with the current settings.
+            An instance of BaseResponse configured with ``openai_settings``.
         """
         return BaseResponse[TOut](
-            instructions="",
+            instructions=self.instructions_text,
             tools=self.tools,
             schema=self.schema,
             output_structure=self.output_structure,
-            tool_handlers={},
+            tool_handlers=tool_handlers,
+            openai_settings=openai_settings,
         )

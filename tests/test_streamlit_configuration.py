@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 from pydantic import ValidationError
 
+from openai_sdk_helpers.config import OpenAISettings
 from openai_sdk_helpers.response.base import BaseResponse
 from openai_sdk_helpers.streamlit_app import StreamlitAppConfig, load_app_config
 from openai_sdk_helpers.structure.base import BaseStructure
@@ -33,8 +33,7 @@ class _DummyResponse(BaseResponse[BaseStructure]):
             schema=None,
             output_structure=None,
             tool_handlers={},
-            client=MagicMock(),
-            model="dummy",
+            openai_settings=OpenAISettings(api_key="test", default_model="dummy"),
         )
 
 
@@ -44,6 +43,12 @@ def test_load_app_config_success(tmp_path: Path) -> None:
         """
 from openai_sdk_helpers.response.base import BaseResponse
 from openai_sdk_helpers.structure.base import BaseStructure
+from openai_sdk_helpers.config import OpenAISettings
+from openai_sdk_helpers.config import OpenAISettings
+from openai_sdk_helpers.config import OpenAISettings
+from openai_sdk_helpers.config import OpenAISettings
+from openai_sdk_helpers.config import OpenAISettings
+from openai_sdk_helpers.config import OpenAISettings
 
 
 class TempResponse(BaseResponse[BaseStructure]):
@@ -54,8 +59,7 @@ class TempResponse(BaseResponse[BaseStructure]):
             schema=None,
             output_structure=None,
             tool_handlers={},
-            client=object(),
-            model="dummy",
+            openai_settings=OpenAISettings(api_key="test", default_model="dummy"),
         )
 
 
@@ -125,6 +129,8 @@ def test_vector_store_normalization_returns_copy(tmp_path: Path) -> None:
         """
 from openai_sdk_helpers.response.base import BaseResponse
 from openai_sdk_helpers.structure.base import BaseStructure
+from openai_sdk_helpers.config import OpenAISettings
+from openai_sdk_helpers.config import OpenAISettings
 
 
 class TempResponse(BaseResponse[BaseStructure]):
@@ -135,8 +141,7 @@ class TempResponse(BaseResponse[BaseStructure]):
             schema=None,
             output_structure=None,
             tool_handlers={},
-            client=object(),
-            model="dummy",
+            openai_settings=OpenAISettings(api_key="test", default_model="dummy"),
         )
 
 
@@ -159,6 +164,7 @@ def test_load_app_config_proxy(tmp_path: Path) -> None:
         """
 from openai_sdk_helpers.response.base import BaseResponse
 from openai_sdk_helpers.structure.base import BaseStructure
+from openai_sdk_helpers.config import OpenAISettings
 
 
 class TempResponse(BaseResponse[BaseStructure]):
@@ -169,8 +175,7 @@ class TempResponse(BaseResponse[BaseStructure]):
             schema=None,
             output_structure=None,
             tool_handlers={},
-            client=object(),
-            model="dummy",
+            openai_settings=OpenAISettings(api_key="test", default_model="dummy"),
         )
 
 
@@ -210,6 +215,7 @@ def test_config_accepts_response_alias(tmp_path: Path) -> None:
         """
 from openai_sdk_helpers.response.base import BaseResponse
 from openai_sdk_helpers.structure.base import BaseStructure
+from openai_sdk_helpers.config import OpenAISettings
 
 
 class TempResponse(BaseResponse[BaseStructure]):
@@ -220,8 +226,7 @@ class TempResponse(BaseResponse[BaseStructure]):
             schema=None,
             output_structure=None,
             tool_handlers={},
-            client=object(),
-            model="dummy",
+            openai_settings=OpenAISettings(api_key="test", default_model="dummy"),
         )
 
 
@@ -241,6 +246,7 @@ def test_config_accepts_response_class_directly(tmp_path: Path) -> None:
         """
 from openai_sdk_helpers.response.base import BaseResponse
 from openai_sdk_helpers.structure.base import BaseStructure
+from openai_sdk_helpers.config import OpenAISettings
 
 
 class TempResponse(BaseResponse[BaseStructure]):
@@ -251,8 +257,7 @@ class TempResponse(BaseResponse[BaseStructure]):
             schema=None,
             output_structure=None,
             tool_handlers={},
-            client=object(),
-            model="dummy",
+            openai_settings=OpenAISettings(api_key="test", default_model="dummy"),
         )
 
 
@@ -274,6 +279,7 @@ def test_config_accepts_response_instance(tmp_path: Path) -> None:
         """
 from openai_sdk_helpers.response.base import BaseResponse
 from openai_sdk_helpers.structure.base import BaseStructure
+from openai_sdk_helpers.config import OpenAISettings
 
 
 class TempResponse(BaseResponse[BaseStructure]):
@@ -284,8 +290,7 @@ class TempResponse(BaseResponse[BaseStructure]):
             schema=None,
             output_structure=None,
             tool_handlers={},
-            client=object(),
-            model="dummy",
+            openai_settings=OpenAISettings(api_key="test", default_model="dummy"),
         )
 
 
