@@ -30,10 +30,8 @@ dependencies = [
     "streamlit",
 ]
 
-[dependency-groups]
+[project.optional-dependencies]
 dev = [
-
-
     # Linting and docstring style checks
     "pydocstyle",
     "pyright",
