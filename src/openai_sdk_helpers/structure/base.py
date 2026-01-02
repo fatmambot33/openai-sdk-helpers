@@ -42,7 +42,32 @@ class BaseStructure(BaseModel):
     """Base class for defining structured output formats for OpenAI Assistants.
 
     This class provides Pydantic-based schema definition and serialization
-    helpers that support structured output formatting.
+    helpers that support structured output formatting. All structured data
+    types in this package extend ``BaseStructure`` to ensure consistent
+    validation, serialization, and schema generation.
+
+    Examples
+    --------
+    Define a custom structure:
+
+    >>> from openai_sdk_helpers.structure import BaseStructure, spec_field
+    >>> class MyOutput(BaseStructure):
+    ...     title: str = spec_field("title", description="The title")
+    ...     score: float = spec_field("score", description="Quality score")
+
+    Generate JSON schema:
+
+    >>> schema = MyOutput.get_schema()
+    >>> print(schema)
+
+    Create response format for chat completions:
+
+    >>> format_spec = MyOutput.response_format()
+
+    Serialize instance:
+
+    >>> instance = MyOutput(title="Test", score=0.95)
+    >>> json_dict = instance.to_json()
 
     Methods
     -------

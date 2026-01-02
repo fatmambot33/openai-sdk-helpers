@@ -20,6 +20,25 @@ from openai_sdk_helpers.utils import (
 class OpenAISettings(BaseModel):
     """Configuration helpers for constructing OpenAI clients.
 
+    This class centralizes OpenAI SDK configuration by reading from environment
+    variables and optional `.env` files, enabling consistent client setup across
+    your application.
+
+    Examples
+    --------
+    Load settings from environment and create a client:
+
+    >>> from openai_sdk_helpers import OpenAISettings
+    >>> settings = OpenAISettings.from_env()
+    >>> client = settings.create_client()
+
+    Override specific settings:
+
+    >>> settings = OpenAISettings.from_env(
+    ...     default_model="gpt-4o",
+    ...     timeout=60.0
+    ... )
+
     Methods
     -------
     from_env(dotenv_path, **overrides)

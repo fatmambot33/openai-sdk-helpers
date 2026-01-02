@@ -14,6 +14,34 @@ from .prompt_utils import DEFAULT_PROMPT_DIR
 class ValidatorAgent(AgentBase):
     """Check user prompts and agent responses against safety guardrails.
 
+    This agent validates inputs and outputs to ensure they comply with safety
+    policies and usage guidelines, returning structured validation results with
+    recommended actions.
+
+    Examples
+    --------
+    Validate user input:
+
+    >>> from openai_sdk_helpers.agent import ValidatorAgent
+    >>> validator = ValidatorAgent(default_model="gpt-4o-mini")
+    >>> result = validator.run_sync("Tell me about Python programming")
+    >>> print(result.input_safe)  # True
+    >>> print(result.violations)  # []
+
+    Validate both input and output:
+
+    >>> import asyncio
+    >>> async def main():
+    ...     validator = ValidatorAgent(default_model="gpt-4o-mini")
+    ...     result = await validator.run_agent(
+    ...         user_input="Summarize this document",
+    ...         agent_output="Summary containing PII...",
+    ...         policy_notes="No PII in outputs"
+    ...     )
+    ...     if not result.output_safe:
+    ...         print(result.sanitized_output)
+    >>> asyncio.run(main())
+
     Methods
     -------
     run_agent(user_input, agent_output, policy_notes, extra_context)

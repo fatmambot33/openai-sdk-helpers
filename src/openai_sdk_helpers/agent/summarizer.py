@@ -14,6 +14,31 @@ from .prompt_utils import DEFAULT_PROMPT_DIR
 class SummarizerAgent(AgentBase):
     """Generate concise summaries from provided text.
 
+    This agent uses OpenAI models to create structured summaries from longer-form
+    content. The output follows the ``SummaryStructure`` format by default but
+    can be customized with a different output type.
+
+    Examples
+    --------
+    Basic usage with default settings:
+
+    >>> from openai_sdk_helpers.agent import SummarizerAgent
+    >>> summarizer = SummarizerAgent(default_model="gpt-4o-mini")
+    >>> summary = summarizer.run_sync("Long text to summarize...")
+    >>> print(summary.text)
+
+    With custom metadata:
+
+    >>> import asyncio
+    >>> async def main():
+    ...     summarizer = SummarizerAgent(default_model="gpt-4o-mini")
+    ...     result = await summarizer.run_agent(
+    ...         text="Article content...",
+    ...         metadata={"source": "news.txt", "date": "2025-01-01"}
+    ...     )
+    ...     return result
+    >>> asyncio.run(main())
+
     Methods
     -------
     run_agent(text, metadata)

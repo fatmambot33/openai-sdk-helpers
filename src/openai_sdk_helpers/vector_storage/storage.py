@@ -44,6 +44,29 @@ ALLOWED_TEXT_MIME_TYPES = {
 class VectorStorage:
     """Manage an OpenAI vector store.
 
+    This class provides a high-level interface for managing OpenAI vector stores,
+    including file uploads, deletions, and semantic search operations. It handles
+    file caching, concurrent uploads, and automatic store creation.
+
+    Examples
+    --------
+    Basic usage:
+
+    >>> from openai_sdk_helpers.vector_storage import VectorStorage
+    >>> storage = VectorStorage(store_name="documents")
+    >>> storage.upload_file("research.pdf")
+    >>> results = storage.search("machine learning algorithms", top_k=5)
+
+    Batch file upload:
+
+    >>> patterns = ["docs/*.pdf", "papers/*.txt"]
+    >>> stats = storage.upload_files(patterns, overwrite=False)
+    >>> print(f"Uploaded {stats.uploaded} files")
+
+    Clean up:
+
+    >>> storage.delete()  # Delete entire store and files
+
     Methods
     -------
     id()

@@ -13,6 +13,32 @@ from .prompt_utils import DEFAULT_PROMPT_DIR
 class TranslatorAgent(AgentBase):
     """Translate text into a target language.
 
+    This agent provides language translation services using OpenAI models,
+    supporting both synchronous and asynchronous execution modes.
+
+    Examples
+    --------
+    Basic translation:
+
+    >>> from openai_sdk_helpers.agent import TranslatorAgent
+    >>> translator = TranslatorAgent(default_model="gpt-4o-mini")
+    >>> result = translator.run_sync("Hello world", target_language="Spanish")
+    >>> print(result)
+    'Hola mundo'
+
+    Async translation with context:
+
+    >>> import asyncio
+    >>> async def main():
+    ...     translator = TranslatorAgent(default_model="gpt-4o-mini")
+    ...     result = await translator.run_agent(
+    ...         text="Good morning",
+    ...         target_language="French",
+    ...         context={"formality": "formal"}
+    ...     )
+    ...     return result
+    >>> asyncio.run(main())
+
     Methods
     -------
     run_agent(text, target_language, context)

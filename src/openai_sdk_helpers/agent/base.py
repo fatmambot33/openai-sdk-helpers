@@ -30,6 +30,32 @@ class AgentConfigLike(Protocol):
 class AgentBase:
     """Factory for creating and configuring specialized agents.
 
+    ``AgentBase`` provides the foundation for building OpenAI agents with support
+    for Jinja2 prompt templates, custom tools, and both synchronous and
+    asynchronous execution modes. All specialized agents in this package extend
+    this base class.
+
+    Examples
+    --------
+    Create a basic agent from configuration:
+
+    >>> from openai_sdk_helpers.agent import AgentBase, AgentConfig
+    >>> config = AgentConfig(
+    ...     name="my_agent",
+    ...     description="A custom agent",
+    ...     model="gpt-4o-mini"
+    ... )
+    >>> agent = AgentBase(config=config, default_model="gpt-4o-mini")
+    >>> result = agent.run_sync("What is 2+2?")
+
+    Use async execution:
+
+    >>> import asyncio
+    >>> async def main():
+    ...     result = await agent.run_async("Explain quantum physics")
+    ...     return result
+    >>> asyncio.run(main())
+
     Methods
     -------
     from_config(config, run_context_wrapper)

@@ -299,6 +299,32 @@ class VectorSearchWriter(AgentBase):
 class VectorSearch(AgentBase):
     """Manage the complete vector search workflow.
 
+    This high-level agent orchestrates a multi-step research process that plans
+    searches, executes them concurrently against a vector store, and generates
+    comprehensive reports. It combines ``VectorSearchPlanner``,
+    ``VectorSearchTool``, and ``VectorSearchWriter`` into a single workflow.
+
+    Examples
+    --------
+    Basic vector search:
+
+    >>> from pathlib import Path
+    >>> from openai_sdk_helpers.agent.vector_search import VectorSearch
+    >>> prompts = Path("./prompts")
+    >>> search = VectorSearch(prompt_dir=prompts, default_model="gpt-4o-mini")
+    >>> result = search.run_agent_sync("What are the key findings in recent AI research?")
+    >>> print(result.report.report)
+
+    Custom vector store:
+
+    >>> from openai_sdk_helpers.vector_storage import VectorStorage
+    >>> storage = VectorStorage(store_name="research_papers")
+    >>> search = VectorSearch(
+    ...     default_model="gpt-4o-mini",
+    ...     vector_storage=storage,
+    ...     max_concurrent_searches=5
+    ... )
+
     Methods
     -------
     run_agent(search_query)

@@ -18,7 +18,26 @@ class PromptRenderer:
 
     The renderer loads templates from a base directory (defaulting to the
     ``prompt`` package directory) and exposes a rendering helper for
-    injecting context values.
+    injecting context values. This is the foundation for dynamic prompt
+    generation across all agents.
+
+    Examples
+    --------
+    Basic template rendering:
+
+    >>> from pathlib import Path
+    >>> from openai_sdk_helpers.prompt import PromptRenderer
+    >>> renderer = PromptRenderer(base_dir=Path("./templates"))
+    >>> prompt = renderer.render(
+    ...     "greeting.jinja",
+    ...     context={"name": "Alice", "language": "English"}
+    ... )
+    >>> print(prompt)
+
+    Using default prompt directory:
+
+    >>> renderer = PromptRenderer()  # Uses built-in templates
+    >>> prompt = renderer.render("summarizer.jinja", context={})
 
     Methods
     -------
