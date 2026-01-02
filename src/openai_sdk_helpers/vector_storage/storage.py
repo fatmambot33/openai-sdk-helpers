@@ -15,7 +15,7 @@ from openai.types.vector_store import VectorStore
 from openai.types.vector_store_search_response import VectorStoreSearchResponse
 from tqdm import tqdm
 
-from ..types import OpenAIClientLike
+from ..types import OpenAIClient
 from ..utils import ensure_list, log
 from .types import VectorStorageFileInfo, VectorStorageFileStats
 
@@ -69,7 +69,7 @@ class VectorStorage:
     def __init__(
         self,
         store_name: str,
-        client: Optional[OpenAIClientLike] = None,
+        client: Optional[OpenAIClient] = None,
         model: Optional[str] = None,
     ) -> None:
         """Initialize the vector store helper.
@@ -90,7 +90,7 @@ class VectorStorage:
         RuntimeError
             If the OpenAI client cannot be initialized.
         """
-        self._client: OpenAIClientLike
+        self._client: OpenAIClient
         if client is None:
             api_key = os.getenv("OPENAI_API_KEY")
             if api_key is None:

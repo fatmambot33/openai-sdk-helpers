@@ -16,7 +16,7 @@ class SupportsOpenAIClient(Protocol):
     files: Any
 
 
-OpenAIClientLike = Union[OpenAI, SupportsOpenAIClient]
+OpenAIClient = Union[OpenAI, SupportsOpenAIClient]
 
 
-__all__ = ["SupportsOpenAIClient", "OpenAIClientLike"]
+__all__ = ["SupportsOpenAIClient", "OpenAIClient"]

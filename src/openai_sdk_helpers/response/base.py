@@ -36,7 +36,7 @@ from openai.types.responses.response_output_message import ResponseOutputMessage
 
 from .messages import ResponseMessage, ResponseMessages
 from ..structure import BaseStructure
-from ..types import OpenAIClientLike
+from ..types import OpenAIClient
 from ..utils import ensure_list, log
 
 if TYPE_CHECKING:
@@ -82,7 +82,7 @@ class BaseResponse(Generic[T]):
         tool_handlers: dict[str, ToolHandler],
         process_content: Optional[ProcessContent] = None,
         module_name: Optional[str] = None,
-        client: Optional[OpenAIClientLike] = None,
+        client: Optional[OpenAIClient] = None,
         model: Optional[str] = None,
         api_key: Optional[str] = None,
         system_vector_store: Optional[list[str]] = None,
@@ -136,7 +136,7 @@ class BaseResponse(Generic[T]):
         self._tools = tools if tools is not None else []
         self._schema = schema
         self._output_structure = output_structure
-        self._client: OpenAIClientLike
+        self._client: OpenAIClient
         if client is None:
             if api_key is None:
                 raise ValueError("OpenAI API key is required")
