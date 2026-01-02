@@ -36,6 +36,7 @@ from openai.types.responses.response_output_message import ResponseOutputMessage
 
 from .messages import ResponseMessage, ResponseMessages
 from ..structure import BaseStructure
+from ..types import OpenAIClientLike
 from ..utils import ensure_list, log
 
 if TYPE_CHECKING:
@@ -81,11 +82,10 @@ class BaseResponse(Generic[T]):
         tool_handlers: dict[str, ToolHandler],
         process_content: Optional[ProcessContent] = None,
         module_name: Optional[str] = None,
-        vector_storage_cls: Optional[type] = None,
-        client: Optional[OpenAI] = None,
+        client: Optional[OpenAIClientLike] = None,
         model: Optional[str] = None,
         api_key: Optional[str] = None,
-        attachments: Optional[Union[Tuple[str, str], list[Tuple[str, str]]]] = None,
+        system_vector_store: Optional[list[str]] = None,
         data_path_fn: Optional[Callable[[str], Path]] = None,
         save_path: Optional[Path | str] = None,
     ) -> None:
@@ -107,10 +107,8 @@ class BaseResponse(Generic[T]):
             Callback that cleans input text and extracts attachments.
         module_name : str, optional
             Module name used to build the data path.
-        vector_storage_cls : type, optional
-            Vector storage class used for file uploads.
-        client : OpenAI or None, default=None
-            Optional pre-initialized OpenAI client.
+        client : OpenAI | SupportsOpenAIClient or None, default=None
+            Optional pre-initialized OpenAI-compatible client.
         model : str or None, default=None
             Optional OpenAI model name override.
         api_key : str or None, default=None
@@ -132,16 +130,13 @@ class BaseResponse(Generic[T]):
         self._tool_handlers = tool_handlers
         self._process_content = process_content
         self._module_name = module_name
-        self._vector_storage_cls = vector_storage_cls
         self._data_path_fn = data_path_fn
         self._save_path = Path(save_path) if save_path is not None else None
         self._instructions = instructions
         self._tools = tools if tools is not None else []
         self._schema = schema
         self._output_structure = output_structure
-        self._cleanup_user_vector_storage = False
-        self._cleanup_system_vector_storage = False
-
+        self._client: OpenAIClientLike
         if client is None:
             if api_key is None:
                 raise ValueError("OpenAI API key is required")
@@ -163,41 +158,21 @@ class BaseResponse(Generic[T]):
             ResponseInputTextParam(type="input_text", text=instructions)
         ]
 
-        self._system_vector_storage: Optional[Any] = None
         self._user_vector_storage: Optional[Any] = None
 
-        if attachments:
-            if self._vector_storage_cls is None:
-                raise RuntimeError("vector_storage_cls is required for attachments.")
-            self.file_objects: dict[str, List[str]] = {}
-            storage_name = f"{self.__class__.__name__.lower()}_{self.name}_system"
-            self._system_vector_storage = self._vector_storage_cls(
-                store_name=storage_name, client=self._client, model=self._model
+        # New logic: system_vector_store is a list of vector store names to attach
+        if system_vector_store:
+            from .vector_store import attach_vector_store
+
+            attach_vector_store(
+                self,
+                system_vector_store,
+                api_key=(
+                    self._client.api_key
+                    if hasattr(self._client, "api_key")
+                    else api_key
+                ),
             )
-            self._cleanup_system_vector_storage = True
-            system_vector_storage = cast(Any, self._system_vector_storage)
-            for file_path, tool_type in attachments:
-                uploaded_file = system_vector_storage.upload_file(file_path=file_path)
-                self.file_objects.setdefault(tool_type, []).append(uploaded_file.id)
-
-            self.tool_resources = {}
-            required_tools = []
-
-            for tool_type, file_ids in self.file_objects.items():
-                required_tools.append({"type": tool_type})
-                self.tool_resources[tool_type] = {"file_ids": file_ids}
-                if tool_type == "file_search":
-                    self.tool_resources[tool_type]["vector_store_ids"] = [
-                        system_vector_storage.id
-                    ]
-
-            existing_tool_types = {tool["type"] for tool in self._tools}
-            for tool in required_tools:
-                tool_type = tool["type"]
-                if tool_type == "file_search":
-                    tool["vector_store_ids"] = [system_vector_storage.id]
-                if tool_type not in existing_tool_types:
-                    self._tools.append(tool)
 
         self.messages = ResponseMessages()
         self.messages.add_system_message(content=system_content)
@@ -251,17 +226,14 @@ class BaseResponse(Generic[T]):
 
             for file_path in all_attachments:
                 if self._user_vector_storage is None:
-                    if self._vector_storage_cls is None:
-                        raise RuntimeError(
-                            "vector_storage_cls is required for attachments."
-                        )
+                    from openai_sdk_helpers.vector_storage import VectorStorage
+
                     store_name = f"{self.__class__.__name__.lower()}_{self.name}_{self.uuid}_user"
-                    self._user_vector_storage = self._vector_storage_cls(
+                    self._user_vector_storage = VectorStorage(
                         store_name=store_name,
                         client=self._client,
                         model=self._model,
                     )
-                    self._cleanup_user_vector_storage = True
                     user_vector_storage = cast(Any, self._user_vector_storage)
                     if not any(
                         tool.get("type") == "file_search" for tool in self._tools
@@ -273,13 +245,8 @@ class BaseResponse(Generic[T]):
                             }
                         )
                     else:
-                        for tool in self._tools:
-                            if tool.get("type") == "file_search":
-                                if self._system_vector_storage is not None:
-                                    tool["vector_store_ids"] = [
-                                        cast(Any, self._system_vector_storage).id,
-                                        user_vector_storage.id,
-                                    ]
+                        # If system vector store is attached, its ID will be in tool config
+                        pass
                 user_vector_storage = cast(Any, self._user_vector_storage)
                 uploaded_file = user_vector_storage.upload_file(file_path)
                 input_content.append(
@@ -575,16 +542,12 @@ class BaseResponse(Generic[T]):
         """Delete managed vector stores and clean up the session."""
         log(f"Closing session {self.uuid} for {self.__class__.__name__}")
         self.save()
+        # Always clean user vector storage if it exists
         try:
-            if self._user_vector_storage and self._cleanup_user_vector_storage:
+            if self._user_vector_storage:
                 self._user_vector_storage.delete()
                 log("User vector store deleted.")
         except Exception as exc:
             log(f"Error deleting user vector store: {exc}", level=logging.WARNING)
-        try:
-            if self._system_vector_storage and self._cleanup_system_vector_storage:
-                self._system_vector_storage.delete()
-                log("System vector store deleted.")
-        except Exception as exc:
-            log(f"Error deleting system vector store: {exc}", level=logging.WARNING)
+        # System vector store cleanup is now handled via tool configuration
         log(f"Session {self.uuid} closed.")

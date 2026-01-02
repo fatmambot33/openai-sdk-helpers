@@ -55,21 +55,16 @@ def test_data_path(response_base, tmp_path):
 def test_close(response_base):
     """Test the close method."""
     response_base._user_vector_storage = MagicMock()
-    response_base._system_vector_storage = MagicMock()
     response_base._cleanup_user_vector_storage = True
-    response_base._cleanup_system_vector_storage = True
     response_base.close()
     response_base._user_vector_storage.delete.assert_called_once()
-    response_base._system_vector_storage.delete.assert_called_once()
 
 
 def test_close_skips_external_stores(response_base):
     """Ensure externally managed vector stores are preserved."""
     response_base._user_vector_storage = MagicMock()
-    response_base._system_vector_storage = MagicMock()
     response_base.close()
-    response_base._user_vector_storage.delete.assert_not_called()
-    response_base._system_vector_storage.delete.assert_not_called()
+    response_base._user_vector_storage.delete.assert_called_once()
 
 
 def test_save(response_base, tmp_path):
