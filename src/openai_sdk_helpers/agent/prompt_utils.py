@@ -1,4 +1,10 @@
-"""Shared helpers for locating bundled prompt templates."""
+"""Shared helpers for locating bundled prompt templates.
+
+Attributes
+----------
+DEFAULT_PROMPT_DIR : Path
+    Default directory containing bundled prompt templates.
+"""
 
 from __future__ import annotations
 

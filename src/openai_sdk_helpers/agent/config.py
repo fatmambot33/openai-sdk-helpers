@@ -11,12 +11,12 @@ from ..structure import BaseStructure
 
 
 class AgentConfig(BaseStructure):
-    """Configuration required to build a :class:`AgentBase`.
+    """Configuration required to build an AgentBase.
 
     Methods
     -------
     print()
-        Return a human readable representation of the configuration.
+        Return a human-readable representation of the configuration.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -53,7 +53,7 @@ class AgentConfig(BaseStructure):
     )
 
     def print(self) -> str:
-        """Return a human readable representation.
+        """Return a human-readable representation.
 
         Returns
         -------

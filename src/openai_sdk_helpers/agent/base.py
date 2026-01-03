@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-import asyncio
-import threading
 from pathlib import Path
 from typing import Any, Dict, Optional, Protocol
 
-from agents import Agent, Runner, RunResult, RunResultStreaming
+from agents import Agent, RunResult, RunResultStreaming, Runner
 from agents.run_context import RunContextWrapper
 from agents.tool import FunctionTool
 from jinja2 import Template
-from .runner import run_sync, run_streamed, run_async
+
+from .runner import run_async, run_streamed, run_sync
 
 
 class AgentConfigLike(Protocol):
@@ -94,26 +93,21 @@ class AgentBase:
         prompt_dir: Optional[Path] = None,
         default_model: Optional[str] = None,
     ) -> None:
-        """Initialize the ``AgentBase`` using a configuration object.
+        """Initialize the AgentBase using a configuration object.
 
         Parameters
         ----------
-        config
+        config : AgentConfigLike
             Configuration describing this agent.
-        run_context_wrapper
+        run_context_wrapper : RunContextWrapper or None, default=None
             Optional wrapper providing runtime context for prompt rendering.
-            Default ``None``.
-        prompt_dir
+        prompt_dir : Path or None, default=None
             Optional directory holding prompt templates. Used when
             ``config.template_path`` is not provided or is relative. If
             ``config.template_path`` is an absolute path, this parameter is
             ignored.
-        default_model
+        default_model : str or None, default=None
             Optional fallback model identifier if the config does not supply one.
-
-        Returns
-        -------
-        None
         """
         name = config.name
         description = config.description or ""
@@ -155,21 +149,21 @@ class AgentBase:
         run_context_wrapper: Optional[RunContextWrapper[Dict[str, Any]]] = None,
         prompt_dir: Optional[Path] = None,
         default_model: Optional[str] = None,
-    ) -> "AgentBase":
-        """Create a :class:`AgentBase` instance from configuration.
+    ) -> AgentBase:
+        """Create an AgentBase instance from configuration.
 
         Parameters
         ----------
-        config
+        config : AgentConfigLike
             Configuration describing the agent.
-        run_context_wrapper
-            Optional wrapper providing runtime context. Default ``None``.
-        prompt_dir
+        run_context_wrapper : RunContextWrapper or None, default=None
+            Optional wrapper providing runtime context.
+        prompt_dir : Path or None, default=None
             Optional directory holding prompt templates. Used when
             ``config.template_path`` is not provided or is relative. If
             ``config.template_path`` is an absolute path, this parameter is
             ignored.
-        default_model
+        default_model : str or None, default=None
             Optional fallback model identifier.
 
         Returns
@@ -185,7 +179,7 @@ class AgentBase:
         )
 
     def _build_prompt_from_jinja(self) -> str:
-        """Return the rendered instructions prompt for this agent.
+        """Render the instructions prompt for this agent.
 
         Returns
         -------
@@ -203,9 +197,9 @@ class AgentBase:
 
         Parameters
         ----------
-        run_context_wrapper
+        run_context_wrapper : RunContextWrapper or None, default=None
             Wrapper whose ``context`` dictionary is used to render the Jinja
-            template. Default ``None``.
+            template.
 
         Returns
         -------
@@ -225,11 +219,11 @@ class AgentBase:
 
         Parameters
         ----------
-        run_context_wrapper
+        run_context_wrapper : RunContextWrapper
             Wrapper around the current run context whose ``context`` dictionary
             is used to render the Jinja template.
-        _
-            Underlying :class:`agents.Agent` instance (ignored).
+        _ : Agent
+            Underlying Agent instance (ignored).
 
         Returns
         -------
@@ -270,12 +264,12 @@ class AgentBase:
 
         Parameters
         ----------
-        input
+        input : str
             Prompt or query for the agent.
-        context
-            Optional dictionary passed to the agent. Default ``None``.
-        output_type
-            Optional type used to cast the final output. Default ``None``.
+        context : dict or None, default=None
+            Optional dictionary passed to the agent.
+        output_type : type or None, default=None
+            Optional type used to cast the final output.
 
         Returns
         -------
@@ -301,12 +295,12 @@ class AgentBase:
 
         Parameters
         ----------
-        input
+        input : str
             Prompt or query for the agent.
-        context
-            Optional dictionary passed to the agent. Default ``None``.
-        output_type
-            Optional type used to cast the final output. Default ``None``.
+        context : dict or None, default=None
+            Optional dictionary passed to the agent.
+        output_type : type or None, default=None
+            Optional type used to cast the final output.
 
         Returns
         -------
@@ -326,16 +320,16 @@ class AgentBase:
         context: Optional[Dict[str, Any]] = None,
         output_type: Optional[Any] = None,
     ) -> RunResultStreaming:
-        """Return a streaming result for the agent execution.
+        """Stream the agent execution results.
 
         Parameters
         ----------
-        input
+        input : str
             Prompt or query for the agent.
-        context
-            Optional dictionary passed to the agent. Default ``None``.
-        output_type
-            Optional type used to cast the final output. Default ``None``.
+        context : dict or None, default=None
+            Optional dictionary passed to the agent.
+        output_type : type or None, default=None
+            Optional type used to cast the final output.
 
         Returns
         -------

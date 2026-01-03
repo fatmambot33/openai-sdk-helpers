@@ -58,15 +58,11 @@ class ValidatorAgent(AgentBase):
 
         Parameters
         ----------
-        prompt_dir : pathlib.Path or None, default=None
+        prompt_dir : Path or None, default=None
             Optional directory containing Jinja prompt templates. Defaults to the
             packaged ``prompt`` directory when not provided.
         default_model : str or None, default=None
             Fallback model identifier when not specified elsewhere.
-
-        Returns
-        -------
-        None
         """
         config = AgentConfig(
             name="validator",
@@ -92,13 +88,13 @@ class ValidatorAgent(AgentBase):
         ----------
         user_input : str
             Raw input provided by the user for the agent to evaluate.
-        agent_output : str, optional
+        agent_output : str or None, optional
             Latest agent response to validate against safety guardrails.
             Default ``None`` when only the input should be assessed.
-        policy_notes : str, optional
+        policy_notes : str or None, optional
             Additional policy snippets or guardrail expectations to reinforce.
             Default ``None``.
-        extra_context : dict, optional
+        extra_context : dict or None, optional
             Additional fields to merge into the validation context. Default ``None``.
 
         Returns

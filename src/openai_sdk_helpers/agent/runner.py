@@ -1,16 +1,17 @@
 """Convenience wrappers for running OpenAI agents.
 
-These helpers provide a narrow surface around the lower-level functions in
-``openai-sdk-helpers.agent.base`` so that callers can execute agents with consistent
+These helpers provide a consistent interface around the lower-level functions in
+the ``agent.base`` module, allowing callers to execute agents with consistent
 signatures whether they need asynchronous, synchronous, or streamed results.
 """
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
 import asyncio
 import threading
-from agents import Agent, Runner, RunResult, RunResultStreaming
+from typing import Any, Dict, Optional
+
+from agents import Agent, RunResult, RunResultStreaming, Runner
 
 
 async def _run_async(
@@ -19,18 +20,18 @@ async def _run_async(
     context: Optional[Dict[str, Any]] = None,
     output_type: Optional[Any] = None,
 ) -> Any:
-    """Run an ``Agent`` asynchronously.
+    """Run an Agent asynchronously.
 
     Parameters
     ----------
-    agent
+    agent : Agent
         Configured agent instance to execute.
-    input
+    input : str
         Prompt or query string for the agent.
-    context
-        Optional context dictionary passed to the agent. Default ``None``.
-    output_type
-        Optional type used to cast the final output. Default ``None``.
+    context : dict or None, default=None
+        Optional context dictionary passed to the agent.
+    output_type : type or None, default=None
+        Optional type used to cast the final output.
 
     Returns
     -------
@@ -48,16 +49,16 @@ def _run_sync(
     input: str,
     context: Optional[Dict[str, Any]] = None,
 ) -> RunResult:
-    """Run an ``Agent`` synchronously.
+    """Run an Agent synchronously.
 
     Parameters
     ----------
-    agent
+    agent : Agent
         Configured agent instance to execute.
-    input
+    input : str
         Prompt or query string for the agent.
-    context
-        Optional context dictionary passed to the agent. Default ``None``.
+    context : dict or None, default=None
+        Optional context dictionary passed to the agent.
 
     Returns
     -------
@@ -92,16 +93,16 @@ def _run_streamed(
     input: str,
     context: Optional[Dict[str, Any]] = None,
 ) -> RunResultStreaming:
-    """Run an ``Agent`` synchronously and return a streaming result.
+    """Stream agent execution results.
 
     Parameters
     ----------
-    agent
+    agent : Agent
         Configured agent to execute.
-    input
+    input : str
         Prompt or query string for the agent.
-    context
-        Optional context dictionary passed to the agent. Default ``None``.
+    context : dict or None, default=None
+        Optional context dictionary passed to the agent.
 
     Returns
     -------
@@ -118,18 +119,18 @@ async def run_async(
     context: Optional[Dict[str, Any]] = None,
     output_type: Optional[Any] = None,
 ) -> Any:
-    """Run an ``Agent`` asynchronously.
+    """Run an Agent asynchronously.
 
     Parameters
     ----------
-    agent
+    agent : Agent
         Configured agent instance to execute.
-    input
+    input : str
         Prompt or query string for the agent.
-    context
-        Optional context dictionary passed to the agent. Default ``None``.
-    output_type
-        Optional type used to cast the final output. Default ``None``.
+    context : dict or None, default=None
+        Optional context dictionary passed to the agent.
+    output_type : type or None, default=None
+        Optional type used to cast the final output.
 
     Returns
     -------
@@ -150,18 +151,18 @@ def run_sync(
     context: Optional[Dict[str, Any]] = None,
     output_type: Optional[Any] = None,
 ) -> Any:
-    """Run an ``Agent`` synchronously.
+    """Run an Agent synchronously.
 
     Parameters
     ----------
-    agent
+    agent : Agent
         Configured agent instance to execute.
-    input
+    input : str
         Prompt or query string for the agent.
-    context
-        Optional context dictionary passed to the agent. Default ``None``.
-    output_type
-        Optional type used to cast the final output. Default ``None``.
+    context : dict or None, default=None
+        Optional context dictionary passed to the agent.
+    output_type : type or None, default=None
+        Optional type used to cast the final output.
 
     Returns
     -------
@@ -184,18 +185,18 @@ def run_streamed(
     context: Optional[Dict[str, Any]] = None,
     output_type: Optional[Any] = None,
 ) -> RunResultStreaming:
-    """Run an ``Agent`` and return a streaming result.
+    """Stream agent execution results.
 
     Parameters
     ----------
-    agent
+    agent : Agent
         Configured agent instance to execute.
-    input
+    input : str
         Prompt or query string for the agent.
-    context
-        Optional context dictionary passed to the agent. Default ``None``.
-    output_type
-        Optional type used to cast the final output. Default ``None``.
+    context : dict or None, default=None
+        Optional context dictionary passed to the agent.
+    output_type : type or None, default=None
+        Optional type used to cast the final output.
 
     Returns
     -------

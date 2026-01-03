@@ -57,15 +57,11 @@ class TranslatorAgent(AgentBase):
 
         Parameters
         ----------
-        prompt_dir : pathlib.Path or None, default=None
+        prompt_dir : Path or None, default=None
             Optional directory containing Jinja prompt templates. Defaults to the
             packaged ``prompt`` directory when not provided.
         default_model : str or None, default=None
             Fallback model identifier when not specified elsewhere.
-
-        Returns
-        -------
-        None
         """
         config = AgentConfig(
             name="translator",
@@ -91,8 +87,8 @@ class TranslatorAgent(AgentBase):
             Source content to translate.
         target_language : str
             Language to translate the content into.
-        context : dict, optional
-            Additional context values to merge into the prompt. Default ``None``.
+        context : dict or None, default=None
+            Additional context values to merge into the prompt.
 
         Returns
         -------
@@ -125,21 +121,26 @@ class TranslatorAgent(AgentBase):
         ----------
         input : str
             Source content to translate.
-        context : dict, optional
-            Additional context values to merge into the prompt. Default ``None``.
-        output_type : type or None, optional
-            Optional output type cast for the response. Default ``None``.
-        target_language : str, optional
+        context : dict or None, default=None
+            Additional context values to merge into the prompt.
+        output_type : type or None, default=None
+            Optional output type cast for the response.
+        target_language : str or None, optional
             Target language to translate the content into. Required unless supplied
             within ``context`` or ``kwargs``.
         **kwargs
             Optional keyword arguments. ``context`` is accepted as an alias for
-            ``context`` for backward compatibility.
+            backward compatibility.
 
         Returns
         -------
         str
             Translated text returned by the agent.
+
+        Raises
+        ------
+        ValueError
+            If ``target_language`` is not provided.
         """
         merged_context: Dict[str, Any] = {}
 

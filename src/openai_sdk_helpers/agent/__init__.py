@@ -5,7 +5,7 @@ from __future__ import annotations
 from .base import AgentBase
 from .config import AgentConfig
 from ..structure.plan.enum import AgentEnum
-from .project_manager import ProjectManager
+from .coordination import CoordinatorAgent
 from .runner import run_sync, run_async, run_streamed
 from .summarizer import SummarizerAgent
 from .translator import TranslatorAgent
@@ -18,7 +18,7 @@ __all__ = [
     "AgentBase",
     "AgentConfig",
     "AgentEnum",
-    "ProjectManager",
+    "CoordinatorAgent",
     "run_sync",
     "run_async",
     "run_streamed",

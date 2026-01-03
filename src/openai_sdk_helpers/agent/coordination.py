@@ -24,7 +24,7 @@ ExecutePlanFn = Callable[[PlanStructure], List[str]]
 SummarizeFn = Callable[[List[str]], str]
 
 
-class ProjectManager(AgentBase, JSONSerializable):
+class CoordinatorAgent(AgentBase, JSONSerializable):
     """Coordinate agent plans while persisting project state and outputs.
 
     Methods
@@ -63,28 +63,24 @@ class ProjectManager(AgentBase, JSONSerializable):
 
         Parameters
         ----------
-        prompt_fn
+        prompt_fn : PromptFn
             Callable that generates a prompt brief from the input string.
-        build_plan_fn
+        build_plan_fn : BuildPlanFn
             Callable that generates a plan from the prompt brief.
-        execute_plan_fn
+        execute_plan_fn : ExecutePlanFn
             Callable that executes a plan and returns results.
-        summarize_fn
+        summarize_fn : SummarizeFn
             Callable that summarizes a list of result strings.
-        module_data_path
+        module_data_path : Path
             Base path for persisting project artifacts.
-        name
+        name : str
             Name of the parent module for data organization.
-        config
+        config : AgentConfig or None, default=None
             Optional agent configuration describing prompts and metadata.
-        prompt_dir
+        prompt_dir : Path or None, default=None
             Optional directory holding prompt templates.
-        default_model
+        default_model : str or None, default=None
             Optional fallback model identifier.
-
-        Returns
-        -------
-        None
         """
         if config is None:
             config = AgentConfig(
@@ -109,16 +105,12 @@ class ProjectManager(AgentBase, JSONSerializable):
         self.end_date: Optional[datetime] = None
 
     def build_prompt(self, prompt: str) -> None:
-        """Return a concise brief for the project.
+        """Generate a concise brief for the project.
 
         Parameters
         ----------
         prompt : str
             The core request or goal for the project.
-
-        Returns
-        -------
-        None
         """
         log("build_prompt", level=logging.INFO)
         self.start_date = datetime.now(timezone.utc)
@@ -133,10 +125,6 @@ class ProjectManager(AgentBase, JSONSerializable):
         ------
         ValueError
             If called before :meth:`build_prompt`.
-
-        Returns
-        -------
-        None
         """
         log("build_plan", level=logging.INFO)
         if not self.brief:
@@ -148,7 +136,7 @@ class ProjectManager(AgentBase, JSONSerializable):
         self.save()
 
     def execute_plan(self) -> List[str]:
-        """Run each task, updating status, timestamps, and recorded results.
+        """Execute each task, updating status, timestamps, and recorded results.
 
         Returns
         -------
@@ -169,9 +157,9 @@ class ProjectManager(AgentBase, JSONSerializable):
 
         Parameters
         ----------
-        results : list[str], optional
-            List of string outputs gathered from task execution. Defaults to
-            ``None``, which uses the stored plan task results if available.
+        results : list[str] or None, default=None
+            List of string outputs gathered from task execution. When ``None``,
+            uses the stored plan task results if available.
 
         Returns
         -------
@@ -202,10 +190,6 @@ class ProjectManager(AgentBase, JSONSerializable):
         ----------
         prompt : str
             The request or question to analyze and summarize.
-
-        Returns
-        -------
-        None
         """
         self.build_prompt(prompt)
         self.build_plan()
@@ -259,7 +243,7 @@ class ProjectManager(AgentBase, JSONSerializable):
         Any
             Raw output from the underlying callable.
         """
-        task_type = ProjectManager._normalize_task_type(task.task_type)
+        task_type = CoordinatorAgent._normalize_task_type(task.task_type)
         prompt_with_context = task.prompt
         if aggregated_context and task_type not in {"WebAgentSearch", "VectorSearch"}:
             context_block = "\n".join(aggregated_context)
@@ -284,7 +268,7 @@ class ProjectManager(AgentBase, JSONSerializable):
                 level=logging.ERROR,
             )
             return f"Task error: {exc}"
-        return ProjectManager._resolve_result(output)
+        return CoordinatorAgent._resolve_result(output)
 
     @staticmethod
     def _run_task_in_thread(
@@ -312,7 +296,7 @@ class ProjectManager(AgentBase, JSONSerializable):
 
         def _runner() -> None:
             try:
-                result_container["result"] = ProjectManager._run_task(
+                result_container["result"] = CoordinatorAgent._run_task(
                     task,
                     agent_callable=agent_callable,
                     aggregated_context=aggregated_context,
@@ -363,14 +347,14 @@ class ProjectManager(AgentBase, JSONSerializable):
                         "await the task instead."
                     )
                 return asyncio.run_coroutine_threadsafe(
-                    ProjectManager._await_wrapper(result), owning_loop
+                    CoordinatorAgent._await_wrapper(result), owning_loop
                 ).result()
 
         awaitable: asyncio.Future[Any] | asyncio.Task[Any] | Any = result
         coroutine = (
             awaitable
             if inspect.iscoroutine(awaitable)
-            else ProjectManager._await_wrapper(awaitable)
+            else CoordinatorAgent._await_wrapper(awaitable)
         )
 
         try:
@@ -394,7 +378,7 @@ class ProjectManager(AgentBase, JSONSerializable):
 
     @staticmethod
     async def _await_wrapper(awaitable: Any) -> Any:
-        """Await a generic awaitable and return its result.
+        """Resolve an awaitable and return its result.
 
         Parameters
         ----------
@@ -480,7 +464,7 @@ class ProjectManager(AgentBase, JSONSerializable):
         str
             Lowercase label safe for filesystem usage.
         """
-        task_type = ProjectManager._normalize_task_type(task.task_type)
+        task_type = CoordinatorAgent._normalize_task_type(task.task_type)
         base = (task_type or "task").replace(" ", "_").lower()
         return f"{base}_{task_type}"
 
@@ -508,4 +492,4 @@ class ProjectManager(AgentBase, JSONSerializable):
             return str(task_type)
 
 
-__all__ = ["ProjectManager"]
+__all__ = ["CoordinatorAgent"]

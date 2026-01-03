@@ -56,17 +56,13 @@ class SummarizerAgent(AgentBase):
 
         Parameters
         ----------
-        prompt_dir : pathlib.Path or None, default=None
+        prompt_dir : Path or None, default=None
             Optional directory containing Jinja prompt templates. Defaults to the
             packaged ``prompt`` directory when not provided.
         default_model : str or None, default=None
             Fallback model identifier when not specified elsewhere.
         output_type : type, default=SummaryStructure
             Type describing the expected summary output.
-
-        Returns
-        -------
-        None
         """
         config = AgentConfig(
             name="summarizer",
@@ -81,14 +77,14 @@ class SummarizerAgent(AgentBase):
     async def run_agent(
         self, text: str, metadata: Optional[Dict[str, Any]] = None
     ) -> Any:
-        """Return a summary for ``text``.
+        """Generate a summary for ``text``.
 
         Parameters
         ----------
         text : str
             Source content to summarize.
-        metadata : dict, optional
-            Additional metadata to include in the prompt context. Default ``None``.
+        metadata : dict or None, default=None
+            Additional metadata to include in the prompt context.
 
         Returns
         -------

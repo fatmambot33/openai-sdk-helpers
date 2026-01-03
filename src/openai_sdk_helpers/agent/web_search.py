@@ -40,14 +40,10 @@ class WebAgentPlanner(AgentBase):
 
         Parameters
         ----------
-        prompt_dir : pathlib.Path or None, default=None
+        prompt_dir : Path or None, default=None
             Directory containing prompt templates.
         default_model : str or None, default=None
             Default model identifier to use when not defined in config.
-
-        Returns
-        -------
-        None
         """
         config = AgentConfig(
             name="web_planner",
@@ -97,14 +93,10 @@ class WebSearchToolAgent(AgentBase):
 
         Parameters
         ----------
-        prompt_dir : pathlib.Path or None, default=None
+        prompt_dir : Path or None, default=None
             Directory containing prompt templates.
         default_model : str or None, default=None
             Default model identifier to use when not defined in config.
-
-        Returns
-        -------
-        None
         """
         config = AgentConfig(
             name="web_search",
@@ -173,7 +165,7 @@ class WebSearchToolAgent(AgentBase):
         Returns
         -------
         WebSearchItemResultStructure
-            Search result summarising the page.
+            Search result summarizing the page.
         """
         template_context: Dict[str, Any] = {
             "search_term": item.query,
@@ -216,14 +208,10 @@ class WebAgentWriter(AgentBase):
 
         Parameters
         ----------
-        prompt_dir : pathlib.Path or None, default=None
+        prompt_dir : Path or None, default=None
             Directory containing prompt templates.
         default_model : str or None, default=None
             Default model identifier to use when not defined in config.
-
-        Returns
-        -------
-        None
         """
         config = AgentConfig(
             name="web_writer",
@@ -291,14 +279,10 @@ class WebAgentSearch(AgentBase):
         ----------
         config : AgentConfig or None, default=None
             Optional configuration for the agent.
-        prompt_dir : pathlib.Path or None, default=None
+        prompt_dir : Path or None, default=None
             Directory containing prompt templates.
         default_model : str or None, default=None
             Default model identifier to use when not defined in config.
-
-        Returns
-        -------
-        None
         """
         if config is None:
             config = AgentConfig(

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from openai_sdk_helpers.agent.project_manager import ProjectManager
+from openai_sdk_helpers.agent.coordination import CoordinatorAgent
 from openai_sdk_helpers.structure import (
     TaskStructure,
     PlanStructure,
@@ -13,7 +13,7 @@ from openai_sdk_helpers.structure import (
 
 
 def test_project_manager_integration(tmp_path):
-    """Test the ProjectManager integration."""
+    """Test the CoordinatorAgent integration."""
 
     def prompt_fn(prompt: str) -> PromptStructure:
         return PromptStructure(prompt=f"Brief for {prompt}")
@@ -35,8 +35,8 @@ def test_project_manager_integration(tmp_path):
     def summarize_fn(results: list[str]) -> str:
         return f"Summary of {', '.join(results)}"
 
-    with patch("openai_sdk_helpers.agent.project_manager.ProjectManager.save"):
-        pm = ProjectManager(
+    with patch("openai_sdk_helpers.agent.project_manager.CoordinatorAgent.save"):
+        pm = CoordinatorAgent(
             prompt_fn=prompt_fn,
             build_plan_fn=build_plan_fn,
             execute_plan_fn=execute_plan_fn,

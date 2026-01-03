@@ -40,14 +40,10 @@ class VectorSearchPlanner(AgentBase):
 
         Parameters
         ----------
-        prompt_dir : pathlib.Path or None, default=None
+        prompt_dir : Path or None, default=None
             Directory containing prompt templates.
         default_model : str or None, default=None
             Default model identifier to use when not defined in config.
-
-        Returns
-        -------
-        None
         """
         config = AgentConfig(
             name="vector_planner",
@@ -103,7 +99,7 @@ class VectorSearchTool(AgentBase):
 
         Parameters
         ----------
-        prompt_dir : pathlib.Path or None, default=None
+        prompt_dir : Path or None, default=None
             Directory containing prompt templates.
         default_model : str or None, default=None
             Default model identifier to use when not defined in config.
@@ -113,13 +109,9 @@ class VectorSearchTool(AgentBase):
             Maximum number of concurrent vector search tasks to run.
         vector_storage : VectorStorage or None, default=None
             Optional preconfigured vector storage instance to reuse.
-        vector_storage_factory : callable, default=None
-            Factory for constructing a :class:`VectorStorage` when one is not
-            provided. Receives ``store_name`` as an argument.
-
-        Returns
-        -------
-        None
+        vector_storage_factory : Callable or None, default=None
+            Factory for constructing a VectorStorage when one is not provided.
+            Receives ``store_name`` as an argument.
         """
         self._vector_storage: Optional[VectorStorage] = None
         self._store_name = store_name or "editorial"
@@ -248,14 +240,10 @@ class VectorSearchWriter(AgentBase):
 
         Parameters
         ----------
-        prompt_dir : pathlib.Path or None, default=None
+        prompt_dir : Path or None, default=None
             Directory containing prompt templates.
         default_model : str or None, default=None
             Default model identifier to use when not defined in config.
-
-        Returns
-        -------
-        None
         """
         config = AgentConfig(
             name="vector_writer",
@@ -353,7 +341,7 @@ class VectorSearch(AgentBase):
         ----------
         config : AgentConfig or None, default=None
             Optional configuration for the agent.
-        prompt_dir : pathlib.Path or None, default=None
+        prompt_dir : Path or None, default=None
             Directory containing prompt templates.
         default_model : str or None, default=None
             Default model identifier to use when not defined in config.

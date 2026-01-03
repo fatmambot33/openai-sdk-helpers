@@ -1,4 +1,4 @@
-"""Tests for the ProjectManager class."""
+"""Tests for the CoordinatorAgent class."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from openai_sdk_helpers.structure.plan.enum import AgentEnum
-from openai_sdk_helpers.agent.project_manager import ProjectManager
+from openai_sdk_helpers.agent.coordination import CoordinatorAgent
 from openai_sdk_helpers.structure import (
     TaskStructure,
     PlanStructure,
@@ -49,9 +49,9 @@ def project_manager(
     mock_execute_plan_fn,
     mock_summarize_fn,
 ):
-    """Return a ProjectManager instance."""
-    with patch("openai_sdk_helpers.agent.project_manager.ProjectManager.save"):
-        yield ProjectManager(
+    """Return an CoordinatorAgent instance."""
+    with patch("openai_sdk_helpers.agent.project_manager.CoordinatorAgent.save"):
+        yield CoordinatorAgent(
             prompt_fn=mock_prompt_fn,
             build_plan_fn=mock_build_plan_fn,
             execute_plan_fn=mock_execute_plan_fn,
