@@ -711,8 +711,11 @@ class BaseStructure(BaseModel):
         except json.JSONDecodeError:
             try:
                 structured_data = ast.literal_eval(arguments)
-            except Exception as exc:  # noqa: BLE001
-                raise ValueError(f"Invalid JSON arguments: {arguments}") from exc
+            except (SyntaxError, ValueError) as exc:
+                raise ValueError(
+                    f"Invalid JSON arguments: {arguments}. "
+                    f"Expected valid JSON or Python literal."
+                ) from exc
         return cls.from_raw_input(structured_data)
 
     @staticmethod
