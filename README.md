@@ -6,8 +6,9 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/openai-sdk-helpers.svg)](https://pypi.org/project/openai-sdk-helpers/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Shared primitives for composing OpenAI agent workflows: structures, response
-handling, prompt rendering, and reusable agent factories.
+Shared primitives for composing OpenAI workflows: high-level agent abstractions
+(via `openai-agents` SDK) and low-level response handling (via `openai` SDK),
+plus structures, prompt rendering, and reusable utilities.
 
 [Installation](#installation) •
 [Quickstart](#quickstart) •
@@ -41,28 +42,46 @@ applications. The library intentionally focuses on reusable primitives—data
 structures, configuration helpers, and orchestration utilities—while leaving
 application-specific prompts and tools to the consuming project.
 
+**Important**: This library integrates with **two distinct OpenAI SDKs**:
+- **`openai-agents`** - Used by the `agent` module for high-level agent workflows with automatic tool handling and streaming
+- **`openai`** - Used by the `response` module for direct API interactions with fine-grained control over responses
+
+The `agent` module provides a higher-level abstraction for building agents, while the `response` module offers lower-level control for custom response handling workflows.
+
 ### Key Features
 
-- **Agent wrappers** for OpenAI Agents SDK with synchronous and asynchronous
-  entry points.
-- **Prompt rendering** powered by Jinja2 for dynamic agent instructions.
-- **Typed structures** using Pydantic for prompts, responses, and search workflows 
-  to ensure predictable inputs and outputs.
+#### Agent Module (Built on `openai-agents` SDK)
+- **Agent wrappers** with synchronous and asynchronous entry points
+- **Prompt rendering** powered by Jinja2 for dynamic agent instructions
 - **Vector and web search flows** that coordinate planning, execution, and
-  reporting with built-in concurrency control.
+  reporting with built-in concurrency control
 - **Reusable text agents** for common tasks:
   - **SummarizerAgent**: Generate concise summaries from provided text
   - **TranslatorAgent**: Translate text into target languages
   - **ValidatorAgent**: Check inputs and outputs against safety guardrails
-- **OpenAI configuration management** with environment variable and `.env` file support.
-- **Vector storage abstraction** for seamless integration with OpenAI vector stores.
-- **Response handling utilities** for parsing and transforming agent outputs.
-- **Type-safe interfaces** with full type hints and `py.typed` marker for external projects.
+
+#### Response Module (Built on `openai` SDK)
+- **Response handling utilities** for direct API control with fine-grained message management
+- **Tool execution framework** with custom handlers and structured outputs
+- **Session persistence** for saving and restoring conversation history
+
+#### Shared Components
+- **Typed structures** using Pydantic for prompts, responses, and search workflows 
+  to ensure predictable inputs and outputs
+- **OpenAI configuration management** with environment variable and `.env` file support
+- **Vector storage abstraction** for seamless integration with OpenAI vector stores
+- **Type-safe interfaces** with full type hints and `py.typed` marker for external projects
 
 ## Requirements
 
 - Python 3.10 or higher
 - OpenAI API key (set via `OPENAI_API_KEY` environment variable)
+
+**Note**: This package depends on both:
+- `openai` - The standard OpenAI Python SDK
+- `openai-agents` - The OpenAI Agents SDK for high-level agent workflows
+
+Both are automatically installed when you install `openai-sdk-helpers`.
 
 ## Installation
 
@@ -99,7 +118,7 @@ The dev dependencies include:
 ### Basic Vector Search
 
 Create a vector search workflow by wiring your own prompt templates and
-preferred model configuration:
+preferred model configuration. This example uses the `agent` module built on `openai-agents` SDK:
 
 ```python
 from pathlib import Path
@@ -126,7 +145,8 @@ with a `FileNotFoundError`.
 
 ### Text utilities
 
-The built-in text helpers provide lightweight single-step agents for common tasks:
+The built-in text helpers provide lightweight single-step agents for common tasks.
+These use the `agent` module built on `openai-agents` SDK:
 
 ```python
 from openai_sdk_helpers.agent import (
@@ -196,6 +216,38 @@ vector_search = VectorSearch(
 Pass uncommon OpenAI client keyword arguments (such as `default_headers`,
 `http_client`, or custom `base_url` proxies) through `extra_client_kwargs`
 when instantiating `OpenAISettings`.
+
+### Direct Response Control (Response Module)
+
+For more fine-grained control over API interactions, use the `response` module built on the standard `openai` SDK. This gives you direct access to message history, tool handlers, and custom response parsing:
+
+```python
+from openai_sdk_helpers.response import BaseResponse
+from openai_sdk_helpers import OpenAISettings
+
+# Configure OpenAI settings
+settings = OpenAISettings.from_env()
+
+# Create a response handler with custom instructions
+response = BaseResponse(
+    instructions="You are a helpful code review assistant.",
+    tools=None,  # Or provide custom tool definitions
+    output_structure=None,  # Or a Pydantic model for structured output
+    tool_handlers={},  # Map tool names to handler functions
+    openai_settings=settings
+)
+
+# Execute and get a response
+result = response.run_sync("Review this Python code for best practices...")
+print(result)
+
+# Clean up
+response.close()
+```
+
+**Key Differences:**
+- **Agent Module**: Higher-level abstraction with built-in streaming, automatic tool handling, and agent-specific workflows
+- **Response Module**: Lower-level control with manual message management, custom tool handlers, and direct API access
 
 ## Advanced Usage
 
@@ -320,7 +372,9 @@ tests/                  # Comprehensive unit test suite
 
 The package is organized around cohesive, reusable building blocks:
 
-### Agent Modules
+### Agent Modules (Built on `openai-agents` SDK)
+
+These modules use the `openai-agents` SDK for high-level agent workflows with automatic streaming, tool handling, and conversation management.
 
 - **`openai_sdk_helpers.agent.base.AgentBase`**  
   Base class for all agents with synchronous and asynchronous execution support.
@@ -344,17 +398,24 @@ The package is organized around cohesive, reusable building blocks:
 - **`openai_sdk_helpers.agent.validation.ValidatorAgent`**  
   Validates user inputs and agent outputs against safety guardrails.
 
-### Configuration and Response Handling
+### Response Module (Built on `openai` SDK)
+
+These modules use the standard `openai` SDK for direct API interactions with fine-grained control over request/response cycles.
+
+- **`openai_sdk_helpers.response.base.BaseResponse`**  
+  Manages complete OpenAI API interaction lifecycle including input construction,
+  tool execution, message history, and structured output parsing. Uses the 
+  `client.responses.create()` API for direct control over conversation flow.
+
+- **`openai_sdk_helpers.response.runner`**  
+  Convenience functions for executing response workflows with automatic cleanup
+  in both synchronous and asynchronous contexts.
+
+### Configuration and Data Structures (Shared)
 
 - **`openai_sdk_helpers.config.OpenAISettings`**  
   Centralizes OpenAI API configuration with environment variable support.
   Creates configured OpenAI clients with consistent settings.
-
-- **`openai_sdk_helpers.response`**  
-  Contains response runners and helpers for normalizing agent outputs,
-  including streaming response support and message parsing.
-
-### Data Structures
 
 - **`openai_sdk_helpers.structure.BaseStructure`**  
   Pydantic-based foundation for all structured outputs. Provides JSON schema
@@ -363,7 +424,7 @@ The package is organized around cohesive, reusable building blocks:
 - **`openai_sdk_helpers.structure.plan`**  
   Task and plan structures for multi-step workflows with status tracking.
 
-### Utilities
+### Utilities (Shared)
 
 - **`openai_sdk_helpers.prompt.PromptRenderer`**  
   Jinja2-based template rendering for dynamic prompt generation.
