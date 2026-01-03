@@ -35,7 +35,7 @@ def test_project_manager_integration(tmp_path):
     def summarize_fn(results: list[str]) -> str:
         return f"Summary of {', '.join(results)}"
 
-    with patch("openai_sdk_helpers.agent.project_manager.CoordinatorAgent.save"):
+    with patch("openai_sdk_helpers.agent.coordination.CoordinatorAgent.save"):
         pm = CoordinatorAgent(
             prompt_fn=prompt_fn,
             build_plan_fn=build_plan_fn,

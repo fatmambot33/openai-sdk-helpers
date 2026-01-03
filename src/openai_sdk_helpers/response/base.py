@@ -1,4 +1,10 @@
-"""Base response handling for OpenAI interactions."""
+"""Core response management for OpenAI API interactions.
+
+This module implements the BaseResponse class, which manages the complete
+lifecycle of OpenAI API interactions including input construction, tool
+execution, message history, vector store attachments, and structured output
+parsing.
+"""
 
 from __future__ import annotations
 
@@ -14,13 +20,8 @@ from typing import (
     Any,
     Callable,
     Generic,
-    List,
-    Optional,
     Sequence,
-    Tuple,
-    Type,
     TypeVar,
-    Union,
     cast,
 )
 
@@ -43,83 +44,138 @@ if TYPE_CHECKING:  # pragma: no cover - only for typing hints
     from openai_sdk_helpers.streamlit_app.config import StreamlitAppConfig
 
 T = TypeVar("T", bound=BaseStructure)
-ToolHandler = Callable[[ResponseFunctionToolCall], Union[str, Any]]
-ProcessContent = Callable[[str], Tuple[str, List[str]]]
+ToolHandler = Callable[[ResponseFunctionToolCall], str | Any]
+ProcessContent = Callable[[str], tuple[str, list[str]]]
 
 
 RB = TypeVar("RB", bound="BaseResponse[BaseStructure]")
 
 
 class BaseResponse(Generic[T]):
-    """Manage OpenAI interactions for structured responses.
+    """Manage OpenAI API interactions for structured responses.
 
-    This base class handles input construction, OpenAI requests, tool calls,
-    and optional parsing into structured output models.
+    Orchestrates the complete lifecycle of OpenAI API requests including
+    input construction, tool execution, message history management, vector
+    store attachments, and structured output parsing. Supports both
+    synchronous and asynchronous execution with automatic resource cleanup.
+
+    The class handles conversation state, tool calls with custom handlers,
+    file attachments via vector stores, and optional parsing into typed
+    structured output models. Sessions can be persisted to disk and restored.
+
+    Attributes
+    ----------
+    uuid : UUID
+        Unique identifier for this response session.
+    name : str
+        Lowercase class name used for path construction.
+    messages : ResponseMessages
+        Complete message history for this session.
 
     Methods
     -------
-    run_async(content, attachments)
+    run_async(content, attachments=None)
         Generate a response asynchronously and return parsed output.
-    run_sync(content, attachments)
-        Synchronous wrapper around ``run_async``.
-    run_streamed(content, attachments)
-        Await ``run_async`` to mirror the agent API.
-    build_streamlit_config(...)
-        Construct a :class:`StreamlitAppConfig` using this class as the builder.
-    save(filepath)
-        Serialize the message history to disk.
+    run_sync(content, attachments=None)
+        Execute run_async synchronously with thread management.
+    run_streamed(content, attachments=None)
+        Execute run_async and await the result (streaming not yet supported).
+    get_last_tool_message()
+        Return the most recent tool message or None.
+    get_last_user_message()
+        Return the most recent user message or None.
+    get_last_assistant_message()
+        Return the most recent assistant message or None.
+    build_streamlit_config(**kwargs)
+        Construct a StreamlitAppConfig using this class as the builder.
+    save(filepath=None)
+        Serialize the message history to a JSON file.
     close()
-        Clean up remote resources (vector stores).
+        Clean up remote resources including vector stores.
+
+    Examples
+    --------
+    >>> from openai_sdk_helpers import BaseResponse, OpenAISettings
+    >>> settings = OpenAISettings(api_key="...", default_model="gpt-4")
+    >>> response = BaseResponse(
+    ...     instructions="You are a helpful assistant",
+    ...     tools=None,
+    ...     output_structure=None,
+    ...     tool_handlers={},
+    ...     openai_settings=settings
+    ... )
+    >>> result = response.run_sync("Hello, world!")
+    >>> response.close()
     """
 
     def __init__(
         self,
         *,
         instructions: str,
-        tools: Optional[list],
-        output_structure: Optional[Type[T]],
+        tools: list | None,
+        output_structure: type[T] | None,
         tool_handlers: dict[str, ToolHandler],
         openai_settings: OpenAISettings,
-        process_content: Optional[ProcessContent] = None,
-        name: Optional[str] = None,
-        system_vector_store: Optional[list[str]] = None,
-        data_path_fn: Optional[Callable[[str], Path]] = None,
-        save_path: Optional[Path | str] = None,
+        process_content: ProcessContent | None = None,
+        name: str | None = None,
+        system_vector_store: list[str] | None = None,
+        data_path_fn: Callable[[str], Path] | None = None,
+        save_path: Path | str | None = None,
     ) -> None:
-        """Initialize a response session.
+        """Initialize a response session with OpenAI configuration.
+
+        Sets up the OpenAI client, message history, vector stores, and tool
+        handlers for a complete response workflow. The session can optionally
+        be persisted to disk for later restoration.
 
         Parameters
         ----------
         instructions : str
-            System instructions for the OpenAI response.
+            System instructions provided to the OpenAI API for context.
         tools : list or None
-            Tool definitions for the OpenAI request.
+            Tool definitions for the OpenAI API request. Pass None for no tools.
         output_structure : type[BaseStructure] or None
-            Structure type used to parse tool call outputs. When provided, the
-            schema is automatically generated from this structure using its
-            ``response_format()`` method.
+            Structure class used to parse tool call outputs. When provided,
+            the schema is automatically generated using the structure's
+            response_format() method. Pass None for unstructured responses.
         tool_handlers : dict[str, ToolHandler]
-            Mapping of tool names to handler callables.
+            Mapping from tool names to callable handlers. Each handler receives
+            a ResponseFunctionToolCall and returns a string or any serializable
+            result.
         openai_settings : OpenAISettings
-            Fully resolved OpenAI settings supplying authentication and
-            default model information.
-        process_content : callable, optional
-            Callback that cleans input text and extracts attachments.
-        name : str, optional
-            Module name used to build the data path.
-        attachments : tuple or list of tuples, optional
-            File attachments in the form ``(file_path, tool_type)``.
-        data_path_fn : callable or None, default=None
-            Function that maps ``name`` to a base data path.
-        save_path : Path | str or None, default=None
-            Optional path to a directory or file for persisted messages.
+            Fully configured OpenAI settings with API key and default model.
+        process_content : callable or None, default None
+            Optional callback that processes input text and extracts file
+            attachments. Must return a tuple of (processed_text, attachment_list).
+        name : str or None, default None
+            Module name used for data path construction when data_path_fn is set.
+        system_vector_store : list[str] or None, default None
+            Optional list of vector store names to attach as system context.
+        data_path_fn : callable or None, default None
+            Function mapping name to a base directory path for artifact storage.
+        save_path : Path, str, or None, default None
+            Optional path to a directory or file where message history is saved.
+            If a directory, files are named using the session UUID.
 
         Raises
         ------
         ValueError
-            If API key or model is missing in ``openai_settings``.
+            If api_key is missing from openai_settings.
+            If default_model is missing from openai_settings.
         RuntimeError
             If the OpenAI client fails to initialize.
+
+        Examples
+        --------
+        >>> from openai_sdk_helpers import BaseResponse, OpenAISettings
+        >>> settings = OpenAISettings(api_key="sk-...", default_model="gpt-4")
+        >>> response = BaseResponse(
+        ...     instructions="You are helpful",
+        ...     tools=None,
+        ...     output_structure=None,
+        ...     tool_handlers={},
+        ...     openai_settings=settings
+        ... )
         """
         self._tool_handlers = tool_handlers
         self._process_content = process_content
@@ -153,7 +209,7 @@ class BaseResponse(Generic[T]):
             ResponseInputTextParam(type="input_text", text=instructions)
         ]
 
-        self._user_vector_storage: Optional[Any] = None
+        self._user_vector_storage: Any | None = None
 
         # New logic: system_vector_store is a list of vector store names to attach
         if system_vector_store:
@@ -178,12 +234,26 @@ class BaseResponse(Generic[T]):
 
     @property
     def data_path(self) -> Path:
-        """Return the directory used to persist artifacts for this session.
+        """Return the directory for persisting session artifacts.
+
+        Constructs a path using data_path_fn, name, class name, and the
+        session name. Both data_path_fn and name must be set during
+        initialization for this property to work.
 
         Returns
         -------
         Path
-            Absolute path for persisting response artifacts.
+            Absolute path for persisting response artifacts and message history.
+
+        Raises
+        ------
+        RuntimeError
+            If data_path_fn or name were not provided during initialization.
+
+        Examples
+        --------
+        >>> response.data_path
+        PosixPath('/data/myapp/baseresponse/session_123')
         """
         if self._data_path_fn is None or self._name is None:
             raise RuntimeError(
@@ -194,17 +264,27 @@ class BaseResponse(Generic[T]):
 
     def _build_input(
         self,
-        content: Union[str, List[str]],
-        attachments: Optional[List[str]] = None,
+        content: str | list[str],
+        attachments: list[str] | None = None,
     ) -> None:
-        """Build the list of input messages for the OpenAI request.
+        """Construct input messages for the OpenAI API request.
+
+        Processes content through the optional process_content callback,
+        uploads any file attachments to vector stores, and adds all
+        messages to the conversation history.
 
         Parameters
         ----------
-        content
+        content : str or list[str]
             String or list of strings to include as user messages.
-        attachments
-            Optional list of file paths to upload and attach.
+        attachments : list[str] or None, default None
+            Optional list of file paths to upload and attach to the message.
+
+        Notes
+        -----
+        If attachments are provided and no user vector storage exists, this
+        method automatically creates one and adds a file_search tool to
+        the tools list.
         """
         contents = ensure_list(content)
 
@@ -213,9 +293,9 @@ class BaseResponse(Generic[T]):
                 processed_text, content_attachments = raw_content, []
             else:
                 processed_text, content_attachments = self._process_content(raw_content)
-            input_content: List[
-                Union[ResponseInputTextParam, ResponseInputFileParam]
-            ] = [ResponseInputTextParam(type="input_text", text=processed_text)]
+            input_content: list[ResponseInputTextParam | ResponseInputFileParam] = [
+                ResponseInputTextParam(type="input_text", text=processed_text)
+            ]
 
             all_attachments = (attachments or []) + content_attachments
 
@@ -256,32 +336,43 @@ class BaseResponse(Generic[T]):
 
     async def run_async(
         self,
-        content: Union[str, List[str]],
-        attachments: Optional[Union[str, List[str]]] = None,
-    ) -> Optional[T]:
-        """Generate a response asynchronously.
+        content: str | list[str],
+        attachments: str | list[str] | None = None,
+    ) -> T | None:
+        """Generate a response asynchronously from the OpenAI API.
+
+        Builds input messages, sends the request to OpenAI, processes any
+        tool calls with registered handlers, and optionally parses the
+        result into the configured output_structure.
 
         Parameters
         ----------
-        content
-            Prompt text or list of texts.
-        attachments
-            Optional file path or list of paths to upload and attach.
+        content : str or list[str]
+            Prompt text or list of prompt texts to send.
+        attachments : str, list[str], or None, default None
+            Optional file path or list of file paths to upload and attach.
 
         Returns
         -------
-        Optional[T]
-            Parsed response object or ``None``.
+        T or None
+            Parsed response object of type output_structure, or None if
+            no structured output was produced.
 
         Raises
         ------
         RuntimeError
-            If the API returns no output or a tool handler errors.
+            If the API returns no output.
+            If a tool handler raises an exception.
         ValueError
-            If no handler is found for a tool invoked by the API.
+            If the API invokes a tool with no registered handler.
+
+        Examples
+        --------
+        >>> result = await response.run_async("Analyze this text")
+        >>> print(result)
         """
         log(f"{self.__class__.__name__}::run_response")
-        parsed_result: Optional[T] = None
+        parsed_result: T | None = None
 
         self._build_input(
             content=content,
@@ -370,19 +461,41 @@ class BaseResponse(Generic[T]):
 
     def run_sync(
         self,
-        content: Union[str, List[str]],
-        attachments: Optional[Union[str, List[str]]] = None,
-    ) -> Optional[T]:
-        """Run :meth:`run_response_async` synchronously."""
+        content: str | list[str],
+        attachments: str | list[str] | None = None,
+    ) -> T | None:
+        """Execute run_async synchronously with proper event loop handling.
 
-        async def runner() -> Optional[T]:
+        Automatically detects if an event loop is already running and uses
+        a separate thread if necessary. This enables safe usage in both
+        synchronous and asynchronous contexts.
+
+        Parameters
+        ----------
+        content : str or list[str]
+            Prompt text or list of prompt texts to send.
+        attachments : str, list[str], or None, default None
+            Optional file path or list of file paths to upload and attach.
+
+        Returns
+        -------
+        T or None
+            Parsed response object of type output_structure, or None.
+
+        Examples
+        --------
+        >>> result = response.run_sync("Summarize this document")
+        >>> print(result)
+        """
+
+        async def runner() -> T | None:
             return await self.run_async(content=content, attachments=attachments)
 
         try:
             asyncio.get_running_loop()
         except RuntimeError:
             return asyncio.run(runner())
-        result: Optional[T] = None
+        result: T | None = None
 
         def _thread_func() -> None:
             nonlocal result
@@ -395,55 +508,61 @@ class BaseResponse(Generic[T]):
 
     def run_streamed(
         self,
-        content: Union[str, List[str]],
-        attachments: Optional[Union[str, List[str]]] = None,
-    ) -> Optional[T]:
-        """Generate a response asynchronously and return the awaited result.
+        content: str | list[str],
+        attachments: str | list[str] | None = None,
+    ) -> T | None:
+        """Execute run_async and await the result.
 
-        Streaming is not yet supported for responses, so this helper simply
-        awaits :meth:`run_async` to mirror the agent API.
+        Streaming responses are not yet fully supported, so this method
+        simply awaits run_async to provide API compatibility with agent
+        interfaces.
 
         Parameters
         ----------
-        content
-            Prompt text or list of texts.
-        attachments
-            Optional file path or list of paths to upload and attach.
+        content : str or list[str]
+            Prompt text or list of prompt texts to send.
+        attachments : str, list[str], or None, default None
+            Optional file path or list of file paths to upload and attach.
 
         Returns
         -------
-        Optional[T]
-            Parsed response object or ``None``.
+        T or None
+            Parsed response object of type output_structure, or None.
+
+        Notes
+        -----
+        This method exists for API consistency but does not currently
+        provide true streaming functionality.
         """
         return asyncio.run(self.run_async(content=content, attachments=attachments))
 
     def get_last_tool_message(self) -> ResponseMessage | None:
-        """Return the most recent tool message.
+        """Return the most recent tool message from conversation history.
 
         Returns
         -------
         ResponseMessage or None
-            Latest tool message or ``None`` when absent.
+            Latest tool message, or None if no tool messages exist.
         """
         return self.messages.get_last_tool_message()
 
     def get_last_user_message(self) -> ResponseMessage | None:
-        """Return the most recent user message.
+        """Return the most recent user message from conversation history.
 
         Returns
         -------
         ResponseMessage or None
-            Latest user message or ``None`` when absent.
+            Latest user message, or None if no user messages exist.
         """
         return self.messages.get_last_user_message()
 
     def get_last_assistant_message(self) -> ResponseMessage | None:
-        """Return the most recent assistant message.
+        """Return the most recent assistant message from conversation history.
 
         Returns
         -------
         ResponseMessage or None
-            Latest assistant message or ``None`` when absent.
+            Latest assistant message, or None if no assistant messages exist.
         """
         return self.messages.get_last_assistant_message()
 
@@ -456,26 +575,40 @@ class BaseResponse(Generic[T]):
         system_vector_store: Sequence[str] | str | None = None,
         preserve_vector_stores: bool = False,
         model: str | None = None,
-    ) -> "StreamlitAppConfig":
-        """Construct a :class:`StreamlitAppConfig` using ``cls`` as the builder.
+    ) -> StreamlitAppConfig:
+        """Construct a StreamlitAppConfig bound to this response class.
+
+        Creates a complete Streamlit application configuration using the
+        calling class as the response builder. This enables rapid deployment
+        of chat interfaces for custom response classes.
 
         Parameters
         ----------
-        display_title : str, default="Example copilot"
+        display_title : str, default "Example copilot"
             Title displayed at the top of the Streamlit page.
-        description : str or None, default=None
-            Optional short description shown beneath the title.
-        system_vector_store : Sequence[str] | str | None, default=None
-            Optional vector store names to attach as system context.
-        preserve_vector_stores : bool, default=False
-            When ``True``, skip automatic vector store cleanup on close.
-        model : str or None, default=None
-            Optional model hint for display alongside the chat interface.
+        description : str or None, default None
+            Optional description shown beneath the title.
+        system_vector_store : Sequence[str], str, or None, default None
+            Optional vector store name(s) to attach as system context.
+            Single string or sequence of strings.
+        preserve_vector_stores : bool, default False
+            When True, skip automatic cleanup of vector stores on session close.
+        model : str or None, default None
+            Optional model identifier displayed in the chat interface.
 
         Returns
         -------
         StreamlitAppConfig
-            Validated configuration bound to ``cls`` as the response builder.
+            Fully configured Streamlit application bound to this response class.
+
+        Examples
+        --------
+        >>> config = MyResponse.build_streamlit_config(
+        ...     display_title="My Assistant",
+        ...     description="A helpful AI assistant",
+        ...     system_vector_store=["docs", "kb"],
+        ...     model="gpt-4"
+        ... )
         """
         from openai_sdk_helpers.streamlit_app.config import StreamlitAppConfig
 
@@ -492,8 +625,29 @@ class BaseResponse(Generic[T]):
             model=model,
         )
 
-    def save(self, filepath: Optional[str | Path] = None) -> None:
-        """Serialize the message history to a JSON file."""
+    def save(self, filepath: str | Path | None = None) -> None:
+        """Serialize the message history to a JSON file.
+
+        Saves the complete conversation history to disk. The target path
+        is determined by filepath parameter, save_path from initialization,
+        or data_path_fn if configured.
+
+        Parameters
+        ----------
+        filepath : str, Path, or None, default None
+            Optional explicit path for the JSON file. If None, uses save_path
+            or constructs path from data_path_fn and session UUID.
+
+        Notes
+        -----
+        If no save location is configured (no filepath, save_path, or
+        data_path_fn), the save operation is silently skipped.
+
+        Examples
+        --------
+        >>> response.save("/path/to/session.json")
+        >>> response.save()  # Uses configured save_path or data_path
+        """
         if filepath is not None:
             target = Path(filepath)
         elif self._save_path is not None:
@@ -516,7 +670,13 @@ class BaseResponse(Generic[T]):
         log(f"Saved messages to {target}")
 
     def __repr__(self) -> str:
-        """Return an unambiguous representation including model and UUID."""
+        """Return a detailed string representation of the response session.
+
+        Returns
+        -------
+        str
+            String showing class name, model, UUID, message count, and data path.
+        """
         data_path = None
         if self._data_path_fn is not None and self._name is not None:
             data_path = self.data_path
@@ -525,16 +685,51 @@ class BaseResponse(Generic[T]):
             f"messages={len(self.messages.messages)}, data_path={data_path}>"
         )
 
-    def __enter__(self) -> "BaseResponse[T]":
-        """Enter the context manager for this response session."""
+    def __enter__(self) -> BaseResponse[T]:
+        """Enter the context manager for resource management.
+
+        Returns
+        -------
+        BaseResponse[T]
+            Self reference for use in with statements.
+        """
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        """Exit the context manager and close remote resources."""
+        """Exit the context manager and clean up resources.
+
+        Parameters
+        ----------
+        exc_type : type or None
+            Exception type if an exception occurred, otherwise None.
+        exc_val : Exception or None
+            Exception instance if an exception occurred, otherwise None.
+        exc_tb : traceback or None
+            Traceback object if an exception occurred, otherwise None.
+        """
         self.close()
 
     def close(self) -> None:
-        """Delete managed vector stores and clean up the session."""
+        """Clean up session resources including vector stores.
+
+        Saves the current message history and deletes managed vector stores.
+        User vector stores are always cleaned up. System vector store cleanup
+        is handled via tool configuration.
+
+        Notes
+        -----
+        This method is automatically called when using the response as a
+        context manager. Always call close() or use a with statement to
+        ensure proper resource cleanup.
+
+        Examples
+        --------
+        >>> response = BaseResponse(...)
+        >>> try:
+        ...     result = response.run_sync("query")
+        ... finally:
+        ...     response.close()
+        """
         log(f"Closing session {self.uuid} for {self.__class__.__name__}")
         self.save()
         # Always clean user vector storage if it exists

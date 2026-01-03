@@ -1,4 +1,9 @@
-"""Configuration loading for the example Streamlit chat app."""
+"""Configuration management for Streamlit chat applications.
+
+This module provides Pydantic-based configuration validation and loading for
+Streamlit chat applications. It handles response instantiation, vector store
+attachment, and validation of application settings.
+"""
 
 from __future__ import annotations
 
@@ -14,16 +19,45 @@ from openai_sdk_helpers.utils import ensure_list
 
 
 class StreamlitAppConfig(BaseModel):
-    """Validated configuration for the config-driven Streamlit application.
+    """Validated configuration for Streamlit chat applications.
+
+    Manages all settings required to run a configuration-driven Streamlit
+    chat interface, including response handlers, vector stores, display
+    settings, and validation rules. Uses Pydantic for comprehensive
+    validation and type safety.
+
+    Attributes
+    ----------
+    response : BaseResponse, type[BaseResponse], Callable, or None
+        Response handler as an instance, class, or callable factory.
+    display_title : str
+        Title displayed at the top of the Streamlit page.
+    description : str or None
+        Optional description shown beneath the title.
+    system_vector_store : list[str] or None
+        Optional vector store names to attach for file search.
+    preserve_vector_stores : bool
+        When True, skip automatic cleanup of vector stores on session close.
+    model : str or None
+        Optional model identifier displayed in the chat interface.
 
     Methods
     -------
     normalized_vector_stores()
-        Return configured system vector stores as a list of names.
+        Return configured system vector stores as a list.
     create_response()
-        Instantiate the configured ``BaseResponse``.
+        Instantiate and return the configured BaseResponse.
     load_app_config(config_path)
-        Load, validate, and return the Streamlit application configuration.
+        Load, validate, and return configuration from a Python module.
+
+    Examples
+    --------
+    >>> from openai_sdk_helpers.streamlit_app import StreamlitAppConfig
+    >>> config = StreamlitAppConfig(
+    ...     response=MyResponse,
+    ...     display_title="My Assistant",
+    ...     description="A helpful AI assistant"
+    ... )
     """
 
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
@@ -66,22 +100,25 @@ class StreamlitAppConfig(BaseModel):
     def validate_vector_store(
         cls, value: Sequence[str] | str | None
     ) -> list[str] | None:
-        """Normalize configured vector stores to a list of names.
+        """Normalize configured vector stores to a list of strings.
+
+        Ensures that vector store configurations are always represented as
+        a list, whether provided as a single string or sequence.
 
         Parameters
         ----------
-        value : Sequence[str] | str | None
-            Raw value provided by the configuration module.
+        value : Sequence[str], str, or None
+            Raw value from configuration (single name, list, or None).
 
         Returns
         -------
-        list[str] | None
-            Normalized list of vector store names.
+        list[str] or None
+            Normalized list of vector store names, or None if not configured.
 
         Raises
         ------
-        TypeError
-            If any entry cannot be coerced to ``str``.
+        ValueError
+            If any entry cannot be converted to a string.
         """
         if value is None:
             return None
@@ -95,7 +132,26 @@ class StreamlitAppConfig(BaseModel):
     def validate_response(
         cls, value: BaseResponse[BaseStructure] | type[BaseResponse] | Callable | None
     ) -> BaseResponse[BaseStructure] | type[BaseResponse] | Callable | None:
-        """Ensure the configuration provides a valid response source."""
+        """Validate that the response field is a valid handler source.
+
+        Ensures the provided response can be used to create a BaseResponse
+        instance for handling chat interactions.
+
+        Parameters
+        ----------
+        value : BaseResponse, type[BaseResponse], Callable, or None
+            Response handler as instance, class, or factory function.
+
+        Returns
+        -------
+        BaseResponse, type[BaseResponse], Callable, or None
+            Validated response handler.
+
+        Raises
+        ------
+        TypeError
+            If value is not a BaseResponse, subclass, or callable.
+        """
         if value is None:
             return None
         if isinstance(value, BaseResponse):
@@ -109,62 +165,116 @@ class StreamlitAppConfig(BaseModel):
     def normalized_vector_stores(self) -> list[str]:
         """Return configured system vector stores as a list.
 
+        Provides a consistent interface for accessing vector store names,
+        returning an empty list when none are configured.
+
         Returns
         -------
         list[str]
-            Vector store names or an empty list when none are configured.
+            Vector store names, or empty list if not configured.
+
+        Examples
+        --------
+        >>> config.normalized_vector_stores()
+        ['docs', 'knowledge_base']
         """
         return list(self.system_vector_store or [])
 
     @model_validator(mode="after")
-    def ensure_response(self) -> "StreamlitAppConfig":
-        """Validate that a response source is provided."""
+    def ensure_response(self) -> StreamlitAppConfig:
+        """Validate that a response source is provided.
+
+        Ensures the configuration includes a valid response handler, which
+        is required for the chat application to function.
+
+        Returns
+        -------
+        StreamlitAppConfig
+            Self reference after validation.
+
+        Raises
+        ------
+        ValueError
+            If no response source is configured.
+        """
         if self.response is None:
             raise ValueError("response must be provided.")
         return self
 
     def create_response(self) -> BaseResponse[BaseStructure]:
-        """Instantiate and return the configured response instance.
+        """Instantiate and return the configured response handler.
+
+        Converts the response field (whether class, instance, or callable)
+        into an active BaseResponse instance ready for chat interactions.
 
         Returns
         -------
         BaseResponse[BaseStructure]
-            Active response instance.
+            Active response instance for handling chat messages.
 
         Raises
         ------
         TypeError
-            If the configured ``response`` cannot produce a ``BaseResponse``.
+            If the configured response cannot produce a BaseResponse.
+
+        Examples
+        --------
+        >>> response = config.create_response()
+        >>> result = response.run_sync("Hello")
         """
         return _instantiate_response(self.response)
 
     @staticmethod
     def load_app_config(
         config_path: Path,
-    ) -> "StreamlitAppConfig":
-        """Load, validate, and return the Streamlit application configuration.
+    ) -> StreamlitAppConfig:
+        """Load, validate, and return configuration from a Python module.
+
+        Imports the specified Python module and extracts its APP_CONFIG
+        variable to create a validated StreamlitAppConfig instance.
 
         Parameters
         ----------
         config_path : Path
-            Filesystem path to the configuration module.
+            Filesystem path to the Python configuration module.
 
         Returns
         -------
         StreamlitAppConfig
-            Validated configuration derived from ``config_path``.
+            Validated configuration extracted from the module.
+
+        Raises
+        ------
+        FileNotFoundError
+            If config_path does not exist.
+        ImportError
+            If the module cannot be imported.
+        ValueError
+            If APP_CONFIG is missing from the module.
+        TypeError
+            If APP_CONFIG has an invalid type.
+
+        Examples
+        --------
+        >>> from pathlib import Path
+        >>> config = StreamlitAppConfig.load_app_config(
+        ...     Path("./my_config.py")
+        ... )
         """
         module = _import_config_module(config_path)
         return _extract_config(module)
 
 
 def _import_config_module(config_path: Path) -> ModuleType:
-    """Import the configuration module from ``config_path``.
+    """Import a Python module from the specified filesystem path.
+
+    Uses importlib to dynamically load a configuration module, enabling
+    runtime configuration discovery.
 
     Parameters
     ----------
     config_path : Path
-        Filesystem path pointing to the configuration module.
+        Filesystem path pointing to the configuration Python file.
 
     Returns
     -------
@@ -174,9 +284,15 @@ def _import_config_module(config_path: Path) -> ModuleType:
     Raises
     ------
     FileNotFoundError
-        If ``config_path`` does not exist.
+        If config_path does not exist on the filesystem.
     ImportError
-        If the module cannot be imported.
+        If the module cannot be imported or executed.
+
+    Examples
+    --------
+    >>> module = _import_config_module(Path("./config.py"))
+    >>> hasattr(module, 'APP_CONFIG')
+    True
     """
     if not config_path.exists():
         raise FileNotFoundError(f"Configuration file not found at '{config_path}'.")
@@ -191,12 +307,16 @@ def _import_config_module(config_path: Path) -> ModuleType:
 
 
 def _extract_config(module: ModuleType) -> StreamlitAppConfig:
-    """Extract a validated :class:`StreamlitAppConfig` from ``module``.
+    """Extract and validate StreamlitAppConfig from a loaded module.
+
+    Looks for APP_CONFIG in the module and converts it to a validated
+    StreamlitAppConfig instance. Supports multiple input formats including
+    dictionaries, BaseResponse instances, and existing config objects.
 
     Parameters
     ----------
     module : ModuleType
-        Module loaded from the configuration path.
+        Python module loaded from the configuration path.
 
     Returns
     -------
@@ -206,9 +326,16 @@ def _extract_config(module: ModuleType) -> StreamlitAppConfig:
     Raises
     ------
     ValueError
-        If ``APP_CONFIG`` is missing from the module.
+        If APP_CONFIG is missing from the module.
     TypeError
-        If ``APP_CONFIG`` is neither a mapping nor ``StreamlitAppConfig`` instance.
+        If APP_CONFIG is not a valid type (dict, BaseResponse, callable,
+        or StreamlitAppConfig).
+
+    Examples
+    --------
+    >>> config = _extract_config(module)
+    >>> isinstance(config, StreamlitAppConfig)
+    True
     """
     if not hasattr(module, "APP_CONFIG"):
         raise ValueError("APP_CONFIG must be defined in the configuration module.")
@@ -231,22 +358,32 @@ def _extract_config(module: ModuleType) -> StreamlitAppConfig:
 
 
 def _instantiate_response(candidate: object) -> BaseResponse[BaseStructure]:
-    """Instantiate a :class:`BaseResponse` from the provided candidate.
+    """Convert a response candidate into a BaseResponse instance.
+
+    Handles multiple candidate types: existing instances (returned as-is),
+    classes (instantiated with no arguments), and callables (invoked to
+    produce an instance).
 
     Parameters
     ----------
     candidate : object
-        Configured response source.
+        Response source as instance, class, or callable factory.
 
     Returns
     -------
     BaseResponse[BaseStructure]
-        Active response instance.
+        Active response instance ready for use.
 
     Raises
     ------
     TypeError
-        If the candidate cannot produce a ``BaseResponse`` instance.
+        If candidate cannot produce a BaseResponse instance.
+
+    Examples
+    --------
+    >>> response = _instantiate_response(MyResponse)
+    >>> isinstance(response, BaseResponse)
+    True
     """
     if isinstance(candidate, BaseResponse):
         return candidate
@@ -262,20 +399,28 @@ def _instantiate_response(candidate: object) -> BaseResponse[BaseStructure]:
 
 
 def _config_from_mapping(raw_config: dict) -> StreamlitAppConfig:
-    """Build :class:`StreamlitAppConfig` from a mapping with aliases.
+    """Build StreamlitAppConfig from a dictionary with field aliases.
 
-    The mapping may provide ``build_response`` directly or a ``response`` key
-    containing a :class:`BaseResponse` instance, subclass, or callable.
+    Supports both 'response' and 'build_response' keys for backward
+    compatibility. Extracts configuration fields and constructs a
+    validated StreamlitAppConfig instance.
 
     Parameters
     ----------
     raw_config : dict
-        Developer-supplied mapping from the configuration module.
+        Developer-supplied dictionary from the configuration module.
 
     Returns
     -------
     StreamlitAppConfig
-        Validated configuration derived from ``raw_config``.
+        Validated configuration constructed from the dictionary.
+
+    Examples
+    --------
+    >>> config = _config_from_mapping({
+    ...     'response': MyResponse,
+    ...     'display_title': 'My App'
+    ... })
     """
     config_kwargs = dict(raw_config)
     response_candidate = config_kwargs.pop("response", None)
@@ -290,22 +435,55 @@ def _config_from_mapping(raw_config: dict) -> StreamlitAppConfig:
 def load_app_config(
     config_path: Path,
 ) -> StreamlitAppConfig:
-    """Proxy to :meth:`StreamlitAppConfig.load_app_config` for compatibility."""
-    return StreamlitAppConfig.load_app_config(config_path=config_path)
+    """Load and validate Streamlit configuration from a Python module.
 
-
-def _load_configuration(config_path: Path) -> StreamlitAppConfig:
-    """Load the Streamlit configuration and present user-friendly errors.
+    Convenience function that proxies to StreamlitAppConfig.load_app_config
+    for backward compatibility.
 
     Parameters
     ----------
     config_path : Path
-        Filesystem location of the developer-authored configuration module.
+        Filesystem path to the configuration module.
+
+    Returns
+    -------
+    StreamlitAppConfig
+        Validated configuration loaded from the module.
+
+    Examples
+    --------
+    >>> from pathlib import Path
+    >>> config = load_app_config(Path("./my_config.py"))
+    """
+    return StreamlitAppConfig.load_app_config(config_path=config_path)
+
+
+def _load_configuration(config_path: Path) -> StreamlitAppConfig:
+    """Load configuration with user-friendly error handling for Streamlit.
+
+    Wraps StreamlitAppConfig.load_app_config with exception handling that
+    displays errors in the Streamlit UI and halts execution gracefully.
+
+    Parameters
+    ----------
+    config_path : Path
+        Filesystem location of the configuration module.
 
     Returns
     -------
     StreamlitAppConfig
         Validated configuration object.
+
+    Raises
+    ------
+    RuntimeError
+        If configuration loading fails (after displaying error in UI).
+
+    Notes
+    -----
+    This function is designed specifically for use within Streamlit
+    applications where errors should be displayed in the UI rather
+    than raising exceptions that crash the app.
     """
     try:
         return StreamlitAppConfig.load_app_config(config_path=config_path)

@@ -50,7 +50,7 @@ def project_manager(
     mock_summarize_fn,
 ):
     """Return an CoordinatorAgent instance."""
-    with patch("openai_sdk_helpers.agent.project_manager.CoordinatorAgent.save"):
+    with patch("openai_sdk_helpers.agent.coordination.CoordinatorAgent.save"):
         yield CoordinatorAgent(
             prompt_fn=mock_prompt_fn,
             build_plan_fn=mock_build_plan_fn,

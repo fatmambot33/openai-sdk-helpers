@@ -1,10 +1,15 @@
-"""Core prompt rendering utilities."""
+"""Core prompt rendering implementation.
+
+This module provides the PromptRenderer class for loading and rendering
+Jinja2 templates with context variables. Templates can be loaded from a
+specified directory or by absolute path.
+"""
 
 from __future__ import annotations
 
 import warnings
 from pathlib import Path
-from typing import Any, Mapping, Optional
+from typing import Any
 
 from dotenv import load_dotenv
 from jinja2 import Environment, FileSystemLoader, Template
@@ -14,16 +19,29 @@ warnings.filterwarnings("ignore")
 
 
 class PromptRenderer:
-    """Render prompts using Jinja2 templates.
+    """Jinja2-based template renderer for dynamic prompt generation.
 
-    The renderer loads templates from a base directory (defaulting to the
-    ``prompt`` package directory) and exposes a rendering helper for
-    injecting context values. This is the foundation for dynamic prompt
-    generation across all agents.
+    Loads and renders Jinja2 templates from a base directory or by absolute
+    path. The renderer supports variable substitution, template inheritance,
+    and all standard Jinja2 features for creating dynamic prompts.
+
+    Templates are loaded from a base directory (defaulting to the built-in
+    prompt package directory) or can be specified with absolute paths.
+    Autoescape is disabled by default since prompts are plain text.
+
+    Attributes
+    ----------
+    base_dir : Path
+        Base directory for template loading.
+
+    Methods
+    -------
+    render(template_path, context=None)
+        Render a Jinja2 template with the given context variables.
 
     Examples
     --------
-    Basic template rendering with base_dir:
+    Basic template rendering with custom base directory:
 
     >>> from pathlib import Path
     >>> from openai_sdk_helpers.prompt import PromptRenderer
@@ -42,29 +60,36 @@ class PromptRenderer:
     ...     context={"name": "Bob"}
     ... )
 
-    Using default prompt directory:
+    Using built-in templates:
 
     >>> renderer = PromptRenderer()  # Uses built-in templates
     >>> prompt = renderer.render("summarizer.jinja", context={})
-
-    Methods
-    -------
-    render(template_path, context)
-        Render the template at ``template_path`` with the supplied context.
     """
 
-    def __init__(self, base_dir: Optional[Path] = None) -> None:
+    def __init__(self, base_dir: Path | None = None) -> None:
         """Initialize the renderer with a Jinja2 environment.
+
+        Sets up the Jinja2 environment with a FileSystemLoader pointing to
+        the specified base directory. If no base directory is provided,
+        defaults to the built-in prompt package directory containing
+        standard templates.
 
         Parameters
         ----------
-        base_dir : Path or None, default=None
-            Base directory containing Jinja2 templates. Defaults to the
-            ``prompt`` directory adjacent to this file when ``None``.
+        base_dir : Path or None, default None
+            Base directory containing Jinja2 templates. If None, uses the
+            prompt package directory containing built-in templates.
 
-        Returns
-        -------
-        None
+        Examples
+        --------
+        >>> from pathlib import Path
+        >>> renderer = PromptRenderer(base_dir=Path("./my_templates"))
+        >>> renderer.base_dir
+        PosixPath('.../my_templates')
+
+        >>> default_renderer = PromptRenderer()
+        >>> default_renderer.base_dir.name
+        'prompt'
         """
         if base_dir is None:
             # Defaults to the directory containing this file, which also
@@ -78,23 +103,46 @@ class PromptRenderer:
             autoescape=False,  # Prompts are plain text
         )
 
-    def render(
-        self, template_path: str, context: Optional[Mapping[str, Any]] = None
-    ) -> str:
-        """Render a Jinja2 template with the given context.
+    def render(self, template_path: str, context: dict[str, Any] | None = None) -> str:
+        """Render a Jinja2 template with the given context variables.
+
+        Loads the template from either an absolute path or a path relative
+        to the base directory. The template is rendered with the provided
+        context dictionary using Jinja2's template engine.
 
         Parameters
         ----------
         template_path : str
-            Path to the template file. Can be an absolute path or relative to
-            ``base_dir``.
-        context : Mapping[str, Any] or None, default=None
-            Context variables passed to the template.
+            Path to the template file. Can be an absolute path or relative
+            to base_dir.
+        context : dict[str, Any] or None, default None
+            Context variables to pass to the template. If None, an empty
+            dictionary is used.
 
         Returns
         -------
         str
-            Rendered prompt as a string.
+            Fully rendered template as a string.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the template file does not exist at the specified path.
+
+        Examples
+        --------
+        >>> renderer = PromptRenderer()
+        >>> context = {"name": "Alice", "age": 30}
+        >>> result = renderer.render("greeting.jinja", context)
+        >>> "Alice" in result
+        True
+
+        With absolute path:
+
+        >>> result = renderer.render(
+        ...     "/path/to/template.jinja",
+        ...     context={"key": "value"}
+        ... )
         """
         path = Path(template_path)
         if path.is_absolute():

@@ -1,23 +1,63 @@
-"""Structures for designing and planning new agents."""
+"""Agent design and planning structures.
+
+This module provides structures for capturing agent requirements and
+converting them into executable plans with validation and deployment steps.
+"""
 
 from __future__ import annotations
 
-from typing import List, Optional
-
-from .plan.enum import AgentEnum
 from .base import BaseStructure, spec_field
-from .plan import TaskStructure, PlanStructure
+from .plan import PlanStructure, TaskStructure
+from .plan.enum import AgentEnum
 
 
 class AgentBlueprint(BaseStructure):
-    """Capture the core requirements for creating a new agent.
+    """Capture requirements for creating a new agent.
+
+    Defines the complete specification for an agent including mission,
+    capabilities, constraints, tools, data sources, and deployment plans.
+    Can be converted into an executable plan structure.
+
+    Attributes
+    ----------
+    name : str
+        Name of the agent to build.
+    mission : str
+        Primary goal or charter for the agent.
+    capabilities : list[str]
+        Core skills the agent must perform.
+    constraints : list[str]
+        Boundaries, policies, or limits the agent must honor.
+    required_tools : list[str]
+        External tools the agent must integrate.
+    data_sources : list[str]
+        Data inputs that inform the agent's work.
+    evaluation_plan : list[str]
+        Checks, tests, or metrics that validate the agent.
+    rollout_plan : list[str]
+        Deployment or launch steps for the agent.
+    guardrails : list[str]
+        Safety rules and governance requirements.
+    notes : str or None
+        Additional context that informs the build.
 
     Methods
     -------
     summary()
         Return a human-readable overview of the blueprint.
     build_plan()
-        Convert the blueprint into an ordered ``PlanStructure``.
+        Convert the blueprint into an ordered PlanStructure.
+
+    Examples
+    --------
+    >>> blueprint = AgentBlueprint(
+    ...     name="ResearchCoordinator",
+    ...     mission="Coordinate research sprint",
+    ...     capabilities=["search", "summarize"],
+    ...     constraints=["max 10 queries per run"]
+    ... )
+    >>> print(blueprint.summary())
+    >>> plan = blueprint.build_plan()
     """
 
     name: str = spec_field(
@@ -32,53 +72,64 @@ class AgentBlueprint(BaseStructure):
         description="Primary goal or charter for the agent.",
         examples=["Coordinate a research sprint", "Score model outputs"],
     )
-    capabilities: List[str] = spec_field(
+    capabilities: list[str] = spec_field(
         "capabilities",
         default_factory=list,
         description="Core skills the agent must perform.",
     )
-    constraints: List[str] = spec_field(
+    constraints: list[str] = spec_field(
         "constraints",
         default_factory=list,
         description="Boundaries, policies, or limits the agent must honor.",
     )
-    required_tools: List[str] = spec_field(
+    required_tools: list[str] = spec_field(
         "required_tools",
         default_factory=list,
         description="External tools the agent must integrate.",
     )
-    data_sources: List[str] = spec_field(
+    data_sources: list[str] = spec_field(
         "data_sources",
         default_factory=list,
         description="Data inputs that inform the agent's work.",
     )
-    evaluation_plan: List[str] = spec_field(
+    evaluation_plan: list[str] = spec_field(
         "evaluation_plan",
         default_factory=list,
         description="Checks, tests, or metrics that validate the agent.",
     )
-    rollout_plan: List[str] = spec_field(
+    rollout_plan: list[str] = spec_field(
         "rollout_plan",
         default_factory=list,
         description="Deployment or launch steps for the agent.",
     )
-    guardrails: List[str] = spec_field(
+    guardrails: list[str] = spec_field(
         "guardrails",
         default_factory=list,
         description="Safety rules and governance requirements.",
     )
-    notes: Optional[str] = spec_field(
+    notes: str | None = spec_field(
         "notes",
         description="Additional context that informs the build.",
     )
 
     def summary(self) -> str:
-        """Return a multi-line summary highlighting key requirements.
+        """Return a human-readable overview of the blueprint.
+
+        Formats all blueprint fields into a multi-line summary highlighting
+        key requirements and specifications.
 
         Returns
         -------
         str
-            Human-readable description of the blueprint fields.
+            Multi-line formatted description of blueprint fields.
+
+        Examples
+        --------
+        >>> print(blueprint.summary())
+        Agent name: ResearchCoordinator
+        Mission: Coordinate research sprint
+        Capabilities: search, summarize
+        ...
         """
 
         def _format(label: str, values: list[str]) -> str:
@@ -101,12 +152,24 @@ class AgentBlueprint(BaseStructure):
         return "\n".join(lines)
 
     def build_plan(self) -> PlanStructure:
-        """Translate the blueprint into a structured plan of execution steps.
+        """Translate the blueprint into a structured execution plan.
+
+        Converts the agent requirements into an ordered sequence of tasks
+        representing the complete build lifecycle: planning, design,
+        implementation, validation, evaluation, and deployment.
 
         Returns
         -------
         PlanStructure
-            Ordered list of tasks representing the build lifecycle.
+            Ordered list of tasks with agent types and prompts.
+
+        Examples
+        --------
+        >>> plan = blueprint.build_plan()
+        >>> len(plan.tasks)
+        6
+        >>> plan.tasks[0].task_type
+        <AgentEnum.PLANNER: 'MetaPlanner'>
         """
         tasks = [
             TaskStructure(

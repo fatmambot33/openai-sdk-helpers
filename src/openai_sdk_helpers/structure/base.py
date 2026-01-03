@@ -1,4 +1,9 @@
-"""Base structure definitions for shared agent structures."""
+"""Base classes for structured output models.
+
+This module provides the foundational BaseStructure class and utilities for
+defining Pydantic-based structured output models with OpenAI-compatible schema
+generation, validation, and serialization.
+"""
 
 from __future__ import annotations
 
@@ -7,22 +12,17 @@ import ast
 import inspect
 import json
 import logging
-from enum import Enum
-from pathlib import Path
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from enum import Enum
+from pathlib import Path
 from typing import (
     Any,
     ClassVar,
-    Dict,
-    List,
-    Optional,
-    Type,
     TypeVar,
-    Union,
+    cast,
     get_args,
     get_origin,
-    cast,
 )
 
 # Third-party imports
@@ -39,12 +39,55 @@ DEFAULT_DATA_PATH: Path | None = None
 
 
 class BaseStructure(BaseModel):
-    """Base class for defining structured output formats for OpenAI Assistants.
+    """Base class for structured output models with schema generation.
 
-    This class provides Pydantic-based schema definition and serialization
-    helpers that support structured output formatting. All structured data
-    types in this package extend ``BaseStructure`` to ensure consistent
-    validation, serialization, and schema generation.
+    Provides Pydantic-based schema definition and serialization utilities
+    for OpenAI-compatible structured outputs. All structured data types
+    extend this class to ensure consistent validation, serialization, and
+    schema generation across the package.
+
+    Supports automatic JSON schema generation, prompt formatting, and
+    conversion to/from OpenAI API formats for both Assistant and chat
+    completion APIs.
+
+    Attributes
+    ----------
+    DATA_PATH : Path or None, class attribute
+        Optional location for saving schema files. Set at class level
+        before calling save_schema_to_file.
+
+    Methods
+    -------
+    get_prompt(add_enum_values=True)
+        Format structured prompt lines into a single output string.
+    get_input_prompt_list(add_enum_values=True)
+        Build a structured prompt including inherited fields.
+    assistant_format()
+        Build a response format payload for Assistant APIs.
+    assistant_tool_definition(name, description)
+        Build a function tool definition payload for Assistant APIs.
+    response_format()
+        Build a response format payload for chat completions.
+    response_tool_definition(tool_name, tool_description)
+        Build a function tool definition payload for chat completions.
+    get_schema()
+        Generate a JSON schema for the structure.
+    save_schema_to_file()
+        Persist the schema to disk within DATA_PATH.
+    to_json()
+        Serialize the structure to a JSON-compatible dictionary.
+    to_json_file(filepath)
+        Write the serialized payload to a file.
+    from_raw_input(data)
+        Construct an instance from raw assistant tool-call arguments.
+    format_output(label, value)
+        Format a label/value pair for console output.
+    schema_overrides()
+        Produce Field overrides for dynamic schema customization.
+    print()
+        Return a string representation of the structure.
+    console_print()
+        Print the string representation to stdout.
 
     Examples
     --------
@@ -68,39 +111,6 @@ class BaseStructure(BaseModel):
 
     >>> instance = MyOutput(title="Test", score=0.95)
     >>> json_dict = instance.to_json()
-
-    Methods
-    -------
-    assistant_format()
-        Build a response format payload for Assistant APIs.
-    assistant_tool_definition(name, description)
-        Build a function tool definition payload for Assistant APIs.
-    get_prompt(add_enum_values)
-        Format structured prompt lines into a single output string.
-    get_input_prompt_list(add_enum_values)
-        Build a structured prompt including inherited fields.
-    get_schema(force_required)
-        Generate a JSON schema for the structure.
-    response_format()
-        Build a response format payload for chat completions.
-    response_tool_definition(tool_name, tool_description)
-        Build a function tool definition payload for chat completions.
-    save_schema_to_file(force_required)
-        Persist the schema to disk within the application data path.
-    to_json()
-        Serialize the structure to a JSON-compatible dictionary.
-    to_json_file(filepath)
-        Write the serialized payload to ``filepath``.
-    from_raw_input(data)
-        Construct an instance from raw assistant tool-call arguments.
-    format_output(label, value)
-        Format a label/value pair for console output.
-    schema_overrides()
-        Produce ``Field`` overrides for dynamic schema customisation.
-    print()
-        Return a string representation of the structure.
-    console_print()
-        Print the string representation to stdout.
     """
 
     model_config = ConfigDict(
@@ -130,12 +140,16 @@ class BaseStructure(BaseModel):
 
     @classmethod
     def _get_all_fields(cls) -> dict[Any, Any]:
-        """Collect all fields, including inherited ones, from the class hierarchy.
+        """Collect all fields from the class hierarchy including inherited ones.
+
+        Traverses the method resolution order (MRO) to gather fields from
+        all parent classes that inherit from BaseModel, ensuring inherited
+        fields are included in schema generation.
 
         Returns
         -------
         dict[Any, Any]
-            Mapping of field names to model fields.
+            Mapping of field names to Pydantic ModelField instances.
         """
         fields = {}
         for base in reversed(cls.__mro__):  # Traverse inheritance tree
@@ -214,7 +228,10 @@ class BaseStructure(BaseModel):
 
     @classmethod
     def assistant_tool_definition(cls, name: str, description: str) -> dict:
-        """Build an assistant function tool definition for this structure.
+        """Build an Assistant API function tool definition for this structure.
+
+        Creates a tool definition compatible with the OpenAI Assistant API,
+        using the structure's schema as the function parameters.
 
         Parameters
         ----------
@@ -226,7 +243,14 @@ class BaseStructure(BaseModel):
         Returns
         -------
         dict
-            Assistant tool definition payload.
+            Assistant tool definition payload in OpenAI format.
+
+        Examples
+        --------
+        >>> tool = MyStructure.assistant_tool_definition(
+        ...     "analyze_data",
+        ...     "Analyze the provided data"
+        ... )
         """
         from .responses import assistant_tool_definition
 
@@ -234,12 +258,19 @@ class BaseStructure(BaseModel):
 
     @classmethod
     def assistant_format(cls) -> dict:
-        """Build an assistant response format definition for this structure.
+        """Build an Assistant API response format definition.
+
+        Creates a response format specification that instructs the Assistant
+        API to return structured output matching this structure's schema.
 
         Returns
         -------
         dict
-            Assistant response format definition.
+            Assistant response format definition in OpenAI format.
+
+        Examples
+        --------
+        >>> format_def = MyStructure.assistant_format()
         """
         from .responses import assistant_format
 
@@ -248,6 +279,9 @@ class BaseStructure(BaseModel):
     @classmethod
     def response_tool_definition(cls, tool_name: str, tool_description: str) -> dict:
         """Build a chat completion tool definition for this structure.
+
+        Creates a function tool definition compatible with the chat
+        completions API, using the structure's schema as parameters.
 
         Parameters
         ----------
@@ -259,7 +293,14 @@ class BaseStructure(BaseModel):
         Returns
         -------
         dict
-            Tool definition payload for chat completions.
+            Tool definition payload for chat completions API.
+
+        Examples
+        --------
+        >>> tool = MyStructure.response_tool_definition(
+        ...     "process_data",
+        ...     "Process the input data"
+        ... )
         """
         from .responses import response_tool_definition
 
@@ -269,10 +310,23 @@ class BaseStructure(BaseModel):
     def response_format(cls) -> ResponseTextConfigParam:
         """Build a chat completion response format for this structure.
 
+        Creates a response format specification that instructs the chat
+        completions API to return structured output matching this
+        structure's schema.
+
         Returns
         -------
         ResponseTextConfigParam
-            Response format definition.
+            Response format definition for chat completions API.
+
+        Examples
+        --------
+        >>> format_spec = MyStructure.response_format()
+        >>> response = client.chat.completions.create(
+        ...     model="gpt-4",
+        ...     messages=[...],
+        ...     response_format=format_spec
+        ... )
         """
         from .responses import response_format
 
@@ -280,21 +334,29 @@ class BaseStructure(BaseModel):
 
     @classmethod
     def get_schema(cls) -> dict[str, Any]:
-        """Generate a JSON schema for the class.
+        """Generate a JSON schema for this structure.
 
-        All object properties are marked as required to produce fully specified
-        schemas. Fields with a default value of ``None`` are treated as nullable
-        and gain an explicit ``null`` entry in the resulting schema.
-
-        Parameters
-        ----------
-        force_required : bool, default=False
-            Retained for compatibility; all schemas declare required properties.
+        Produces a complete JSON schema with all properties marked as
+        required. Fields with default value of None are treated as nullable
+        and include an explicit null type in the schema.
 
         Returns
         -------
         dict[str, Any]
-            JSON schema describing the structure.
+            JSON schema describing the structure in JSON Schema format.
+
+        Notes
+        -----
+        The schema generation automatically:
+        - Marks all object properties as required
+        - Adds null type for fields with None default
+        - Cleans up $ref entries for better compatibility
+        - Recursively processes nested structures
+
+        Examples
+        --------
+        >>> schema = MyStructure.get_schema()
+        >>> print(json.dumps(schema, indent=2))
         """
         schema = cls.model_json_schema()
 
@@ -311,7 +373,7 @@ class BaseStructure(BaseModel):
                     clean_refs(item)
             return obj
 
-        cleaned_schema = cast(Dict[str, Any], clean_refs(schema))
+        cleaned_schema = cast(dict[str, Any], clean_refs(schema))
 
         def add_required_fields(target: dict[str, Any]) -> None:
             """Ensure every object declares its required properties."""
@@ -360,21 +422,28 @@ class BaseStructure(BaseModel):
 
     @classmethod
     def save_schema_to_file(cls) -> Path:
-        """
-        Save the generated JSON schema to a file.
+        """Save the generated JSON schema to a file.
 
-        The schema is generated using :meth:`get_schema` and saved in the
-        application's data path.
-
-        Parameters
-        ----------
-        force_required : bool, default=False
-            When ``True``, mark all object properties as required.
+        Generates the schema using get_schema and saves it to a JSON file
+        within the DATA_PATH directory. The filename is derived from the
+        class name.
 
         Returns
         -------
         Path
-            Path to the saved schema file.
+            Absolute path to the saved schema file.
+
+        Raises
+        ------
+        RuntimeError
+            If DATA_PATH is not set on the class.
+
+        Examples
+        --------
+        >>> MyStructure.DATA_PATH = Path("./schemas")
+        >>> schema_path = MyStructure.save_schema_to_file()
+        >>> print(schema_path)
+        PosixPath('./schemas/MyStructure_schema.json')
         """
         schema = cls.get_schema()
         if cls.DATA_PATH is None:
@@ -387,17 +456,23 @@ class BaseStructure(BaseModel):
             json.dump(schema, file_handle, indent=2, ensure_ascii=False)
         return file_path
 
-    def to_json(self) -> Dict[str, Any]:
-        """
-        Serialize the Pydantic model instance to a JSON-compatible dictionary.
+    def to_json(self) -> dict[str, Any]:
+        """Serialize the instance to a JSON-compatible dictionary.
 
-        Enum members are converted to their values. Lists and nested dictionaries
-        are recursively processed.
+        Converts the Pydantic model instance to a dictionary suitable for
+        JSON serialization. Enum members are converted to their values,
+        and nested structures are recursively processed.
 
         Returns
         -------
         dict[str, Any]
-            Model instance serialized as a dictionary.
+            Model instance serialized as a dictionary with JSON-compatible types.
+
+        Examples
+        --------
+        >>> instance = MyStructure(title="Test", score=0.95)
+        >>> data = instance.to_json()
+        >>> print(json.dumps(data))
         """
 
         def convert(obj: Any) -> Any:
@@ -420,16 +495,19 @@ class BaseStructure(BaseModel):
             if annotation is None:
                 return False
 
-            origins_to_match = {list, List, Sequence, tuple, set}
+            origins_to_match = {list, Sequence, tuple, set}
 
             origin = get_origin(annotation)
             if origin in origins_to_match or annotation in origins_to_match:
                 return True
 
-            if origin is Union:
+            # Check for Union types (e.g., list[str] | None)
+            if origin is not None:
+                # Handle Union by checking args
+                args = get_args(annotation)
                 return any(
                     get_origin(arg) in origins_to_match or arg in origins_to_match
-                    for arg in get_args(annotation)
+                    for arg in args
                 )
             return False
 
@@ -469,21 +547,20 @@ class BaseStructure(BaseModel):
         return filepath
 
     @classmethod
-    def _extract_enum_class(cls, field_type: Any) -> Optional[Type[Enum]]:
-        """
-        Extract an Enum class from a field's type annotation.
+    def _extract_enum_class(cls, field_type: Any) -> type[Enum] | None:
+        """Extract an Enum class from a field's type annotation.
 
-        Handles direct Enum types, List[Enum], and Optional[Enum] (via Union).
+        Handles direct Enum types, list[Enum], and optional Enums.
 
         Parameters
         ----------
-        field_type
+        field_type : Any
             Type annotation of a field.
 
         Returns
         -------
         type[Enum] or None
-            Enum class if found, otherwise ``None``.
+            Enum class if found, otherwise None.
         """
         origin = get_origin(field_type)
         args = get_args(field_type)
@@ -491,13 +568,14 @@ class BaseStructure(BaseModel):
         if inspect.isclass(field_type) and issubclass(field_type, Enum):
             return field_type
         elif (
-            origin in {list, List}
+            origin is list
             and args
             and inspect.isclass(args[0])
             and issubclass(args[0], Enum)
         ):
             return args[0]
-        elif origin is Union:
+        elif origin is not None:
+            # Handle Union types
             for arg in args:
                 enum_cls = cls._extract_enum_class(arg)
                 if enum_cls:
@@ -505,18 +583,18 @@ class BaseStructure(BaseModel):
         return None
 
     @classmethod
-    def _build_enum_field_mapping(cls) -> dict[str, Type[Enum]]:
-        """
-        Build a mapping from field names to their Enum classes.
+    def _build_enum_field_mapping(cls) -> dict[str, type[Enum]]:
+        """Build a mapping from field names to their Enum classes.
 
-        This is used by `from_raw_input` to correctly process enum values.
+        Used by from_raw_input to correctly process enum values from
+        raw API responses.
 
         Returns
         -------
         dict[str, type[Enum]]
             Mapping of field names to Enum types.
         """
-        mapping: dict[str, Type[Enum]] = {}
+        mapping: dict[str, type[Enum]] = {}
 
         for name, model_field in cls.model_fields.items():
             field_type = model_field.annotation
@@ -528,24 +606,27 @@ class BaseStructure(BaseModel):
         return mapping
 
     @classmethod
-    def from_raw_input(cls: Type[T], data: dict) -> T:
-        """
-        Construct an instance of the class from a dictionary of raw input data.
+    def from_raw_input(cls: type[T], data: dict) -> T:
+        """Construct an instance from a dictionary of raw input data.
 
-        This method is particularly useful for converting data received from an
-        OpenAI Assistant (e.g., tool call arguments) into a Pydantic model.
-        It handles the conversion of string values to Enum members for fields
-        typed as Enum or List[Enum]. Warnings are logged for invalid enum values.
+        Particularly useful for converting data from OpenAI API tool calls
+        or assistant outputs into validated structure instances. Handles
+        enum value conversion automatically.
 
         Parameters
         ----------
         data : dict
-            Raw input data payload.
+            Raw input data dictionary from API response.
 
         Returns
         -------
         T
-            Instance populated with the processed data.
+            Validated instance of the structure class.
+
+        Examples
+        --------
+        >>> raw_data = {"title": "Test", "score": 0.95}
+        >>> instance = MyStructure.from_raw_input(raw_data)
         """
         mapping = cls._build_enum_field_mapping()
         clean_data = data.copy()
@@ -596,7 +677,7 @@ class BaseStructure(BaseModel):
         return cls(**clean_data)
 
     @classmethod
-    def from_tool_arguments(cls: Type[T], arguments: str) -> T:
+    def from_tool_arguments(cls: type[T], arguments: str) -> T:
         """Parse tool call arguments which may not be valid JSON.
 
         The OpenAI API is expected to return well-formed JSON for tool arguments,
@@ -660,7 +741,7 @@ class BaseStructure(BaseModel):
         return f"- {label}: {str(value)}"
 
     @classmethod
-    def schema_overrides(cls) -> Dict[str, Any]:
+    def schema_overrides(cls) -> dict[str, Any]:
         """
         Generate Pydantic ``Field`` overrides.
 
@@ -752,7 +833,7 @@ def spec_field(
     Any
         Pydantic ``Field`` configured with a default title and null behavior.
     """
-    field_kwargs: Dict[str, Any] = {"title": name.replace("_", " ").title()}
+    field_kwargs: dict[str, Any] = {"title": name.replace("_", " ").title()}
     field_kwargs.update(overrides)
 
     base_description = field_kwargs.pop("description", description)

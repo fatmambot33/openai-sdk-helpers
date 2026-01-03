@@ -1,4 +1,8 @@
-"""Structured output model for agent plans."""
+"""Structured output model for agent plans.
+
+This module defines a Pydantic model for representing ordered lists of agent
+tasks, with support for sequential execution and result aggregation.
+"""
 
 from __future__ import annotations
 
@@ -6,7 +10,8 @@ import asyncio
 import inspect
 import threading
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, List, Mapping
+from typing import Any, Callable
+from collections.abc import Mapping
 
 from .enum import AgentEnum
 from ..base import BaseStructure, spec_field
@@ -16,6 +21,14 @@ from .task import TaskStructure
 class PlanStructure(BaseStructure):
     """Structured representation of an ordered list of agent tasks.
 
+    Represents a complete execution plan consisting of multiple agent tasks
+    to be run sequentially, with support for context passing between tasks.
+
+    Attributes
+    ----------
+    tasks : list[TaskStructure]
+        Ordered list of agent tasks to execute.
+
     Methods
     -------
     print()
@@ -23,12 +36,21 @@ class PlanStructure(BaseStructure):
     __len__()
         Return the count of tasks in the plan.
     append(task)
-        Append an ``TaskStructure`` to the plan.
+        Append a TaskStructure to the plan.
     execute(agent_registry, halt_on_error)
         Run tasks sequentially using the provided agent callables.
+
+    Examples
+    --------
+    >>> plan = PlanStructure(tasks=[
+    ...     TaskStructure(prompt="Task 1"),
+    ...     TaskStructure(prompt="Task 2")
+    ... ])
+    >>> len(plan)
+    2
     """
 
-    tasks: List[TaskStructure] = spec_field(
+    tasks: list[TaskStructure] = spec_field(
         "tasks",
         default_factory=list,
         description="Ordered list of agent tasks to execute.",
@@ -37,22 +59,15 @@ class PlanStructure(BaseStructure):
     def print(self) -> str:
         """Return a human-readable representation of the plan.
 
-        Parameters
-        ----------
-        None
-
         Returns
         -------
         str
-            Concatenated description of each plan step.
-
-        Raises
-        ------
-        None
+            Concatenated description of each task with task numbers.
 
         Examples
         --------
-        >>> PlanStructure().print()
+        >>> plan = PlanStructure()
+        >>> plan.print()
         'No tasks defined.'
         """
         if not self.tasks:
@@ -62,20 +77,12 @@ class PlanStructure(BaseStructure):
         )
 
     def __len__(self) -> int:
-        """Return the number of tasks contained in the plan.
-
-        Parameters
-        ----------
-        None
+        """Return the number of tasks in the plan.
 
         Returns
         -------
         int
             Count of stored agent tasks.
-
-        Raises
-        ------
-        None
 
         Examples
         --------
@@ -92,14 +99,6 @@ class PlanStructure(BaseStructure):
         task : TaskStructure
             Task to append to the plan.
 
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        None
-
         Examples
         --------
         >>> plan = PlanStructure()
@@ -115,12 +114,15 @@ class PlanStructure(BaseStructure):
     ) -> list[str]:
         """Execute tasks with registered agent callables and record outputs.
 
+        Runs each task in sequence, passing results as context to subsequent
+        tasks. Updates task status, timing, and results as execution proceeds.
+
         Parameters
         ----------
         agent_registry : Mapping[AgentEnum | str, Callable[..., Any]]
-            Lookup of agent identifiers to callables. Keys may be ``AgentEnum``
+            Lookup of agent identifiers to callables. Keys may be AgentEnum
             instances or their string values. Each callable receives the task
-            prompt (augmented with prior context) and an optional ``context``
+            prompt (augmented with prior context) and an optional context
             keyword containing accumulated results.
         halt_on_error : bool, default=True
             Whether execution should stop when a task raises an exception.
@@ -133,8 +135,15 @@ class PlanStructure(BaseStructure):
         Raises
         ------
         KeyError
-            If a task does not have a corresponding callable in
-            ``agent_registry``.
+            If a task does not have a corresponding callable in agent_registry.
+
+        Examples
+        --------
+        >>> def agent_fn(prompt, context=None):
+        ...     return f"Result for {prompt}"
+        >>> registry = {AgentEnum.WEB_SEARCH: agent_fn}
+        >>> plan = PlanStructure(tasks=[TaskStructure(prompt="Test")])
+        >>> results = plan.execute(registry)  # doctest: +SKIP
         """
         aggregated_results: list[str] = []
         for task in self.tasks:
@@ -171,7 +180,18 @@ class PlanStructure(BaseStructure):
 
     @staticmethod
     def _resolve_registry_key(task_type: AgentEnum | str) -> str:
-        """Return a normalized registry key for the given ``task_type``."""
+        """Return a normalized registry key for the given task_type.
+
+        Parameters
+        ----------
+        task_type : AgentEnum | str
+            Task type to normalize.
+
+        Returns
+        -------
+        str
+            Normalized key for agent registry lookup.
+        """
         if isinstance(task_type, AgentEnum):
             return task_type.value
         if task_type in AgentEnum.__members__:
@@ -189,6 +209,9 @@ class PlanStructure(BaseStructure):
         aggregated_context: list[str],
     ) -> Any:
         """Execute a single task using the supplied callable.
+
+        Combines task context with aggregated results from previous tasks,
+        then invokes the agent callable with the augmented prompt.
 
         Parameters
         ----------
@@ -219,7 +242,21 @@ class PlanStructure(BaseStructure):
 
     @staticmethod
     def _normalize_results(result: Any) -> list[str]:
-        """Convert callable outputs into a list of strings."""
+        """Convert callable outputs into a list of strings.
+
+        Handles various result types including None, awaitables, lists,
+        and single values.
+
+        Parameters
+        ----------
+        result : Any
+            Raw result from agent callable.
+
+        Returns
+        -------
+        list[str]
+            Normalized list of string results.
+        """
         if result is None:
             return []
         if inspect.isawaitable(result):
@@ -230,14 +267,28 @@ class PlanStructure(BaseStructure):
 
     @staticmethod
     def _await_result(result: Any) -> Any:
-        """Await the provided result, handling running event loops."""
+        """Await the provided result, handling running event loops.
+
+        Properly handles awaiting results whether an event loop is running
+        or not, using a separate thread when necessary.
+
+        Parameters
+        ----------
+        result : Any
+            Awaitable result to resolve.
+
+        Returns
+        -------
+        Any
+            Resolved value from the awaitable.
+        """
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
             return asyncio.run(result)
 
         if loop.is_running():
-            container: Dict[str, Any] = {"value": None}
+            container: dict[str, Any] = {"value": None}
 
             def _runner() -> None:
                 container["value"] = asyncio.run(result)

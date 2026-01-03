@@ -1,10 +1,15 @@
-"""Message containers for shared OpenAI responses."""
+"""Message containers for OpenAI response conversations.
+
+This module provides dataclasses for managing conversation history including
+user inputs, assistant outputs, system messages, and tool calls. Messages are
+stored with timestamps and metadata, and can be serialized to JSON.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Dict, List, Union, cast
+from typing import cast
 
 from openai.types.responses.response_function_tool_call import ResponseFunctionToolCall
 from openai.types.responses.response_function_tool_call_param import (
@@ -25,12 +30,26 @@ from .tool_call import ResponseToolCall
 
 @dataclass
 class ResponseMessage(JSONSerializable):
-    """Single message exchanged with the OpenAI client.
+    """Single message exchanged with the OpenAI API.
+
+    Represents a complete message with role, content, timestamp, and
+    optional metadata. Can be serialized to JSON for persistence.
+
+    Attributes
+    ----------
+    role : str
+        Message role: "user", "assistant", "tool", or "system".
+    content : ResponseInputItemParam | ResponseOutputMessage | ResponseFunctionToolCallParam | FunctionCallOutput | ResponseInputMessageContentListParam
+        Message content in OpenAI format.
+    timestamp : datetime
+        UTC timestamp when the message was created.
+    metadata : dict[str, str | float | bool]
+        Optional metadata for tracking or debugging.
 
     Methods
     -------
     to_openai_format()
-        Return the payload in the format expected by the OpenAI client.
+        Return the message content in OpenAI API format.
     """
 
     role: str  # "user", "assistant", "tool", etc.
@@ -42,7 +61,7 @@ class ResponseMessage(JSONSerializable):
         | ResponseInputMessageContentListParam
     )
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    metadata: Dict[str, Union[str, float, bool]] = field(default_factory=dict)
+    metadata: dict[str, str | float | bool] = field(default_factory=dict)
 
     def to_openai_format(
         self,
@@ -65,10 +84,16 @@ class ResponseMessage(JSONSerializable):
 
 @dataclass
 class ResponseMessages(JSONSerializable):
-    """Represent a collection of messages in a response.
+    """Collection of messages in a conversation.
 
-    This dataclass encapsulates user inputs and assistant outputs during an
-    OpenAI API interaction.
+    Manages the complete history of messages exchanged during an OpenAI
+    API interaction. Provides methods for adding different message types
+    and converting to formats required by the OpenAI API.
+
+    Attributes
+    ----------
+    messages : list[ResponseMessage]
+        Ordered list of all messages in the conversation.
 
     Methods
     -------
@@ -81,10 +106,16 @@ class ResponseMessages(JSONSerializable):
     add_tool_message(content, output, **metadata)
         Record a tool call and its output.
     to_openai_payload()
-        Convert stored messages to the OpenAI input payload.
+        Convert stored messages to OpenAI input payload format.
+    get_last_assistant_message()
+        Return the most recent assistant message or None.
+    get_last_tool_message()
+        Return the most recent tool message or None.
+    get_last_user_message()
+        Return the most recent user message or None.
     """
 
-    messages: List[ResponseMessage] = field(default_factory=list)
+    messages: list[ResponseMessage] = field(default_factory=list)
 
     def add_system_message(
         self, content: ResponseInputMessageContentListParam, **metadata
@@ -97,10 +128,6 @@ class ResponseMessages(JSONSerializable):
             System message content in OpenAI format.
         **metadata
             Optional metadata to store with the message.
-
-        Returns
-        -------
-        None
         """
         response_input = cast(
             ResponseInputItemParam, {"role": "system", "content": content}
@@ -120,10 +147,6 @@ class ResponseMessages(JSONSerializable):
             Message payload supplied by the user.
         **metadata
             Optional metadata to store with the message.
-
-        Returns
-        -------
-        None
         """
         self.messages.append(
             ResponseMessage(role="user", content=input_content, metadata=metadata)
@@ -132,20 +155,16 @@ class ResponseMessages(JSONSerializable):
     def add_assistant_message(
         self,
         content: ResponseOutputMessage,
-        metadata: Dict[str, Union[str, float, bool]],
+        metadata: dict[str, str | float | bool],
     ) -> None:
         """Append an assistant message to the conversation.
 
         Parameters
         ----------
         content : ResponseOutputMessage
-            Assistant response message.
-        metadata : dict[str, Union[str, float, bool]]
+            Assistant response message from the OpenAI API.
+        metadata : dict[str, str | float | bool]
             Optional metadata to store with the message.
-
-        Returns
-        -------
-        None
         """
         self.messages.append(
             ResponseMessage(role="assistant", content=content, metadata=metadata)
@@ -154,20 +173,16 @@ class ResponseMessages(JSONSerializable):
     def add_tool_message(
         self, content: ResponseFunctionToolCall, output: str, **metadata
     ) -> None:
-        """Record a tool call and its output in the conversation history.
+        """Record a tool call and its output in the conversation.
 
         Parameters
         ----------
         content : ResponseFunctionToolCall
-            Tool call received from OpenAI.
+            Tool call received from the OpenAI API.
         output : str
-            JSON string returned by the executed tool.
+            JSON string returned by the executed tool handler.
         **metadata
             Optional metadata to store with the message.
-
-        Returns
-        -------
-        None
         """
         tool_call = ResponseToolCall(
             call_id=content.call_id,
@@ -187,24 +202,25 @@ class ResponseMessages(JSONSerializable):
 
     def to_openai_payload(
         self,
-    ) -> List[
+    ) -> list[
         ResponseInputItemParam
         | ResponseOutputMessage
         | ResponseFunctionToolCallParam
         | FunctionCallOutput
         | ResponseInputMessageContentListParam
     ]:
-        """Convert stored messages to the input payload expected by OpenAI.
-
-        Notes
-        -----
-        Assistant messages are model outputs and are not included in the
-        next request's input payload.
+        """Convert stored messages to OpenAI API input format.
 
         Returns
         -------
         list
-            List of message payloads excluding assistant outputs.
+            List of message payloads suitable for the OpenAI API.
+            Assistant messages are excluded as they are outputs, not inputs.
+
+        Notes
+        -----
+        Assistant messages are not included in the returned payload since
+        they represent model outputs rather than inputs for the next request.
         """
         return [
             msg.to_openai_format() for msg in self.messages if msg.role != "assistant"

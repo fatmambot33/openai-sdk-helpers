@@ -1,10 +1,15 @@
-"""Streamlit chat application driven by a developer configuration."""
+"""Configuration-driven Streamlit chat application.
+
+This module implements a complete Streamlit chat interface that loads its
+configuration from a Python module. It handles conversation state, message
+rendering, response execution, and resource cleanup.
+"""
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -17,21 +22,29 @@ from openai_sdk_helpers.streamlit_app import (
     _load_configuration,
 )
 from openai_sdk_helpers.structure.base import BaseStructure
-from openai_sdk_helpers.utils import ensure_list, coerce_jsonable, log
+from openai_sdk_helpers.utils import coerce_jsonable, ensure_list, log
 
 
 def _extract_assistant_text(response: BaseResponse[Any]) -> str:
-    """Return the latest assistant message as a friendly string.
+    """Extract the latest assistant message as readable text.
+
+    Searches the response's message history for the most recent assistant
+    or tool message and extracts displayable text content.
 
     Parameters
     ----------
     response : BaseResponse[Any]
-        Active response session containing message history.
+        Active response session with message history.
 
     Returns
     -------
     str
-        Concatenated assistant text, or an empty string when unavailable.
+        Concatenated assistant text, or empty string if unavailable.
+
+    Examples
+    --------
+    >>> text = _extract_assistant_text(response)
+    >>> print(text)
     """
     message = response.get_last_assistant_message() or response.get_last_tool_message()
     if message is None:
@@ -41,7 +54,7 @@ def _extract_assistant_text(response: BaseResponse[Any]) -> str:
     if content is None:
         return ""
 
-    text_parts: List[str] = []
+    text_parts: list[str] = []
     for part in ensure_list(content):
         text_value = getattr(getattr(part, "text", None), "value", None)
         if text_value:
@@ -52,19 +65,28 @@ def _extract_assistant_text(response: BaseResponse[Any]) -> str:
 
 
 def _render_summary(result: Any, response: BaseResponse[Any]) -> str:
-    """Generate the assistant-facing summary shown in the transcript.
+    """Generate display text for the chat transcript.
+
+    Converts the response result into a human-readable format suitable
+    for display in the Streamlit chat interface. Handles structured
+    outputs, dictionaries, and raw text.
 
     Parameters
     ----------
     result : Any
-        Parsed result returned from ``BaseResponse.run_sync``.
+        Parsed result from BaseResponse.run_sync.
     response : BaseResponse[Any]
-        Response instance containing the latest assistant message.
+        Response instance containing message history.
 
     Returns
     -------
     str
         Display-ready summary text for the chat transcript.
+
+    Notes
+    -----
+    Falls back to extracting assistant text from message history if
+    the result cannot be formatted directly.
     """
     if isinstance(result, BaseStructure):
         return result.print()
@@ -79,20 +101,29 @@ def _render_summary(result: Any, response: BaseResponse[Any]) -> str:
     return "No response returned."
 
 
-def _build_raw_output(result: Any, response: BaseResponse[Any]) -> Dict[str, Any]:
-    """Assemble the raw payload shown under the expandable transcript section.
+def _build_raw_output(result: Any, response: BaseResponse[Any]) -> dict[str, Any]:
+    """Assemble raw JSON payload for the expandable transcript section.
+
+    Creates a structured dictionary containing both the parsed result
+    and the complete conversation history for debugging and inspection.
 
     Parameters
     ----------
     result : Any
-        Parsed result returned from the response instance.
+        Parsed result from the response execution.
     response : BaseResponse[Any]
-        Response session containing message history.
+        Response session with complete message history.
 
     Returns
     -------
     dict[str, Any]
-        Mapping that includes parsed data and raw conversation messages.
+        Mapping with 'parsed' data and 'conversation' messages.
+
+    Examples
+    --------
+    >>> raw = _build_raw_output(result, response)
+    >>> raw.keys()
+    dict_keys(['parsed', 'conversation'])
     """
     return {
         "parsed": coerce_jsonable(result),
@@ -101,22 +132,31 @@ def _build_raw_output(result: Any, response: BaseResponse[Any]) -> Dict[str, Any
 
 
 def _get_response_instance(config: StreamlitAppConfig) -> BaseResponse[Any]:
-    """Instantiate and cache the configured :class:`BaseResponse`.
+    """Instantiate and cache the configured BaseResponse.
+
+    Creates a new response instance from the configuration if not already
+    cached in session state. Applies vector store attachments and cleanup
+    settings based on configuration.
 
     Parameters
     ----------
     config : StreamlitAppConfig
-        Loaded configuration containing the response definition.
+        Loaded configuration with response handler definition.
 
     Returns
     -------
     BaseResponse[Any]
-        Active response instance for the current session.
+        Active response instance for the current Streamlit session.
 
     Raises
     ------
     TypeError
-        If the configured ``response`` cannot produce ``BaseResponse``.
+        If the configured response cannot produce a BaseResponse.
+
+    Notes
+    -----
+    The response instance is cached in st.session_state['response_instance']
+    to maintain conversation state across Streamlit reruns.
     """
     if "response_instance" in st.session_state:
         cached = st.session_state["response_instance"]
@@ -138,17 +178,21 @@ def _get_response_instance(config: StreamlitAppConfig) -> BaseResponse[Any]:
 
 
 def _reset_chat(close_response: bool = True) -> None:
-    """Clear the conversation and optionally close the response session.
+    """Clear conversation and optionally close the response session.
+
+    Saves the current conversation to disk, closes the response to clean
+    up resources, and clears the chat history from session state.
 
     Parameters
     ----------
-    close_response : bool, default=True
-        Whether to call ``close`` on the cached response instance.
+    close_response : bool, default True
+        Whether to call close() on the cached response instance,
+        triggering resource cleanup.
 
-    Returns
-    -------
-    None
-        This function mutates ``st.session_state`` in-place.
+    Notes
+    -----
+    This function mutates st.session_state in-place, clearing the
+    chat_history and response_instance keys.
     """
     response = st.session_state.get("response_instance")
     if close_response and isinstance(response, BaseResponse):
@@ -160,12 +204,15 @@ def _reset_chat(close_response: bool = True) -> None:
 
 
 def _init_session_state() -> None:
-    """Prepare Streamlit session state containers.
+    """Initialize Streamlit session state for chat functionality.
 
-    Returns
-    -------
-    None
-        This function initializes chat-related session keys when absent.
+    Creates the chat_history list in session state if it doesn't exist,
+    enabling conversation persistence across Streamlit reruns.
+
+    Notes
+    -----
+    This function should be called early in the app lifecycle to ensure
+    session state is properly initialized before rendering chat UI.
     """
     if "chat_history" not in st.session_state:
         st.session_state["chat_history"] = []
@@ -174,10 +221,14 @@ def _init_session_state() -> None:
 def _render_chat_history() -> None:
     """Display the conversation transcript from session state.
 
-    Returns
-    -------
-    None
-        Renders chat messages in the current Streamlit session.
+    Iterates through chat_history in session state and renders each
+    message with appropriate formatting. Assistant messages include
+    an expandable raw output section.
+
+    Notes
+    -----
+    Uses Streamlit's chat_message context manager for role-based
+    message styling.
     """
     for message in st.session_state.get("chat_history", []):
         role = message.get("role", "assistant")
@@ -193,14 +244,24 @@ def _render_chat_history() -> None:
 
 
 def _handle_user_message(prompt: str, config: StreamlitAppConfig) -> None:
-    """Append a user prompt and stream the assistant reply into the transcript.
+    """Process user input and generate assistant response.
+
+    Appends the user message to chat history, executes the response
+    handler, and adds the assistant's reply to the conversation.
+    Handles errors gracefully by displaying them in the UI.
 
     Parameters
     ----------
     prompt : str
         User-entered text to send to the assistant.
     config : StreamlitAppConfig
-        Loaded configuration containing the response definition.
+        Loaded configuration with response handler definition.
+
+    Notes
+    -----
+    Errors during response execution are caught and displayed in the
+    chat transcript rather than crashing the application. The function
+    triggers a Streamlit rerun after successful response generation.
     """
     st.session_state["chat_history"].append({"role": "user", "content": prompt})
     try:
@@ -230,12 +291,26 @@ def _handle_user_message(prompt: str, config: StreamlitAppConfig) -> None:
 
 
 def main(config_path: Path) -> None:
-    """Run the config-driven Streamlit chat app.
+    """Run the configuration-driven Streamlit chat application.
+
+    Entry point for the Streamlit app that loads configuration, sets up
+    the UI, manages session state, and handles user interactions.
 
     Parameters
     ----------
     config_path : Path
         Filesystem location of the configuration module.
+
+    Notes
+    -----
+    This function should be called as the entry point for the Streamlit
+    application. It handles the complete application lifecycle including
+    configuration loading, UI rendering, and chat interactions.
+
+    Examples
+    --------
+    >>> from pathlib import Path
+    >>> main(Path("./my_config.py"))
     """
     config = _load_configuration(config_path)
     st.set_page_config(page_title=config.display_title, layout="wide")

@@ -1,10 +1,15 @@
-"""Shared configuration for OpenAI SDK usage."""
+"""Shared configuration for OpenAI SDK usage.
+
+This module provides the OpenAISettings class for centralized management of
+OpenAI client configuration, reading from environment variables and .env files.
+"""
 
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Dict, Mapping, Optional
+from typing import Any
 
 from dotenv import dotenv_values
 from openai import OpenAI
@@ -51,84 +56,92 @@ class OpenAISettings(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    api_key: Optional[str] = Field(
+    api_key: str | None = Field(
         default=None,
         description=(
-            "API key used to authenticate requests. Defaults to ``OPENAI_API_KEY``"
+            "API key used to authenticate requests. Defaults to OPENAI_API_KEY"
             " from the environment."
         ),
     )
-    org_id: Optional[str] = Field(
+    org_id: str | None = Field(
         default=None,
         description=(
             "Organization identifier applied to outgoing requests. Defaults to"
-            " ``OPENAI_ORG_ID``."
+            " OPENAI_ORG_ID."
         ),
     )
-    project_id: Optional[str] = Field(
+    project_id: str | None = Field(
         default=None,
         description=(
             "Project identifier used for billing and resource scoping. Defaults to"
-            " ``OPENAI_PROJECT_ID``."
+            " OPENAI_PROJECT_ID."
         ),
     )
-    base_url: Optional[str] = Field(
+    base_url: str | None = Field(
         default=None,
         description=(
             "Custom base URL for self-hosted or proxied deployments. Defaults to"
-            " ``OPENAI_BASE_URL``."
+            " OPENAI_BASE_URL."
         ),
     )
-    default_model: Optional[str] = Field(
+    default_model: str | None = Field(
         default=None,
         description=(
             "Model name used when constructing agents if no model is explicitly"
-            " provided. Defaults to ``OPENAI_MODEL``."
+            " provided. Defaults to OPENAI_MODEL."
         ),
     )
-    timeout: Optional[float] = Field(
+    timeout: float | None = Field(
         default=None,
         description=(
             "Request timeout in seconds applied to all OpenAI client calls."
-            " Defaults to ``OPENAI_TIMEOUT``."
+            " Defaults to OPENAI_TIMEOUT."
         ),
     )
-    max_retries: Optional[int] = Field(
+    max_retries: int | None = Field(
         default=None,
         description=(
             "Maximum number of automatic retries for transient failures."
-            " Defaults to ``OPENAI_MAX_RETRIES``."
+            " Defaults to OPENAI_MAX_RETRIES."
         ),
     )
-    extra_client_kwargs: Dict[str, Any] = Field(
+    extra_client_kwargs: dict[str, Any] = Field(
         default_factory=dict,
         description=(
-            "Additional keyword arguments forwarded to ``openai.OpenAI``. Use"
-            " this for less common options like ``default_headers`` or"
-            " ``http_client``."
+            "Additional keyword arguments forwarded to openai.OpenAI. Use"
+            " this for less common options like default_headers or"
+            " http_client."
         ),
     )
 
     @classmethod
     def from_env(
-        cls, dotenv_path: Optional[Path] = None, **overrides: Any
-    ) -> "OpenAISettings":
+        cls, dotenv_path: Path | None = None, **overrides: Any
+    ) -> OpenAISettings:
         """Load settings from the environment and optional overrides.
+
+        Reads configuration from environment variables and an optional .env
+        file, with explicit overrides taking precedence.
 
         Parameters
         ----------
-        dotenv_path : Path | None
-            Path to a ``.env`` file to load before reading environment
-            variables. Default ``None``.
+        dotenv_path : Path or None, optional
+            Path to a .env file to load before reading environment
+            variables, by default None.
         overrides : Any
             Keyword overrides applied on top of environment values.
 
         Returns
         -------
         OpenAISettings
-        Settings instance populated from environment variables and overrides.
+            Settings instance populated from environment variables and overrides.
+
+        Raises
+        ------
+        ValueError
+            If OPENAI_API_KEY is not found in environment or dotenv file.
         """
-        env_file_values: Mapping[str, Optional[str]]
+        env_file_values: Mapping[str, str | None]
         if dotenv_path is not None:
             env_file_values = dotenv_values(dotenv_path)
         else:
@@ -145,7 +158,7 @@ class OpenAISettings(BaseModel):
             or os.getenv("OPENAI_MAX_RETRIES")
         )
 
-        values: Dict[str, Any] = {
+        values: dict[str, Any] = {
             "api_key": overrides.get("api_key")
             or env_file_values.get("OPENAI_API_KEY")
             or os.getenv("OPENAI_API_KEY"),
@@ -180,16 +193,19 @@ class OpenAISettings(BaseModel):
 
         return settings
 
-    def client_kwargs(self) -> Dict[str, Any]:
-        """Return keyword arguments for constructing an ``OpenAI`` client.
+    def client_kwargs(self) -> dict[str, Any]:
+        """Return keyword arguments for constructing an OpenAI client.
+
+        Builds a dictionary containing all configured authentication and
+        routing parameters suitable for OpenAI client initialization.
 
         Returns
         -------
-        dict
-        Keyword arguments populated with available authentication and routing
-        values.
+        dict[str, Any]
+            Keyword arguments populated with available authentication and
+            routing values.
         """
-        kwargs: Dict[str, Any] = dict(self.extra_client_kwargs)
+        kwargs: dict[str, Any] = dict(self.extra_client_kwargs)
         if self.api_key:
             kwargs["api_key"] = self.api_key
         if self.org_id:
@@ -205,12 +221,15 @@ class OpenAISettings(BaseModel):
         return kwargs
 
     def create_client(self) -> OpenAI:
-        """Instantiate an ``OpenAI`` client using the stored configuration.
+        """Instantiate an OpenAI client using the stored configuration.
+
+        Uses client_kwargs() to build the client with all configured
+        authentication and routing parameters.
 
         Returns
         -------
         OpenAI
-        Client initialized with ``client_kwargs``.
+            Client initialized with the configured settings.
         """
         return OpenAI(**self.client_kwargs())
 

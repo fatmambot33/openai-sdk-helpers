@@ -1,4 +1,9 @@
-"""Cleanup helpers for vector stores."""
+"""Cleanup utilities for vector stores.
+
+This module provides destructive operations for cleaning up OpenAI vector
+stores and files. Use these functions with caution as they perform
+irreversible deletions.
+"""
 
 from __future__ import annotations
 
@@ -12,13 +17,17 @@ from ..utils import log
 def _delete_all_vector_stores() -> None:
     """Delete all vector stores and clean up any orphaned files.
 
-    This utility iterates over every vector store owned by the account,
-    deleting each one after removing all of its files. Any standalone files that
-    remain after the stores are deleted are also removed.
+    Iterates over every vector store in the account, deleting all files
+    within each store before removing the store itself. After all stores
+    are deleted, removes any remaining orphaned files.
 
-    Returns
-    -------
-    None
+    Warning: This operation is irreversible and will delete all vector
+    stores and files in the account.
+
+    Examples
+    --------
+    >>> from openai_sdk_helpers.vector_storage import _delete_all_vector_stores
+    >>> _delete_all_vector_stores()  # doctest: +SKIP
     """
     try:
         client = OpenAI()
@@ -73,13 +82,16 @@ def _delete_all_vector_stores() -> None:
 def _delete_all_files() -> None:
     """Delete all files from the OpenAI account.
 
-    This utility iterates over every file owned by the account and deletes them.
-    It does not check for vector stores, so it will delete all files regardless
-    of their association.
+    Iterates over every file in the account and deletes them without
+    checking vector store associations. Use with extreme caution.
 
-    Returns
-    -------
-    None
+    Warning: This operation is irreversible and will delete all files
+    in the account, regardless of their usage in vector stores.
+
+    Examples
+    --------
+    >>> from openai_sdk_helpers.vector_storage import _delete_all_files
+    >>> _delete_all_files()  # doctest: +SKIP
     """
     client = OpenAI()
     all_files = client.files.list().data

@@ -1,4 +1,9 @@
-"""Wrapper utilities for managing OpenAI vector stores."""
+"""Wrapper utilities for managing OpenAI vector stores.
+
+This module provides the VectorStorage class for high-level management of
+OpenAI vector stores, including concurrent file uploads, semantic search,
+and batch operations.
+"""
 
 from __future__ import annotations
 
@@ -7,7 +12,7 @@ import logging
 import mimetypes
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import List, Optional, Union, cast
+from typing import Any, cast
 
 from openai import OpenAI
 from openai.pagination import SyncPage
@@ -92,19 +97,24 @@ class VectorStorage:
     def __init__(
         self,
         store_name: str,
-        client: Optional[OpenAIClient] = None,
-        model: Optional[str] = None,
+        client: OpenAIClient | None = None,
+        model: str | None = None,
     ) -> None:
         """Initialize the vector store helper.
 
+        Creates or connects to a named vector store using the OpenAI API.
+        Requires either a preconfigured client or OPENAI_API_KEY environment
+        variable.
+
         Parameters
         ----------
-        store_name
+        store_name : str
             Name of the vector store to create or connect to.
-        client
-            Optional preconfigured ``OpenAI``-compatible client. Default ``None``.
-        model
-            Embedding model identifier. Default ``None`` to read ``OPENAI_MODEL``.
+        client : OpenAIClient or None, optional
+            Preconfigured OpenAI-compatible client, by default None.
+        model : str or None, optional
+            Embedding model identifier. Reads OPENAI_MODEL env var if None,
+            by default None.
 
         Raises
         ------
@@ -130,7 +140,7 @@ class VectorStorage:
             raise ValueError("OpenAI model is required")
 
         self._vector_storage = self._get_or_create_vector_storage(store_name)
-        self._existing_files: Optional[dict[str, str]] = {}
+        self._existing_files: dict[str, str] | None = {}
 
     @property
     def id(self) -> str:
@@ -146,9 +156,12 @@ class VectorStorage:
     def _get_or_create_vector_storage(self, store_name: str) -> VectorStore:
         """Retrieve an existing vector store or create one if it does not exist.
 
+        Searches for an existing vector store with the specified name. If not
+        found, creates a new one.
+
         Parameters
         ----------
-        store_name
+        store_name : str
             Desired name of the vector store.
 
         Returns
@@ -216,27 +229,30 @@ class VectorStorage:
         self,
         file_path: str,
         purpose: str = "assistants",
-        attributes: Optional[dict[str, str | float | bool]] = None,
+        attributes: dict[str, str | float | bool] | None = None,
         overwrite: bool = False,
         refresh_cache: bool = False,
     ) -> VectorStorageFileInfo:
         """Upload a single file to the vector store.
 
+        Handles text and binary files with automatic encoding detection.
+        Skips upload if file already exists unless overwrite is True.
+
         Parameters
         ----------
         file_path : str
             Local path to the file to upload.
-        purpose : str, default "assistants"
-            Purpose of the file (for example ``"assistants"``).
-        attributes : dict or None, default None
-            Custom attributes to associate with the file. The ``file_name``
-            attribute is added automatically.
-        overwrite : bool, default False
-            When ``True``, re-upload even if a file with the same name already
-            exists.
-        refresh_cache : bool, default False
-            When ``True``, refresh the local cache of existing files before
-            checking for duplicates.
+        purpose : str, optional
+            Purpose of the file (e.g., "assistants"), by default "assistants".
+        attributes : dict[str, str | float | bool] or None, optional
+            Custom attributes to associate with the file. The file_name
+            attribute is added automatically, by default None.
+        overwrite : bool, optional
+            When True, re-upload even if a file with the same name exists,
+            by default False.
+        refresh_cache : bool, optional
+            When True, refresh the local cache of existing files before
+            checking for duplicates, by default False.
 
         Returns
         -------
@@ -299,25 +315,28 @@ class VectorStorage:
 
     def upload_files(
         self,
-        file_patterns: Union[str, List[str]],
+        file_patterns: str | list[str],
         purpose: str = "assistants",
-        attributes: Optional[dict[str, str | float | bool]] = None,
+        attributes: dict[str, str | float | bool] | None = None,
         overwrite: bool = False,
     ) -> VectorStorageFileStats:
-        """Upload files matching glob patterns to the vector store using a thread pool.
+        """Upload files matching glob patterns using a thread pool.
+
+        Expands glob patterns to find matching files and uploads them
+        concurrently using up to 10 worker threads. Shows progress bar
+        during upload.
 
         Parameters
         ----------
-        file_patterns : str or list of str
-            Glob pattern or list of patterns (for example
-            ``'/path/to/files/**/*.txt'``).
-        purpose : str, default "assistants"
-            Purpose assigned to uploaded files.
-        attributes : dict or None, default None
-            Custom attributes to associate with each file.
-        overwrite : bool, default False
-            When ``True``, re-upload files even if files with the same name
-            already exist.
+        file_patterns : str or list[str]
+            Glob pattern or list of patterns (e.g., '/path/**/*.txt').
+        purpose : str, optional
+            Purpose assigned to uploaded files, by default "assistants".
+        attributes : dict[str, str | float | bool] or None, optional
+            Custom attributes to associate with each file, by default None.
+        overwrite : bool, optional
+            When True, re-upload files even if files with the same name
+            exist, by default False.
 
         Returns
         -------
@@ -373,16 +392,19 @@ class VectorStorage:
     def delete_file(self, file_id: str) -> VectorStorageFileInfo:
         """Delete a specific file from the vector store.
 
+        Removes the file from the vector store and updates the local cache.
+        The operation is irreversible.
+
         Parameters
         ----------
-        file_id
+        file_id : str
             Identifier of the file to delete.
 
         Returns
         -------
         VectorStorageFileInfo
             Information about the deletion operation with status
-            ``"success"`` or ``"failed"``.
+            "success" or "failed".
         """
         try:
             self._client.vector_stores.files.delete(
@@ -402,12 +424,16 @@ class VectorStorage:
                 name="", id=file_id, status="failed", error=str(exc)
             )
 
-    def delete_files(self, file_ids: List[str]) -> VectorStorageFileStats:
-        """Delete multiple files from the vector store using a thread pool.
+    def delete_files(self, file_ids: list[str]) -> VectorStorageFileStats:
+        """Delete multiple files using a thread pool.
+
+        Performs concurrent deletions using up to 10 worker threads with
+        progress tracking. Updates the local cache for each successful
+        deletion.
 
         Parameters
         ----------
-        file_ids
+        file_ids : list[str]
             List of file IDs to delete.
 
         Returns
@@ -437,13 +463,11 @@ class VectorStorage:
     def delete(self) -> None:
         """Delete the entire vector store and all associated files.
 
-        This operation is irreversible. It first attempts to delete each file
-        individually from the store (and updates the local cache) before
-        deleting the store itself.
+        Removes each file individually before deleting the store itself.
+        The local cache is cleared after deletion.
 
-        Returns
-        -------
-        None
+        Warning: This operation is irreversible and will permanently delete
+        the vector store and all its files.
         """
         try:
             existing_files = list(self.existing_files.items())
@@ -464,11 +488,14 @@ class VectorStorage:
     def download_files(self, output_dir: str) -> VectorStorageFileStats:
         """Download every file in the vector store to a local directory.
 
+        Creates the output directory if needed. Uses file names from
+        attributes or falls back to file IDs.
+
         Parameters
         ----------
-        output_dir
-            Destination directory where the files will be written. The
-            directory is created when it does not already exist.
+        output_dir : str
+            Destination directory where files will be written. Created if
+            it does not exist.
 
         Returns
         -------
@@ -526,20 +553,23 @@ class VectorStorage:
 
     def search(
         self, query: str, top_k: int = 5
-    ) -> Optional[SyncPage[VectorStoreSearchResponse]]:
-        """Perform a search within the vector store.
+    ) -> SyncPage[VectorStoreSearchResponse] | None:
+        """Perform a semantic search within the vector store.
+
+        Uses the configured embedding model to find the most relevant
+        documents matching the query.
 
         Parameters
         ----------
-        query
+        query : str
             Search query string.
-        top_k
-            Maximum number of results to return. Default ``5``.
+        top_k : int, optional
+            Maximum number of results to return, by default 5.
 
         Returns
         -------
-        Optional[SyncPage[VectorStoreSearchResponse]]
-            Page of search results from the OpenAI API, or ``None`` if an
+        SyncPage[VectorStoreSearchResponse] or None
+            Page of search results from the OpenAI API, or None if an
             error occurs.
         """
         try:
@@ -553,26 +583,30 @@ class VectorStorage:
             log(f"Error searching vector store: {str(exc)}", level=logging.ERROR)
             return None
 
-    def summarize(self, query: str, top_k: int = 15) -> Optional[str]:
+    def summarize(self, query: str, top_k: int = 15) -> str | None:
         """Perform a semantic search and summarize results by topic.
+
+        Retrieves top search results and generates a summary. This method
+        is designed to be overridden in application-specific wrappers.
 
         Parameters
         ----------
-        query
+        query : str
             Search query string used for summarization.
-        top_k
-            Number of top search results to retrieve and summarize. Default ``15``.
+        top_k : int, optional
+            Number of top search results to retrieve and summarize,
+            by default 15.
 
         Returns
         -------
-        Optional[str]
-            Summary generated by the OpenAI model or ``None`` when no results
+        str or None
+            Summary generated by the OpenAI model, or None when no results
             are available or an error occurs.
 
         Raises
         ------
         RuntimeError
-            If no summarizer is configured for this core helper.
+            If no summarizer is configured (default behavior).
         """
         response = self.search(query, top_k=top_k)
         if not response or not response.data:

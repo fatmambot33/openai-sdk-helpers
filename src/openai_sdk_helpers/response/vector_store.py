@@ -1,8 +1,12 @@
-"""Helpers for attaching vector stores to responses."""
+"""Vector store attachment utilities for responses.
+
+This module provides functions for attaching named vector stores to response
+instances, enabling file search capabilities through the OpenAI API.
+"""
 
 from __future__ import annotations
 
-from typing import Any, Optional, Sequence
+from typing import Any, Sequence
 
 from openai import OpenAI
 
@@ -13,30 +17,39 @@ from .base import BaseResponse
 def attach_vector_store(
     response: BaseResponse[Any],
     vector_stores: str | Sequence[str],
-    api_key: Optional[str] = None,
+    api_key: str | None = None,
 ) -> list[str]:
-    """Attach vector stores to a response ``file_search`` tool.
+    """Attach named vector stores to a response's file_search tool.
+
+    Resolves vector store names to IDs via the OpenAI API and configures
+    the response's file_search tool to use them. Creates the file_search
+    tool if it doesn't exist, or updates it to include additional stores.
 
     Parameters
     ----------
-    response
-        Response instance whose tool configuration is updated.
-    vector_stores
-        Single vector store name or a sequence of names to attach.
-    api_key : str, optional
-        API key used when the response does not already have a client. Default
-        ``None``.
+    response : BaseResponse[Any]
+        Response instance whose tool configuration will be updated.
+    vector_stores : str or Sequence[str]
+        Single vector store name or sequence of names to attach.
+    api_key : str or None, default None
+        API key for OpenAI client. If None, uses the response's client.
 
     Returns
     -------
     list[str]
-        Ordered list of vector store IDs applied to the ``file_search`` tool.
+        Ordered list of vector store IDs attached to the file_search tool.
 
     Raises
     ------
     ValueError
-        If a vector store cannot be resolved or no API key is available when
-        required.
+        If a vector store name cannot be resolved to an ID.
+        If no API key is available and the response has no client.
+
+    Examples
+    --------
+    >>> from openai_sdk_helpers.response import attach_vector_store
+    >>> ids = attach_vector_store(response, "knowledge_base")
+    >>> ids = attach_vector_store(response, ["docs", "kb"], api_key="sk-...")
     """
     requested_stores = ensure_list(vector_stores)
 

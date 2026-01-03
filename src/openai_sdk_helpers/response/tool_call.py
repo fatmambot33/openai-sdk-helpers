@@ -1,11 +1,15 @@
-"""Tool call representation for shared responses."""
+"""Tool call representation and argument parsing.
+
+This module provides data structures and utilities for managing tool calls
+in OpenAI response conversations, including conversion to OpenAI API formats
+and robust argument parsing.
+"""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Tuple
-import json
 import ast
+import json
+from dataclasses import dataclass
 
 from openai.types.responses.response_function_tool_call_param import (
     ResponseFunctionToolCallParam,
@@ -15,23 +19,27 @@ from openai.types.responses.response_input_param import FunctionCallOutput
 
 @dataclass
 class ResponseToolCall:
-    """Container for tool call data used in a conversation.
+    """Container for tool call data in a conversation.
+
+    Stores the complete information about a tool invocation including
+    the call identifier, tool name, input arguments, and execution output.
+    Can convert to OpenAI API format for use in subsequent requests.
 
     Attributes
     ----------
     call_id : str
-        Identifier of the tool call.
+        Unique identifier for this tool call.
     name : str
-        Name of the tool invoked.
+        Name of the tool that was invoked.
     arguments : str
-        JSON string with the arguments passed to the tool.
+        JSON string containing the arguments passed to the tool.
     output : str
-        JSON string representing the result produced by the tool.
+        JSON string representing the result produced by the tool handler.
 
     Methods
     -------
     to_response_input_item_param()
-        Convert stored data into OpenAI tool call objects.
+        Convert to OpenAI API tool call format.
     """
 
     call_id: str
@@ -41,14 +49,28 @@ class ResponseToolCall:
 
     def to_response_input_item_param(
         self,
-    ) -> Tuple[ResponseFunctionToolCallParam, FunctionCallOutput]:
-        """Convert stored data into OpenAI tool call objects.
+    ) -> tuple[ResponseFunctionToolCallParam, FunctionCallOutput]:
+        """Convert stored data into OpenAI API tool call objects.
+
+        Creates the function call parameter and corresponding output object
+        required by the OpenAI API for tool interaction.
 
         Returns
         -------
         tuple[ResponseFunctionToolCallParam, FunctionCallOutput]
-            The function call object and the corresponding output object
-            suitable for inclusion in an OpenAI request.
+            A two-element tuple containing:
+            - ResponseFunctionToolCallParam: The function call representation
+            - FunctionCallOutput: The function output representation
+
+        Examples
+        --------
+        >>> tool_call = ResponseToolCall(
+        ...     call_id="call_123",
+        ...     name="search",
+        ...     arguments='{"query": "test"}',
+        ...     output='{"results": []}'
+        ... )
+        >>> func_call, func_output = tool_call.to_response_input_item_param()
         """
         from typing import cast
 
@@ -73,32 +95,34 @@ class ResponseToolCall:
 
 
 def parse_tool_arguments(arguments: str) -> dict:
-    """Parse tool call arguments which may not be valid JSON.
+    """Parse tool call arguments with fallback for malformed JSON.
 
-    The OpenAI API is expected to return well-formed JSON for tool arguments,
-    but minor formatting issues (such as the use of single quotes) can occur.
-    This helper first tries ``json.loads`` and falls back to
-    ``ast.literal_eval`` for simple cases.
+    Attempts to parse arguments as JSON first, then falls back to
+    ast.literal_eval for cases where the OpenAI API returns minor
+    formatting issues like single quotes instead of double quotes.
 
     Parameters
     ----------
-    arguments
-        Raw argument string from the tool call.
+    arguments : str
+        Raw argument string from a tool call, expected to be JSON.
 
     Returns
     -------
     dict
-        Parsed dictionary of arguments.
+        Parsed dictionary of tool arguments.
 
     Raises
     ------
     ValueError
-        If the arguments cannot be parsed as JSON.
+        If the arguments cannot be parsed as valid JSON or Python literal.
 
     Examples
     --------
-    >>> parse_tool_arguments('{"key": "value"}')["key"]
-    'value'
+    >>> parse_tool_arguments('{"key": "value"}')
+    {'key': 'value'}
+
+    >>> parse_tool_arguments("{'key': 'value'}")
+    {'key': 'value'}
     """
     try:
         return json.loads(arguments)

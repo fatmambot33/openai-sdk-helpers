@@ -1,9 +1,13 @@
-"""Structured output model for agent tasks."""
+"""Structured output model for agent tasks.
+
+This module defines a Pydantic model for representing individual agent tasks
+within a plan, including task type, inputs, status tracking, and results.
+"""
 
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Literal, Optional
+from typing import Literal
 
 from pydantic import field_validator
 
@@ -14,10 +18,38 @@ from ..base import BaseStructure, spec_field
 class TaskStructure(BaseStructure):
     """Structured representation of a single agent task.
 
+    Represents one task in an agent execution plan, including its type,
+    inputs, execution status, timing, and results.
+
+    Attributes
+    ----------
+    task_type : AgentEnum
+        Agent type responsible for executing the task.
+    prompt : str
+        Input passed to the agent.
+    context : list[str] or None
+        Additional context forwarded to the agent callable.
+    start_date : datetime or None
+        Timestamp marking when the task started (UTC).
+    end_date : datetime or None
+        Timestamp marking when the task completed (UTC).
+    status : Literal["waiting", "running", "done", "error"]
+        Current lifecycle state for the task.
+    results : list[str]
+        Normalized string outputs returned by the agent.
+
     Methods
     -------
     print()
         Return a formatted multi-line description of the task.
+
+    Examples
+    --------
+    >>> task = TaskStructure(
+    ...     task_type=AgentEnum.WEB_SEARCH,
+    ...     prompt="Research AI trends",
+    ...     status="waiting"
+    ... )
     """
 
     task_type: AgentEnum = spec_field(
@@ -30,17 +62,17 @@ class TaskStructure(BaseStructure):
         description="Input passed to the agent.",
         examples=["Research the latest trends in AI-assisted data analysis."],
     )
-    context: List[str] | None = spec_field(
+    context: list[str] | None = spec_field(
         "context",
         default_factory=list,
         description="Additional context forwarded to the agent callable.",
     )
-    start_date: Optional[datetime] = spec_field(
+    start_date: datetime | None = spec_field(
         "start_date",
         default=None,
         description="Timestamp marking when the task started (UTC).",
     )
-    end_date: Optional[datetime] = spec_field(
+    end_date: datetime | None = spec_field(
         "end_date",
         default=None,
         description="Timestamp marking when the task completed (UTC).",
@@ -50,7 +82,7 @@ class TaskStructure(BaseStructure):
         default="waiting",
         description="Current lifecycle state for the task.",
     )
-    results: List[str] = spec_field(
+    results: list[str] = spec_field(
         "results",
         default_factory=list,
         description="Normalized string outputs returned by the agent.",
