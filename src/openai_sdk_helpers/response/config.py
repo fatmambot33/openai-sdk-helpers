@@ -33,7 +33,9 @@ class ResponseConfiguration(Generic[TIn, TOut]):
     tools : Sequence[object], optional
         Tool definitions associated with the configuration. Default is None.
     schema : ResponseTextConfigParam, optional
-        Text response configuration applied at generation time. Default is None.
+        Text response configuration applied at generation time. If ``None`` and
+        no tools are provided, the schema will be auto-generated from
+        ``output_structure``. Default is None.
     input_structure : Type[BaseStructure], optional
         Structure class used to parse or validate input. Must subclass
         BaseStructure. Default is None.

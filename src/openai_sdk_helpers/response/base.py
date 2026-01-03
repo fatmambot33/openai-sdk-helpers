@@ -135,10 +135,11 @@ class BaseResponse(Generic[T]):
         self._openai_settings = openai_settings
 
         # Auto-generate schema from output_structure if not provided and no tools
-        if schema is None and not self._tools and output_structure is not None:
-            self._schema = output_structure.response_format()
-        else:
-            self._schema = schema
+        self._schema = (
+            output_structure.response_format()
+            if schema is None and not self._tools and output_structure is not None
+            else schema
+        )
 
         if not self._openai_settings.api_key:
             raise ValueError("OpenAI API key is required")
