@@ -135,7 +135,10 @@ class BaseResponse(Generic[T]):
         self._openai_settings = openai_settings
 
         # Auto-generate schema from output_structure if not provided and no tools
-        if schema is None and not self._tools and output_structure is not None:
+        should_auto_generate = (
+            schema is None and not self._tools and output_structure is not None
+        )
+        if should_auto_generate:
             self._schema = output_structure.response_format()
         else:
             self._schema = schema
