@@ -131,11 +131,6 @@ class BaseResponse(Generic[T]):
         self._output_structure = output_structure
         self._openai_settings = openai_settings
 
-        # Auto-generate schema from output_structure when provided
-        self._schema = (
-            output_structure.response_format() if output_structure is not None else None
-        )
-
         if not self._openai_settings.api_key:
             raise ValueError("OpenAI API key is required")
 
@@ -297,8 +292,8 @@ class BaseResponse(Generic[T]):
             "input": self.messages.to_openai_payload(),
             "model": self._model,
         }
-        if self._schema is not None:
-            kwargs["text"] = self._schema
+        if not self._tools and self._output_structure is not None:
+            kwargs["text"] = self._output_structure.response_format()
 
         if self._tools:
             kwargs["tools"] = self._tools
@@ -364,7 +359,7 @@ class BaseResponse(Generic[T]):
                     log("No tool call. Parsing output_text.")
                     try:
                         output_dict = json.loads(raw_text)
-                        if self._output_structure and self._schema:
+                        if self._output_structure:
                             return self._output_structure.from_raw_input(output_dict)
                         return output_dict
                     except Exception:

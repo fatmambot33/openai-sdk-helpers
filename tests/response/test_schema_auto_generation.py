@@ -25,15 +25,17 @@ def test_schema_auto_generated_from_output_structure(openai_settings):
         openai_settings=openai_settings,
     )
 
-    # Schema should have been auto-generated
-    assert instance._schema is not None
-    # It should be a dict with a 'format' key (ResponseTextConfigParam structure)
-    assert isinstance(instance._schema, dict)
-    assert "format" in instance._schema
+    # output_structure should be stored
+    assert instance._output_structure is not None
+    assert instance._output_structure == DummyOutputStructure
+    # response_format() should return a dict with a 'format' key
+    schema = instance._output_structure.response_format()
+    assert isinstance(schema, dict)
+    assert "format" in schema
 
 
 def test_schema_auto_generated_even_with_tools(openai_settings):
-    """Test that schema is auto-generated even when tools are present."""
+    """Test that output_structure is stored even when tools are present."""
     instance = BaseResponse(
         instructions="Test instructions",
         tools=[{"type": "function", "name": "test_tool"}],
@@ -42,14 +44,17 @@ def test_schema_auto_generated_even_with_tools(openai_settings):
         openai_settings=openai_settings,
     )
 
-    # Schema should be auto-generated even with tools
-    assert instance._schema is not None
-    assert isinstance(instance._schema, dict)
-    assert "format" in instance._schema
+    # output_structure should be stored even with tools
+    assert instance._output_structure is not None
+    assert instance._output_structure == DummyOutputStructure
+    # response_format() should return a dict with a 'format' key
+    schema = instance._output_structure.response_format()
+    assert isinstance(schema, dict)
+    assert "format" in schema
 
 
 def test_schema_none_when_no_output_structure(openai_settings):
-    """Test that schema is None when output_structure is None."""
+    """Test that output_structure is None when not provided."""
     instance = BaseResponse(
         instructions="Test instructions",
         tools=None,
@@ -58,12 +63,12 @@ def test_schema_none_when_no_output_structure(openai_settings):
         openai_settings=openai_settings,
     )
 
-    # Schema should be None
-    assert instance._schema is None
+    # output_structure should be None
+    assert instance._output_structure is None
 
 
 def test_response_configuration_auto_generates_schema():
-    """Test that ResponseConfiguration auto-generates schema in gen_response."""
+    """Test that ResponseConfiguration stores output_structure in gen_response."""
     config = ResponseConfiguration(
         name="test_config",
         instructions="Test instructions",
@@ -72,12 +77,13 @@ def test_response_configuration_auto_generates_schema():
         output_structure=DummyOutputStructure,
     )
 
-    # But when generating a response, it should auto-generate
+    # But when generating a response, it should store the output_structure
     from openai_sdk_helpers.config import OpenAISettings
 
     settings = OpenAISettings(api_key="test-key", default_model="gpt-4o-mini")
 
     response = config.gen_response(openai_settings=settings)
 
-    # The generated response should have auto-generated schema
-    assert response._schema is not None
+    # The generated response should have the output_structure
+    assert response._output_structure is not None
+    assert response._output_structure == DummyOutputStructure
