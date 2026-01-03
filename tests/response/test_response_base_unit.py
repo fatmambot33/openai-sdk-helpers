@@ -33,8 +33,8 @@ def test_response_base_initialization(response_base, openai_settings):
 
 def test_data_path(response_base, tmp_path):
     """Test the data_path property."""
-    response_base._data_path_fn = lambda module_name: tmp_path / module_name
-    response_base._module_name = "test_module"
+    response_base._data_path_fn = lambda name: tmp_path / name
+    response_base._name = "test_module"
     assert (
         response_base.data_path
         == tmp_path / "test_module" / "baseresponse" / "baseresponse"

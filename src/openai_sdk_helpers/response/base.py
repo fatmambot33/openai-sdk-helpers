@@ -81,7 +81,7 @@ class BaseResponse(Generic[T]):
         tool_handlers: dict[str, ToolHandler],
         openai_settings: OpenAISettings,
         process_content: Optional[ProcessContent] = None,
-        module_name: Optional[str] = None,
+        name: Optional[str] = None,
         system_vector_store: Optional[list[str]] = None,
         data_path_fn: Optional[Callable[[str], Path]] = None,
         save_path: Optional[Path | str] = None,
@@ -105,12 +105,12 @@ class BaseResponse(Generic[T]):
             default model information.
         process_content : callable, optional
             Callback that cleans input text and extracts attachments.
-        module_name : str, optional
+        name : str, optional
             Module name used to build the data path.
         attachments : tuple or list of tuples, optional
             File attachments in the form ``(file_path, tool_type)``.
         data_path_fn : callable or None, default=None
-            Function that maps ``module_name`` to a base data path.
+            Function that maps ``name`` to a base data path.
         save_path : Path | str or None, default=None
             Optional path to a directory or file for persisted messages.
 
@@ -123,7 +123,7 @@ class BaseResponse(Generic[T]):
         """
         self._tool_handlers = tool_handlers
         self._process_content = process_content
-        self._module_name = module_name
+        self._name = name
         self._data_path_fn = data_path_fn
         self._save_path = Path(save_path) if save_path is not None else None
         self._instructions = instructions
@@ -172,7 +172,7 @@ class BaseResponse(Generic[T]):
         self.messages = ResponseMessages()
         self.messages.add_system_message(content=system_content)
         if self._save_path is not None or (
-            self._data_path_fn is not None and self._module_name is not None
+            self._data_path_fn is not None and self._name is not None
         ):
             self.save()
 
@@ -185,11 +185,11 @@ class BaseResponse(Generic[T]):
         Path
             Absolute path for persisting response artifacts.
         """
-        if self._data_path_fn is None or self._module_name is None:
+        if self._data_path_fn is None or self._name is None:
             raise RuntimeError(
-                "data_path_fn and module_name are required to build data paths."
+                "data_path_fn and name are required to build data paths."
             )
-        base_path = self._data_path_fn(self._module_name)
+        base_path = self._data_path_fn(self._name)
         return base_path / self.__class__.__name__.lower() / self.name
 
     def _build_input(
@@ -502,7 +502,7 @@ class BaseResponse(Generic[T]):
             else:
                 filename = f"{str(self.uuid).lower()}.json"
                 target = self._save_path / filename
-        elif self._data_path_fn is not None and self._module_name is not None:
+        elif self._data_path_fn is not None and self._name is not None:
             filename = f"{str(self.uuid).lower()}.json"
             target = self.data_path / filename
         else:
@@ -518,7 +518,7 @@ class BaseResponse(Generic[T]):
     def __repr__(self) -> str:
         """Return an unambiguous representation including model and UUID."""
         data_path = None
-        if self._data_path_fn is not None and self._module_name is not None:
+        if self._data_path_fn is not None and self._name is not None:
             data_path = self.data_path
         return (
             f"<{self.__class__.__name__}(model={self._model}, uuid={self.uuid}, "

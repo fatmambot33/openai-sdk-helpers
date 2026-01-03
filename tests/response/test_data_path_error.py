@@ -11,5 +11,5 @@ def test_data_path_error(openai_settings):
         tool_handlers={},
         openai_settings=openai_settings,
     )
-    with pytest.raises(RuntimeError, match="data_path_fn and module_name are required"):
+    with pytest.raises(RuntimeError, match="data_path_fn and name are required"):
         _ = r.data_path

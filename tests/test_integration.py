@@ -42,7 +42,7 @@ def test_project_manager_integration(tmp_path):
             execute_plan_fn=execute_plan_fn,
             summarize_fn=summarize_fn,
             module_data_path=tmp_path,
-            module_name="test_module",
+            name="test_module",
             default_model="test_model",
         )
 

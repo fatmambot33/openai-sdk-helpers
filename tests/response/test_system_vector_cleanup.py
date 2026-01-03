@@ -40,7 +40,7 @@ def test_close_cleans_system_vector_storage(monkeypatch):
         tool_handlers={},
         openai_settings=settings,
         system_vector_store=["dummy"],
-        module_name="mod",
+        name="mod",
         data_path_fn=lambda m: Path("/tmp"),
     )
     # Should always clean system vector storage

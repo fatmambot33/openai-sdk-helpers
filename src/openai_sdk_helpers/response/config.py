@@ -167,6 +167,7 @@ class ResponseConfiguration(Generic[TIn, TOut]):
             An instance of BaseResponse configured with ``openai_settings``.
         """
         return BaseResponse[TOut](
+            name=self.name,
             instructions=self.instructions_text,
             tools=self.tools,
             output_structure=self.output_structure,

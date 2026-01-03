@@ -57,7 +57,7 @@ def project_manager(
             execute_plan_fn=mock_execute_plan_fn,
             summarize_fn=mock_summarize_fn,
             module_data_path=tmp_path,
-            module_name="test_module",
+            name="test_module",
             default_model="test_model",
         )
 

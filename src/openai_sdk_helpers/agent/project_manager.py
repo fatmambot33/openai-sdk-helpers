@@ -54,7 +54,7 @@ class ProjectManager(AgentBase, JSONSerializable):
         execute_plan_fn: ExecutePlanFn,
         summarize_fn: SummarizeFn,
         module_data_path: Path,
-        module_name: str,
+        name: str,
         config: Optional[AgentConfig] = None,
         prompt_dir: Optional[Path] = None,
         default_model: Optional[str] = None,
@@ -73,7 +73,7 @@ class ProjectManager(AgentBase, JSONSerializable):
             Callable that summarizes a list of result strings.
         module_data_path
             Base path for persisting project artifacts.
-        module_name
+        name
             Name of the parent module for data organization.
         config
             Optional agent configuration describing prompts and metadata.
@@ -99,7 +99,7 @@ class ProjectManager(AgentBase, JSONSerializable):
         self._execute_plan_fn = execute_plan_fn
         self._summarize_fn = summarize_fn
         self._module_data_path = Path(module_data_path)
-        self._module_name = module_name
+        self._name = name
 
         self.prompt: Optional[str] = None
         self.brief: Optional[PromptStructure] = None
@@ -224,7 +224,7 @@ class ProjectManager(AgentBase, JSONSerializable):
         if not self.start_date:
             self.start_date = datetime.now(timezone.utc)
         start_date_str = self.start_date.strftime(DATETIME_FMT)
-        return self._module_data_path / self._module_name / f"{start_date_str}.json"
+        return self._module_data_path / self._name / f"{start_date_str}.json"
 
     def save(self) -> Path:
         """Persist the current project state to disk.
@@ -459,7 +459,7 @@ class ProjectManager(AgentBase, JSONSerializable):
             timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
             self._run_directory = (
                 self._module_data_path
-                / Path(self._module_name)
+                / Path(self._name)
                 / "project_manager"
                 / timestamp
             )
