@@ -77,7 +77,6 @@ class BaseResponse(Generic[T]):
         *,
         instructions: str,
         tools: Optional[list],
-        schema: Optional[Any],
         output_structure: Optional[Type[T]],
         tool_handlers: dict[str, ToolHandler],
         openai_settings: OpenAISettings,
@@ -95,12 +94,10 @@ class BaseResponse(Generic[T]):
             System instructions for the OpenAI response.
         tools : list or None
             Tool definitions for the OpenAI request.
-        schema : object or None
-            Optional response schema configuration. If ``None`` and no tools are
-            provided, the schema will be auto-generated from ``output_structure``
-            using its ``response_format()`` method.
         output_structure : type[BaseStructure] or None
-            Structure type used to parse tool call outputs.
+            Structure type used to parse tool call outputs. When provided, the
+            schema is automatically generated from this structure using its
+            ``response_format()`` method.
         tool_handlers : dict[str, ToolHandler]
             Mapping of tool names to handler callables.
         openai_settings : OpenAISettings
@@ -134,11 +131,9 @@ class BaseResponse(Generic[T]):
         self._output_structure = output_structure
         self._openai_settings = openai_settings
 
-        # Auto-generate schema from output_structure if not provided and no tools
+        # Auto-generate schema from output_structure when provided
         self._schema = (
-            output_structure.response_format()
-            if schema is None and not self._tools and output_structure is not None
-            else schema
+            output_structure.response_format() if output_structure is not None else None
         )
 
         if not self._openai_settings.api_key:

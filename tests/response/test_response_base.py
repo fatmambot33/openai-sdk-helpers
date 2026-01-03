@@ -8,7 +8,6 @@ def test_response_base_initialization(openai_settings, mock_openai_client):
     instance = BaseResponse(
         instructions="Test instructions",
         tools=[],
-        schema=None,
         output_structure=None,
         tool_handlers={},
         openai_settings=openai_settings,

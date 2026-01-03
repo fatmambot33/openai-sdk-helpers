@@ -19,7 +19,6 @@ def response_base(openai_settings):
     return BaseResponse(
         instructions="test instructions",
         tools=[],
-        schema=None,
         output_structure=None,
         tool_handlers={},
         openai_settings=openai_settings,

@@ -6,7 +6,6 @@ def test_save_skips_without_path(caplog, openai_settings):
     r = BaseResponse(
         instructions="hi",
         tools=[],
-        schema=None,
         output_structure=None,
         tool_handlers={},
         openai_settings=openai_settings,
