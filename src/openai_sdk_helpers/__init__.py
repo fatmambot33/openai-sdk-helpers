@@ -30,6 +30,7 @@ from .validation import (
     validate_list_items,
     validate_max_length,
     validate_non_empty_string,
+    validate_safe_path,
     validate_url_format,
 )
 from .structure import (
@@ -100,6 +101,7 @@ __all__ = [
     "validate_dict_mapping",
     "validate_list_items",
     "validate_choice",
+    "validate_safe_path",
     # Main structure classes
     "BaseStructure",
     "SchemaOptions",

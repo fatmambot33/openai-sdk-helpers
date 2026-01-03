@@ -110,6 +110,10 @@ class PromptRenderer:
         to the base directory. The template is rendered with the provided
         context dictionary using Jinja2's template engine.
 
+        For security, relative paths are validated to prevent path traversal
+        attacks. Absolute paths are allowed but should be used with caution
+        as they bypass base directory restrictions.
+
         Parameters
         ----------
         template_path : str
@@ -128,6 +132,9 @@ class PromptRenderer:
         ------
         FileNotFoundError
             If the template file does not exist at the specified path.
+        InputValidationError
+            If the path contains suspicious patterns or attempts to escape
+            the base directory.
 
         Examples
         --------
@@ -144,11 +151,19 @@ class PromptRenderer:
         ...     context={"key": "value"}
         ... )
         """
+        from openai_sdk_helpers.validation import validate_safe_path
+
         path = Path(template_path)
         if path.is_absolute():
+            # Absolute paths allowed but not validated against base_dir
             template_path_ = path
         else:
-            template_path_ = Path(self.base_dir, template_path)
+            # Relative paths validated to prevent directory traversal
+            template_path_ = validate_safe_path(
+                self.base_dir / template_path,
+                base_dir=self.base_dir,
+                field_name="template_path",
+            )
         template_path_text = template_path_.read_text()
         template = Template(template_path_text)
         return template.render(context or {})

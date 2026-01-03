@@ -14,10 +14,14 @@ from openai_sdk_helpers.utils.core import log
 
 T = TypeVar("T")
 
+# Default timeout constants
+DEFAULT_COROUTINE_TIMEOUT = 300.0  # 5 minutes
+THREAD_JOIN_TIMEOUT = 5.0  # 5 seconds
+
 
 def run_coroutine_thread_safe(
     coro: Coroutine[Any, Any, T],
-    timeout: float = 300.0,
+    timeout: float = DEFAULT_COROUTINE_TIMEOUT,
 ) -> T:
     """Run a coroutine in a thread-safe manner from a sync context.
 
@@ -74,10 +78,10 @@ def run_coroutine_thread_safe(
         ) from None
     finally:
         # Ensure thread is cleaned up
-        thread.join(timeout=5)
+        thread.join(timeout=THREAD_JOIN_TIMEOUT)
         if thread.is_alive():
             log(
-                f"Thread {thread.name} did not terminate within 5 seconds",
+                f"Thread {thread.name} did not terminate within {THREAD_JOIN_TIMEOUT} seconds",
                 level=20,  # logging.INFO
             )
 

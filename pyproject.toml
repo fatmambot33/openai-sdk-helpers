@@ -43,6 +43,7 @@ dev = [
     # Testing
     "pytest-cov",
     "pytest",
+    "pytest-asyncio",
 ]
 
 [build-system]

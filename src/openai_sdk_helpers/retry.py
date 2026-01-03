@@ -20,11 +20,19 @@ from openai_sdk_helpers.utils.core import log
 P = ParamSpec("P")
 T = TypeVar("T")
 
+# Default retry configuration constants
+DEFAULT_MAX_RETRIES = 3
+DEFAULT_BASE_DELAY = 1.0
+DEFAULT_MAX_DELAY = 60.0
+
+# HTTP status codes for transient errors
+TRANSIENT_HTTP_STATUS_CODES = frozenset({408, 429, 500, 502, 503})
+
 
 def with_exponential_backoff(
-    max_retries: int = 3,
-    base_delay: float = 1.0,
-    max_delay: float = 60.0,
+    max_retries: int = DEFAULT_MAX_RETRIES,
+    base_delay: float = DEFAULT_BASE_DELAY,
+    max_delay: float = DEFAULT_MAX_DELAY,
 ) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """Decorate functions with exponential backoff on transient errors.
 
@@ -83,12 +91,9 @@ def with_exponential_backoff(
                         last_exc = exc
                         status_code: int | None = getattr(exc, "status_code", None)
                         # Only retry on transient errors
-                        if not status_code or status_code not in (
-                            408,
-                            429,
-                            500,
-                            502,
-                            503,
+                        if (
+                            not status_code
+                            or status_code not in TRANSIENT_HTTP_STATUS_CODES
                         ):
                             raise
                         if attempt >= max_retries:
@@ -139,12 +144,9 @@ def with_exponential_backoff(
                     last_exc = exc
                     status_code: int | None = getattr(exc, "status_code", None)
                     # Only retry on transient errors
-                    if not status_code or status_code not in (
-                        408,
-                        429,
-                        500,
-                        502,
-                        503,
+                    if (
+                        not status_code
+                        or status_code not in TRANSIENT_HTTP_STATUS_CODES
                     ):
                         raise
                     if attempt >= max_retries:

@@ -5,6 +5,7 @@ at API boundaries and configuration initialization.
 """
 
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Callable, TypeVar
 
 from openai_sdk_helpers.errors import InputValidationError
@@ -230,3 +231,72 @@ def validate_choice(
             f"{field_name} must be one of {', '.join(map(str, sorted(allowed_values, key=str)))}; got: {value}"
         )
     return value
+
+
+def validate_safe_path(
+    path: Path | str,
+    base_dir: Path | None = None,
+    field_name: str = "path",
+) -> Path:
+    """Validate that a path is safe and does not escape the base directory.
+
+    Protects against path traversal attacks by ensuring the resolved path
+    is within the base directory when provided.
+
+    Parameters
+    ----------
+    path : Path or str
+        Path to validate. Can be absolute or relative.
+    base_dir : Path or None
+        Base directory to validate against. If None, only checks for
+        suspicious patterns but allows any valid path.
+    field_name : str
+        Name of the field for error messages. Default is "path".
+
+    Returns
+    -------
+    Path
+        Validated resolved path.
+
+    Raises
+    ------
+    InputValidationError
+        If path is invalid, contains suspicious patterns, or escapes
+        the base directory.
+
+    Examples
+    --------
+    >>> from pathlib import Path
+    >>> validate_safe_path(Path("./templates/file.txt"), Path("/base"))
+    PosixPath('/base/templates/file.txt')
+    """
+    if isinstance(path, str):
+        path = Path(path)
+
+    # Check for suspicious patterns
+    path_str = str(path)
+    if ".." in path.parts:
+        raise InputValidationError(
+            f"{field_name} contains suspicious '..' pattern: {path_str}"
+        )
+
+    # Resolve to absolute path
+    try:
+        resolved = path.resolve()
+    except (OSError, RuntimeError) as exc:
+        raise InputValidationError(
+            f"{field_name} cannot be resolved: {path_str}"
+        ) from exc
+
+    # If base_dir provided, ensure path is within it
+    if base_dir is not None:
+        try:
+            base_resolved = base_dir.resolve()
+            resolved.relative_to(base_resolved)
+        except ValueError:
+            raise InputValidationError(
+                f"{field_name} escapes base directory: {path_str} "
+                f"is not within {base_dir}"
+            ) from None
+
+    return resolved
