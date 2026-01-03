@@ -59,6 +59,20 @@ def test_base_agent_initialization_with_prompt_dir(mock_config, tmp_path: Path):
     assert agent._template.render(key="world") == "Hello, world!"
 
 
+def test_base_agent_initialization_with_absolute_template_path(tmp_path: Path):
+    """Test AgentBase initialization with an absolute template path."""
+    template_file = tmp_path / "custom_template.jinja"
+    template_file.write_text("Greetings, {{ name }}!")
+
+    config = MockConfig(
+        name="test_agent",
+        model="test_model",
+        template_path=str(template_file.resolve()),
+    )
+    agent = AgentBase(config=config)
+    assert agent._template.render(name="Alice") == "Greetings, Alice!"
+
+
 def test_base_agent_build_prompt_from_jinja(mock_config, mock_run_context_wrapper):
     """Test building a prompt from a Jinja template."""
     agent = AgentBase(config=mock_config)

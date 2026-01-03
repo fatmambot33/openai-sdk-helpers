@@ -48,6 +48,15 @@ class AgentBase:
     >>> agent = AgentBase(config=config, default_model="gpt-4o-mini")
     >>> result = agent.run_sync("What is 2+2?")
 
+    Use absolute path to template:
+
+    >>> config = AgentConfig(
+    ...     name="my_agent",
+    ...     template_path="/absolute/path/to/template.jinja",
+    ...     model="gpt-4o-mini"
+    ... )
+    >>> agent = AgentBase(config=config, default_model="gpt-4o-mini")
+
     Use async execution:
 
     >>> import asyncio
@@ -95,7 +104,10 @@ class AgentBase:
             Optional wrapper providing runtime context for prompt rendering.
             Default ``None``.
         prompt_dir
-            Optional directory holding prompt templates.
+            Optional directory holding prompt templates. Used when
+            ``config.template_path`` is not provided or is relative. If
+            ``config.template_path`` is an absolute path, this parameter is
+            ignored.
         default_model
             Optional fallback model identifier if the config does not supply one.
 
@@ -153,7 +165,10 @@ class AgentBase:
         run_context_wrapper
             Optional wrapper providing runtime context. Default ``None``.
         prompt_dir
-            Optional directory holding prompt templates.
+            Optional directory holding prompt templates. Used when
+            ``config.template_path`` is not provided or is relative. If
+            ``config.template_path`` is an absolute path, this parameter is
+            ignored.
         default_model
             Optional fallback model identifier.
 

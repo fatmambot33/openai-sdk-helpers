@@ -23,7 +23,7 @@ class PromptRenderer:
 
     Examples
     --------
-    Basic template rendering:
+    Basic template rendering with base_dir:
 
     >>> from pathlib import Path
     >>> from openai_sdk_helpers.prompt import PromptRenderer
@@ -33,6 +33,14 @@ class PromptRenderer:
     ...     context={"name": "Alice", "language": "English"}
     ... )
     >>> print(prompt)
+
+    Using absolute path (no base_dir required):
+
+    >>> renderer = PromptRenderer()
+    >>> prompt = renderer.render(
+    ...     "/absolute/path/to/template.jinja",
+    ...     context={"name": "Bob"}
+    ... )
 
     Using default prompt directory:
 
@@ -78,7 +86,8 @@ class PromptRenderer:
         Parameters
         ----------
         template_path : str
-            Path to the template file, relative to ``base_dir``.
+            Path to the template file. Can be an absolute path or relative to
+            ``base_dir``.
         context : Mapping[str, Any] or None, default=None
             Context variables passed to the template.
 
@@ -87,7 +96,11 @@ class PromptRenderer:
         str
             Rendered prompt as a string.
         """
-        template_path_ = Path(self.base_dir, template_path)
+        path = Path(template_path)
+        if path.is_absolute():
+            template_path_ = path
+        else:
+            template_path_ = Path(self.base_dir, template_path)
         template_path_text = template_path_.read_text()
         template = Template(template_path_text)
         return template.render(context or {})

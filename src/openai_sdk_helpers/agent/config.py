@@ -29,7 +29,9 @@ class AgentConfig(BaseStructure):
         default=None, title="Model", description="Model identifier to use"
     )
     template_path: Optional[str] = Field(
-        default=None, title="Template Path", description="Path to the Jinja template"
+        default=None,
+        title="Template Path",
+        description="Path to the Jinja template (absolute or relative to prompt_dir)",
     )
     input_type: Optional[Type[BaseModel]] = Field(
         default=None,
