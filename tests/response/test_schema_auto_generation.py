@@ -87,3 +87,48 @@ def test_response_configuration_auto_generates_schema():
     # The generated response should have the output_structure
     assert response._output_structure is not None
     assert response._output_structure == DummyOutputStructure
+
+
+def test_schema_used_only_when_no_tools(openai_settings):
+    """Test that schema is only sent to API when no tools are present."""
+    from unittest.mock import Mock, patch
+
+    # Case 1: No tools, with output_structure -> schema should be used
+    instance = BaseResponse(
+        instructions="Test instructions",
+        tools=None,
+        output_structure=DummyOutputStructure,
+        tool_handlers={},
+        openai_settings=openai_settings,
+    )
+
+    with patch.object(instance._client.responses, "create") as mock_create:
+        mock_create.return_value = Mock(output=[])
+        try:
+            instance.run_sync("Test content")
+        except RuntimeError:
+            pass  # Expected: "No output returned from OpenAI."
+
+        call_kwargs = mock_create.call_args[1]
+        assert "text" in call_kwargs
+        assert "tools" not in call_kwargs
+
+    # Case 2: With tools, with output_structure -> schema should NOT be used
+    instance_with_tools = BaseResponse(
+        instructions="Test instructions",
+        tools=[{"type": "function", "name": "test_tool"}],
+        output_structure=DummyOutputStructure,
+        tool_handlers={"test_tool": lambda x: "{}"},
+        openai_settings=openai_settings,
+    )
+
+    with patch.object(instance_with_tools._client.responses, "create") as mock_create:
+        mock_create.return_value = Mock(output=[])
+        try:
+            instance_with_tools.run_sync("Test content")
+        except RuntimeError:
+            pass  # Expected: "No output returned from OpenAI."
+
+        call_kwargs = mock_create.call_args[1]
+        assert "text" not in call_kwargs
+        assert "tools" in call_kwargs
