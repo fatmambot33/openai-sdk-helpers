@@ -405,7 +405,8 @@ These modules use the standard `openai` SDK for direct API interactions with fin
 - **`openai_sdk_helpers.response.base.BaseResponse`**  
   Manages complete OpenAI API interaction lifecycle including input construction,
   tool execution, message history, and structured output parsing. Uses the 
-  `client.responses.create()` API for direct control over conversation flow.
+  `client.responses.create()` API (from the OpenAI Responses API, distinct from 
+  the Chat Completions API) for direct control over conversation flow.
 
 - **`openai_sdk_helpers.response.runner`**  
   Convenience functions for executing response workflows with automatic cleanup
