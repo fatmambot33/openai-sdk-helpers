@@ -2,7 +2,9 @@
 
 import pytest
 from pydantic import Field
+from unittest.mock import Mock, patch
 
+from openai_sdk_helpers.config import OpenAISettings
 from openai_sdk_helpers.response.base import BaseResponse
 from openai_sdk_helpers.response.config import ResponseConfiguration
 from openai_sdk_helpers.structure.base import BaseStructure
@@ -78,8 +80,6 @@ def test_response_configuration_auto_generates_schema():
     )
 
     # But when generating a response, it should store the output_structure
-    from openai_sdk_helpers.config import OpenAISettings
-
     settings = OpenAISettings(api_key="test-key", default_model="gpt-4o-mini")
 
     response = config.gen_response(openai_settings=settings)
@@ -91,8 +91,6 @@ def test_response_configuration_auto_generates_schema():
 
 def test_schema_used_only_when_no_tools(openai_settings):
     """Test that schema is only sent to API when no tools are present."""
-    from unittest.mock import Mock, patch
-
     # Case 1: No tools, with output_structure -> schema should be used
     instance = BaseResponse(
         instructions="Test instructions",
