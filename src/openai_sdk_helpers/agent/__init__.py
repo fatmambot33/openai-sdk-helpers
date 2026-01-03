@@ -7,12 +7,13 @@ from .config import AgentConfig
 from ..structure.plan.enum import AgentEnum
 from .coordination import CoordinatorAgent
 from .runner import run_sync, run_async, run_streamed
+from .search.base import SearchPlanner, SearchToolAgent, SearchWriter
 from .summarizer import SummarizerAgent
 from .translator import TranslatorAgent
 from .validation import ValidatorAgent
 from .utils import run_coroutine_agent_sync
-from .vector_search import VectorSearch
-from .web_search import WebAgentSearch
+from .search.vector import VectorSearch
+from .search.web import WebAgentSearch
 
 __all__ = [
     "AgentBase",
@@ -23,6 +24,9 @@ __all__ = [
     "run_async",
     "run_streamed",
     "run_coroutine_agent_sync",
+    "SearchPlanner",
+    "SearchToolAgent",
+    "SearchWriter",
     "SummarizerAgent",
     "TranslatorAgent",
     "ValidatorAgent",

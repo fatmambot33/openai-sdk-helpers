@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -10,21 +9,21 @@ from agents import custom_span, gen_trace_id, trace
 from agents.model_settings import ModelSettings
 from agents.tool import WebSearchTool
 
-from ..structure.web_search import (
+from ...structure.web_search import (
     WebSearchItemStructure,
     WebSearchItemResultStructure,
     WebSearchStructure,
     WebSearchPlanStructure,
     WebSearchReportStructure,
 )
-from .base import AgentBase
-from .config import AgentConfig
-from .utils import run_coroutine_agent_sync
+from ..config import AgentConfig
+from ..utils import run_coroutine_agent_sync
+from .base import SearchPlanner, SearchToolAgent, SearchWriter
 
 MAX_CONCURRENT_SEARCHES = 10
 
 
-class WebAgentPlanner(AgentBase):
+class WebAgentPlanner(SearchPlanner[WebSearchPlanStructure]):
     """Plan web searches to satisfy a user query.
 
     Methods
@@ -45,37 +44,28 @@ class WebAgentPlanner(AgentBase):
         default_model : str or None, default=None
             Default model identifier to use when not defined in config.
         """
-        config = AgentConfig(
+        super().__init__(prompt_dir=prompt_dir, default_model=default_model)
+
+    def _configure_agent(self) -> AgentConfig:
+        """Return configuration for the web planner agent.
+
+        Returns
+        -------
+        AgentConfig
+            Configuration with name, description, and output type.
+        """
+        return AgentConfig(
             name="web_planner",
             description="Agent that plans web searches based on a user query.",
             output_type=WebSearchPlanStructure,
         )
-        super().__init__(
-            config=config, prompt_dir=prompt_dir, default_model=default_model
-        )
-
-    async def run_agent(self, query: str) -> WebSearchPlanStructure:
-        """Plan searches for ``query``.
-
-        Parameters
-        ----------
-        query : str
-            User search query.
-
-        Returns
-        -------
-        WebSearchPlanStructure
-            Plan describing searches to perform.
-        """
-        result: WebSearchPlanStructure = await self.run_async(
-            input=query,
-            output_type=self._output_type,
-        )
-
-        return result
 
 
-class WebSearchToolAgent(AgentBase):
+class WebSearchToolAgent(
+    SearchToolAgent[
+        WebSearchItemStructure, WebSearchItemResultStructure, WebSearchPlanStructure
+    ]
+):
     """Execute web searches defined in a plan.
 
     Methods
@@ -98,59 +88,27 @@ class WebSearchToolAgent(AgentBase):
         default_model : str or None, default=None
             Default model identifier to use when not defined in config.
         """
-        config = AgentConfig(
+        super().__init__(
+            prompt_dir=prompt_dir,
+            default_model=default_model,
+            max_concurrent_searches=MAX_CONCURRENT_SEARCHES,
+        )
+
+    def _configure_agent(self) -> AgentConfig:
+        """Return configuration for the web search tool agent.
+
+        Returns
+        -------
+        AgentConfig
+            Configuration with name, description, input type, and tools.
+        """
+        return AgentConfig(
             name="web_search",
             description="Agent that performs web searches and summarizes results.",
             input_type=WebSearchPlanStructure,
             tools=[WebSearchTool()],
             model_settings=ModelSettings(tool_choice="required"),
         )
-        super().__init__(
-            config=config, prompt_dir=prompt_dir, default_model=default_model
-        )
-
-    async def run_agent(
-        self, search_plan: WebSearchPlanStructure
-    ) -> List[WebSearchItemResultStructure]:
-        """Execute all searches in the plan with a progress bar.
-
-        Parameters
-        ----------
-        search_plan : WebSearchPlanStructure
-            Plan describing each search to perform.
-
-        Returns
-        -------
-        list[WebSearchItemResultStructure]
-            Completed search results.
-        """
-        with custom_span("Search the web"):
-            semaphore = asyncio.Semaphore(MAX_CONCURRENT_SEARCHES)
-
-            async def _bounded_search(
-                item: WebSearchItemStructure,
-            ) -> WebSearchItemResultStructure:
-                """Execute a single search within the concurrency limit.
-
-                Parameters
-                ----------
-                item : WebSearchItemStructure
-                    Search item to process.
-
-                Returns
-                -------
-                WebSearchItemResultStructure
-                    Search result for ``item``.
-                """
-                async with semaphore:
-                    return await self.run_search(item)
-
-            tasks = [
-                asyncio.create_task(_bounded_search(item))
-                for item in search_plan.searches
-            ]
-            results = await asyncio.gather(*tasks)
-            return [result for result in results if result is not None]
 
     async def run_search(
         self, item: WebSearchItemStructure
@@ -167,23 +125,35 @@ class WebSearchToolAgent(AgentBase):
         WebSearchItemResultStructure
             Search result summarizing the page.
         """
-        template_context: Dict[str, Any] = {
-            "search_term": item.query,
-            "reason": item.reason,
-        }
+        with custom_span("Search the web"):
+            template_context: Dict[str, Any] = {
+                "search_term": item.query,
+                "reason": item.reason,
+            }
 
-        result = await super().run_async(
-            input=item.query,
-            context=template_context,
-            output_type=str,
-        )
-        return self._coerce_item_result(result)
+            result = await super(SearchToolAgent, self).run_async(
+                input=item.query,
+                context=template_context,
+                output_type=str,
+            )
+            return self._coerce_item_result(result)
 
     @staticmethod
     def _coerce_item_result(
         result: Union[str, WebSearchItemResultStructure, Any],
     ) -> WebSearchItemResultStructure:
-        """Return a WebSearchItemResultStructure from varied agent outputs."""
+        """Return a WebSearchItemResultStructure from varied agent outputs.
+
+        Parameters
+        ----------
+        result : str or WebSearchItemResultStructure or Any
+            Agent output that may be of various types.
+
+        Returns
+        -------
+        WebSearchItemResultStructure
+            Coerced search result structure.
+        """
         if isinstance(result, WebSearchItemResultStructure):
             return result
         try:
@@ -192,7 +162,7 @@ class WebSearchToolAgent(AgentBase):
             return WebSearchItemResultStructure(text="")
 
 
-class WebAgentWriter(AgentBase):
+class WebAgentWriter(SearchWriter[WebSearchReportStructure]):
     """Summarize search results into a human-readable report.
 
     Methods
@@ -213,55 +183,33 @@ class WebAgentWriter(AgentBase):
         default_model : str or None, default=None
             Default model identifier to use when not defined in config.
         """
-        config = AgentConfig(
+        super().__init__(prompt_dir=prompt_dir, default_model=default_model)
+
+    def _configure_agent(self) -> AgentConfig:
+        """Return configuration for the web writer agent.
+
+        Returns
+        -------
+        AgentConfig
+            Configuration with name, description, and output type.
+        """
+        return AgentConfig(
             name="web_writer",
             description="Agent that writes a report based on web search results.",
             output_type=WebSearchReportStructure,
         )
-        super().__init__(
-            config=config, prompt_dir=prompt_dir, default_model=default_model
-        )
-
-    async def run_agent(
-        self, query: str, search_results: List[WebSearchItemResultStructure]
-    ) -> WebSearchReportStructure:
-        """Compile a report from search results.
-
-        Parameters
-        ----------
-        query : str
-            Original search query.
-        search_results : list[WebSearchItemResultStructure]
-            Results produced by the search step.
-
-        Returns
-        -------
-        WebSearchReportStructure
-            Generated report for the query.
-        """
-        template_context: Dict[str, Any] = {
-            "original_query": query,
-            "search_results": search_results,
-        }
-        result: WebSearchReportStructure = await self.run_async(
-            input=query,
-            context=template_context,
-            output_type=self._output_type,
-        )
-
-        return result
 
 
-class WebAgentSearch(AgentBase):
+class WebAgentSearch:
     """Manage the complete web search workflow.
 
     Methods
     -------
-    run_agent(search_query)
+    run_agent_async(search_query)
         Execute the research workflow asynchronously.
     run_agent_sync(search_query)
         Execute the research workflow synchronously.
-    run_web_agent(search_query)
+    run_web_agent_async(search_query)
         Convenience asynchronous entry point for the workflow.
     run_web_agent_sync(search_query)
         Convenience synchronous entry point for the workflow.
@@ -269,7 +217,6 @@ class WebAgentSearch(AgentBase):
 
     def __init__(
         self,
-        config: Optional[AgentConfig] = None,
         prompt_dir: Optional[Path] = None,
         default_model: Optional[str] = None,
     ) -> None:
@@ -277,23 +224,13 @@ class WebAgentSearch(AgentBase):
 
         Parameters
         ----------
-        config : AgentConfig or None, default=None
-            Optional configuration for the agent.
         prompt_dir : Path or None, default=None
             Directory containing prompt templates.
         default_model : str or None, default=None
             Default model identifier to use when not defined in config.
         """
-        if config is None:
-            config = AgentConfig(
-                name="web_agent",
-                description="Agent that coordinates web searches and report writing.",
-                output_type=WebSearchStructure,
-            )
-        super().__init__(
-            config=config, prompt_dir=prompt_dir, default_model=default_model
-        )
         self._prompt_dir = prompt_dir
+        self._default_model = default_model
 
     async def run_agent_async(self, search_query: str) -> WebSearchStructure:
         """Execute the entire research workflow for ``search_query``.
@@ -311,13 +248,13 @@ class WebAgentSearch(AgentBase):
         trace_id = gen_trace_id()
         with trace("WebAgentSearch trace", trace_id=trace_id):
             planner = WebAgentPlanner(
-                prompt_dir=self._prompt_dir, default_model=self.model
+                prompt_dir=self._prompt_dir, default_model=self._default_model
             )
             tool = WebSearchToolAgent(
-                prompt_dir=self._prompt_dir, default_model=self.model
+                prompt_dir=self._prompt_dir, default_model=self._default_model
             )
             writer = WebAgentWriter(
-                prompt_dir=self._prompt_dir, default_model=self.model
+                prompt_dir=self._prompt_dir, default_model=self._default_model
             )
             search_plan = await planner.run_agent(query=search_query)
             search_results = await tool.run_agent(search_plan=search_plan)
@@ -330,7 +267,7 @@ class WebAgentSearch(AgentBase):
         )
 
     def run_agent_sync(self, search_query: str) -> WebSearchStructure:
-        """Run :meth:`run_agent` synchronously for ``search_query``.
+        """Run :meth:`run_agent_async` synchronously for ``search_query``.
 
         Parameters
         ----------
@@ -361,7 +298,7 @@ class WebAgentSearch(AgentBase):
 
     @staticmethod
     def run_web_agent_sync(search_query: str) -> WebSearchStructure:
-        """Run :meth:`run_web_agent` synchronously for ``search_query``.
+        """Run :meth:`run_web_agent_async` synchronously for ``search_query``.
 
         Parameters
         ----------

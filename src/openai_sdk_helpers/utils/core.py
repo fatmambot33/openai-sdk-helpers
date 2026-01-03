@@ -18,14 +18,14 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 
-def coerce_optional_float(value: Any) -> float | None:
+def coerce_optional_float(value: object) -> float | None:
     """Return a float when the provided value can be coerced, otherwise None.
 
     Handles float, int, and string inputs. Empty strings or None return None.
 
     Parameters
     ----------
-    value : Any
+    value : object
         Value to convert into a float. Strings must be parseable as floats.
 
     Returns
@@ -61,7 +61,7 @@ def coerce_optional_float(value: Any) -> float | None:
     raise TypeError("timeout must be a float, int, str, or None")
 
 
-def coerce_optional_int(value: Any) -> int | None:
+def coerce_optional_int(value: object) -> int | None:
     """Return an int when the provided value can be coerced, otherwise None.
 
     Handles int, float (if whole number), and string inputs. Empty strings
@@ -69,7 +69,7 @@ def coerce_optional_int(value: Any) -> int | None:
 
     Parameters
     ----------
-    value : Any
+    value : object
         Value to convert into an int. Strings must be parseable as integers.
 
     Returns
@@ -109,14 +109,14 @@ def coerce_optional_int(value: Any) -> int | None:
     raise TypeError("max_retries must be an int, str, or None")
 
 
-def coerce_dict(value: Any) -> dict[str, Any]:
+def coerce_dict(value: object) -> dict[str, Any]:
     """Return a string-keyed dictionary built from value if possible.
 
     Converts Mapping objects to dictionaries. None returns an empty dict.
 
     Parameters
     ----------
-    value : Any
+    value : object
         Mapping-like value to convert. None yields an empty dictionary.
 
     Returns

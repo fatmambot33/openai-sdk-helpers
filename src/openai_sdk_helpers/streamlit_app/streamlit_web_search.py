@@ -1,7 +1,7 @@
 """Developer configuration for the example Streamlit chat app."""
 
 import json
-from openai_sdk_helpers.agent.web_search import WebAgentSearch
+from openai_sdk_helpers.agent.search.web import WebAgentSearch
 from openai_sdk_helpers.config import OpenAISettings
 from openai_sdk_helpers.response.base import BaseResponse
 from openai_sdk_helpers.structure.web_search import WebSearchStructure

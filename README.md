@@ -103,7 +103,7 @@ preferred model configuration:
 
 ```python
 from pathlib import Path
-from openai_sdk_helpers.agent.vector_search import VectorSearch
+from openai_sdk_helpers.agent.search.vector import VectorSearch
 
 # Point to your custom prompt directory
 prompts = Path("./prompts")
@@ -176,7 +176,7 @@ settings = OpenAISettings.from_env()
 client = settings.create_client()
 
 # Reuse the default model across agents
-from openai_sdk_helpers.agent.vector_search import VectorSearch
+from openai_sdk_helpers.agent.search.vector import VectorSearch
 
 vector_search = VectorSearch(
     prompt_dir=prompts,
@@ -242,7 +242,7 @@ Integrate with OpenAI vector stores for document search:
 
 ```python
 from openai_sdk_helpers.vector_storage import VectorStorage
-from openai_sdk_helpers.agent.vector_search import VectorSearch
+from openai_sdk_helpers.agent.search.vector import VectorSearch
 
 # Create or connect to a vector store
 storage = VectorStorage(store_name="my_documents")
@@ -326,7 +326,7 @@ The package is organized around cohesive, reusable building blocks:
   Base class for all agents with synchronous and asynchronous execution support.
   Handles prompt rendering, model configuration, and tool integration.
 
-- **`openai_sdk_helpers.agent.vector_search.VectorSearch`**  
+- **`openai_sdk_helpers.agent.search.vector.VectorSearch`**  
   Complete vector search workflow that coordinates planning, searching, and 
   reporting. Bundles `VectorSearchPlanner`, `VectorSearchTool`, and 
   `VectorSearchWriter` into a single entry point.

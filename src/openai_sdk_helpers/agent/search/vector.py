@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import asyncio
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from agents import custom_span, gen_trace_id, trace
 
-from ..structure.vector_search import (
+from ...structure.vector_search import (
     VectorSearchItemStructure,
     VectorSearchItemResultStructure,
     VectorSearchItemResultsStructure,
@@ -16,15 +15,15 @@ from ..structure.vector_search import (
     VectorSearchPlanStructure,
     VectorSearchReportStructure,
 )
-from ..vector_storage import VectorStorage
-from .base import AgentBase
-from .config import AgentConfig
-from .utils import run_coroutine_agent_sync
+from ...vector_storage import VectorStorage
+from ..config import AgentConfig
+from ..utils import run_coroutine_agent_sync
+from .base import SearchPlanner, SearchToolAgent, SearchWriter
 
 MAX_CONCURRENT_SEARCHES = 10
 
 
-class VectorSearchPlanner(AgentBase):
+class VectorSearchPlanner(SearchPlanner[VectorSearchPlanStructure]):
     """Plan vector searches to satisfy a user query.
 
     Methods
@@ -45,37 +44,30 @@ class VectorSearchPlanner(AgentBase):
         default_model : str or None, default=None
             Default model identifier to use when not defined in config.
         """
-        config = AgentConfig(
+        super().__init__(prompt_dir=prompt_dir, default_model=default_model)
+
+    def _configure_agent(self) -> AgentConfig:
+        """Return configuration for the vector planner agent.
+
+        Returns
+        -------
+        AgentConfig
+            Configuration with name, description, and output type.
+        """
+        return AgentConfig(
             name="vector_planner",
             description="Plan vector searches based on a user query.",
             output_type=VectorSearchPlanStructure,
         )
-        super().__init__(
-            config=config, prompt_dir=prompt_dir, default_model=default_model
-        )
-
-    async def run_agent(self, query: str) -> VectorSearchPlanStructure:
-        """Create a search plan for ``query``.
-
-        Parameters
-        ----------
-        query : str
-            User search query.
-
-        Returns
-        -------
-        VectorSearchPlanStructure
-            Generated search plan.
-        """
-        result: VectorSearchPlanStructure = await self.run_async(
-            input=query,
-            output_type=self._output_type,
-        )
-
-        return result
 
 
-class VectorSearchTool(AgentBase):
+class VectorSearchTool(
+    SearchToolAgent[
+        VectorSearchItemStructure,
+        VectorSearchItemResultStructure,
+        VectorSearchPlanStructure,
+    ]
+):
     """Execute vector searches defined in a search plan.
 
     Methods
@@ -118,15 +110,25 @@ class VectorSearchTool(AgentBase):
         self._vector_storage_factory = vector_storage_factory
         if vector_storage is not None:
             self._vector_storage = vector_storage
-        self._max_concurrent_searches = max_concurrent_searches
-        config = AgentConfig(
+        super().__init__(
+            prompt_dir=prompt_dir,
+            default_model=default_model,
+            max_concurrent_searches=max_concurrent_searches,
+        )
+
+    def _configure_agent(self) -> AgentConfig:
+        """Return configuration for the vector search tool agent.
+
+        Returns
+        -------
+        AgentConfig
+            Configuration with name, description, and input type.
+        """
+        return AgentConfig(
             name="vector_search",
             description="Perform vector searches based on a search plan.",
             input_type=VectorSearchPlanStructure,
             output_type=VectorSearchItemResultsStructure,
-        )
-        super().__init__(
-            config=config, prompt_dir=prompt_dir, default_model=default_model
         )
 
     def _get_vector_storage(self) -> VectorStorage:
@@ -143,57 +145,6 @@ class VectorSearchTool(AgentBase):
             else:
                 self._vector_storage = VectorStorage(store_name=self._store_name)
         return self._vector_storage
-
-    async def run_agent(
-        self, search_plan: VectorSearchPlanStructure
-    ) -> VectorSearchItemResultsStructure:
-        """Execute all searches in the plan with a progress bar.
-
-        Parameters
-        ----------
-        search_plan : VectorSearchPlanStructure
-            Plan describing each search to perform.
-
-        Returns
-        -------
-        VectorSearchItemResultsStructure
-            Collection of results for the completed searches.
-        """
-        with custom_span("Search vector store"):
-            semaphore = asyncio.Semaphore(self._max_concurrent_searches)
-
-            async def _bounded_search(
-                item: VectorSearchItemStructure,
-            ) -> VectorSearchItemResultStructure:
-                """Execute a single search within the concurrency limit.
-
-                Parameters
-                ----------
-                item : VectorSearchItemStructure
-                    Search item to process.
-
-                Returns
-                -------
-                VectorSearchItemResultStructure
-                    Result of the search.
-                """
-                async with semaphore:
-                    return await self.run_search(item)
-
-            tasks = [
-                asyncio.create_task(_bounded_search(item))
-                for item in search_plan.searches
-            ]
-            results_list = await asyncio.gather(*tasks, return_exceptions=True)
-            results = VectorSearchItemResultsStructure()
-            for item, result in zip(search_plan.searches, results_list):
-                if isinstance(result, BaseException):
-                    results.errors.append(f"Search for '{item.query}' failed: {result}")
-                    continue
-                if result is not None:
-                    results.append(result)
-
-            return results
 
     async def run_search(
         self, item: VectorSearchItemStructure
@@ -224,7 +175,7 @@ class VectorSearchTool(AgentBase):
         return VectorSearchItemResultStructure(texts=texts)
 
 
-class VectorSearchWriter(AgentBase):
+class VectorSearchWriter(SearchWriter[VectorSearchReportStructure]):
     """Generate reports summarizing vector search results.
 
     Methods
@@ -245,46 +196,24 @@ class VectorSearchWriter(AgentBase):
         default_model : str or None, default=None
             Default model identifier to use when not defined in config.
         """
-        config = AgentConfig(
+        super().__init__(prompt_dir=prompt_dir, default_model=default_model)
+
+    def _configure_agent(self) -> AgentConfig:
+        """Return configuration for the vector writer agent.
+
+        Returns
+        -------
+        AgentConfig
+            Configuration with name, description, and output type.
+        """
+        return AgentConfig(
             name="vector_writer",
             description="Write a report based on search results.",
             output_type=VectorSearchReportStructure,
         )
-        super().__init__(
-            config=config, prompt_dir=prompt_dir, default_model=default_model
-        )
-
-    async def run_agent(
-        self, query: str, search_results: VectorSearchItemResultsStructure
-    ) -> VectorSearchReportStructure:
-        """Compile a final report from search results.
-
-        Parameters
-        ----------
-        query : str
-            Original search query.
-        search_results : VectorSearchItemResultsStructure
-            Results returned from the search step.
-
-        Returns
-        -------
-        VectorSearchReportStructure
-            Generated report for the query.
-        """
-        template_context: Dict[str, Any] = {
-            "original_query": query,
-            "search_results": search_results,
-        }
-        result: VectorSearchReportStructure = await self.run_async(
-            input=query,
-            context=template_context,
-            output_type=self._output_type,
-        )
-
-        return result
 
 
-class VectorSearch(AgentBase):
+class VectorSearch:
     """Manage the complete vector search workflow.
 
     This high-level agent orchestrates a multi-step research process that plans
@@ -297,7 +226,7 @@ class VectorSearch(AgentBase):
     Basic vector search:
 
     >>> from pathlib import Path
-    >>> from openai_sdk_helpers.agent.vector_search import VectorSearch
+    >>> from openai_sdk_helpers.agent.search.vector import VectorSearch
     >>> prompts = Path("./prompts")
     >>> search = VectorSearch(prompt_dir=prompts, default_model="gpt-4o-mini")
     >>> result = search.run_agent_sync("What are the key findings in recent AI research?")
@@ -327,7 +256,6 @@ class VectorSearch(AgentBase):
 
     def __init__(
         self,
-        config: Optional[AgentConfig] = None,
         prompt_dir: Optional[Path] = None,
         default_model: Optional[str] = None,
         vector_store_name: Optional[str] = None,
@@ -339,8 +267,6 @@ class VectorSearch(AgentBase):
 
         Parameters
         ----------
-        config : AgentConfig or None, default=None
-            Optional configuration for the agent.
         prompt_dir : Path or None, default=None
             Directory containing prompt templates.
         default_model : str or None, default=None
@@ -352,24 +278,11 @@ class VectorSearch(AgentBase):
         vector_storage : VectorStorage or None, default=None
             Optional preconfigured vector storage instance to reuse.
         vector_storage_factory : callable, default=None
-            Factory used to construct a :class:`VectorStorage` when one is not
-            provided. Receives ``vector_store_name`` as an argument.
-
-        Returns
-        -------
-        None
+            Factory used to construct a VectorStorage when one is not provided.
+            Receives ``vector_store_name`` as an argument.
         """
-        if config is None:
-            config = AgentConfig(
-                name="vector_agent",
-                description="Coordinates the research process, including planning, searching, and report writing.",
-                output_type=VectorSearchStructure,
-                input_type=VectorSearchReportStructure,
-            )
-        super().__init__(
-            config=config, prompt_dir=prompt_dir, default_model=default_model
-        )
         self._prompt_dir = prompt_dir
+        self._default_model = default_model
         self._vector_store_name = vector_store_name
         self._max_concurrent_searches = max_concurrent_searches
         self._vector_storage = vector_storage
@@ -391,25 +304,30 @@ class VectorSearch(AgentBase):
         trace_id = gen_trace_id()
         with trace("VectorSearch trace", trace_id=trace_id):
             planner = VectorSearchPlanner(
-                prompt_dir=self._prompt_dir, default_model=self.model
+                prompt_dir=self._prompt_dir, default_model=self._default_model
             )
             tool = VectorSearchTool(
                 prompt_dir=self._prompt_dir,
-                default_model=self.model,
+                default_model=self._default_model,
                 store_name=self._vector_store_name,
                 max_concurrent_searches=self._max_concurrent_searches,
                 vector_storage=self._vector_storage,
                 vector_storage_factory=self._vector_storage_factory,
             )
             writer = VectorSearchWriter(
-                prompt_dir=self._prompt_dir, default_model=self.model
+                prompt_dir=self._prompt_dir, default_model=self._default_model
             )
             with custom_span("vector_search.plan"):
                 search_plan = await planner.run_agent(query=search_query)
             with custom_span("vector_search.search"):
-                search_results = await tool.run_agent(search_plan=search_plan)
+                search_results_list = await tool.run_agent(search_plan=search_plan)
             with custom_span("vector_search.write"):
-                search_report = await writer.run_agent(search_query, search_results)
+                search_report = await writer.run_agent(
+                    search_query, search_results_list
+                )
+        search_results = VectorSearchItemResultsStructure(
+            item_results=search_results_list
+        )
         return VectorSearchStructure(
             query=search_query,
             plan=search_plan,

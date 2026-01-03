@@ -6,8 +6,6 @@ tasks within an execution plan.
 
 from __future__ import annotations
 
-from typing import Any
-
 from ...enums.base import CrosswalkJSONEnum
 
 
@@ -67,7 +65,7 @@ class AgentEnum(CrosswalkJSONEnum):
     RELEASE_MANAGER = "ReleaseManager"
 
     @classmethod
-    def CROSSWALK(cls) -> dict[str, dict[str, Any]]:
+    def CROSSWALK(cls) -> dict[str, dict[str, str]]:
         """Return the raw crosswalk data for this enum.
 
         Returns

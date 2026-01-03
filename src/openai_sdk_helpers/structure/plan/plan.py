@@ -10,7 +10,7 @@ import asyncio
 import inspect
 import threading
 from datetime import datetime, timezone
-from typing import Any, Callable
+from typing import Any, Awaitable, Callable, Coroutine, cast
 from collections.abc import Mapping
 
 from .enum import AgentEnum
@@ -108,7 +108,9 @@ class PlanStructure(BaseStructure):
 
     def execute(
         self,
-        agent_registry: Mapping[AgentEnum | str, Callable[..., Any]],
+        agent_registry: Mapping[
+            AgentEnum | str, Callable[..., object | Coroutine[Any, Any, object]]
+        ],
         *,
         halt_on_error: bool = True,
     ) -> list[str]:
@@ -205,9 +207,9 @@ class PlanStructure(BaseStructure):
     def _run_task(
         task: TaskStructure,
         *,
-        agent_callable: Callable[..., Any],
+        agent_callable: Callable[..., object | Coroutine[Any, Any, object]],
         aggregated_context: list[str],
-    ) -> Any:
+    ) -> object | Coroutine[Any, Any, object]:
         """Execute a single task using the supplied callable.
 
         Combines task context with aggregated results from previous tasks,
@@ -241,7 +243,7 @@ class PlanStructure(BaseStructure):
             return agent_callable(prompt_with_context)
 
     @staticmethod
-    def _normalize_results(result: Any) -> list[str]:
+    def _normalize_results(result: object | Coroutine[Any, Any, object]) -> list[str]:
         """Convert callable outputs into a list of strings.
 
         Handles various result types including None, awaitables, lists,
@@ -260,13 +262,16 @@ class PlanStructure(BaseStructure):
         if result is None:
             return []
         if inspect.isawaitable(result):
-            return PlanStructure._normalize_results(PlanStructure._await_result(result))
+            awaited = PlanStructure._await_result(
+                cast(Coroutine[Any, Any, object], result)
+            )
+            return PlanStructure._normalize_results(awaited)
         if isinstance(result, list):
             return [str(item) for item in result]
         return [str(result)]
 
     @staticmethod
-    def _await_result(result: Any) -> Any:
+    def _await_result(result: Coroutine[Any, Any, object]) -> object:
         """Await the provided result, handling running event loops.
 
         Properly handles awaiting results whether an event loop is running
@@ -288,7 +293,7 @@ class PlanStructure(BaseStructure):
             return asyncio.run(result)
 
         if loop.is_running():
-            container: dict[str, Any] = {"value": None}
+            container: dict[str, object | None] = {"value": None}
 
             def _runner() -> None:
                 container["value"] = asyncio.run(result)

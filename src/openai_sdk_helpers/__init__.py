@@ -2,6 +2,36 @@
 
 from __future__ import annotations
 
+from .async_utils import run_coroutine_thread_safe, run_coroutine_with_fallback
+from .context_manager import (
+    AsyncManagedResource,
+    ManagedResource,
+    async_context,
+    ensure_closed,
+    ensure_closed_async,
+)
+from .errors import (
+    OpenAISDKError,
+    ConfigurationError,
+    PromptNotFoundError,
+    AgentExecutionError,
+    VectorStorageError,
+    ToolExecutionError,
+    ResponseGenerationError,
+    InputValidationError,
+    AsyncExecutionError,
+    ResourceCleanupError,
+)
+from .logging_config import LoggerFactory
+from .retry import with_exponential_backoff
+from .validation import (
+    validate_choice,
+    validate_dict_mapping,
+    validate_list_items,
+    validate_max_length,
+    validate_non_empty_string,
+    validate_url_format,
+)
 from .structure import (
     BaseStructure,
     SchemaOptions,
@@ -39,6 +69,38 @@ from .response import (
 )
 
 __all__ = [
+    # Async utilities
+    "run_coroutine_thread_safe",
+    "run_coroutine_with_fallback",
+    # Error classes
+    "OpenAISDKError",
+    "ConfigurationError",
+    "PromptNotFoundError",
+    "AgentExecutionError",
+    "VectorStorageError",
+    "ToolExecutionError",
+    "ResponseGenerationError",
+    "InputValidationError",
+    "AsyncExecutionError",
+    "ResourceCleanupError",
+    # Logging
+    "LoggerFactory",
+    # Retry utilities
+    "with_exponential_backoff",
+    # Context managers
+    "ManagedResource",
+    "AsyncManagedResource",
+    "ensure_closed",
+    "ensure_closed_async",
+    "async_context",
+    # Validation
+    "validate_non_empty_string",
+    "validate_max_length",
+    "validate_url_format",
+    "validate_dict_mapping",
+    "validate_list_items",
+    "validate_choice",
+    # Main structure classes
     "BaseStructure",
     "SchemaOptions",
     "spec_field",

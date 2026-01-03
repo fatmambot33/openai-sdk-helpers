@@ -12,7 +12,7 @@ import logging
 import mimetypes
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, cast
+from typing import cast
 
 from openai import OpenAI
 from openai.pagination import SyncPage

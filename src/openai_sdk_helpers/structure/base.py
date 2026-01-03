@@ -360,7 +360,7 @@ class BaseStructure(BaseModel):
         """
         schema = cls.model_json_schema()
 
-        def clean_refs(obj):
+        def clean_refs(obj: Any) -> Any:
             if isinstance(obj, dict):
                 if "$ref" in obj:
                     for key in list(obj.keys()):

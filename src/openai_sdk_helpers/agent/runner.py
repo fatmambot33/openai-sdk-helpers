@@ -8,10 +8,11 @@ signatures whether they need asynchronous, synchronous, or streamed results.
 from __future__ import annotations
 
 import asyncio
-import threading
 from typing import Any, Dict, Optional
 
 from agents import Agent, RunResult, RunResultStreaming, Runner
+
+from openai_sdk_helpers.async_utils import run_coroutine_with_fallback
 
 
 async def _run_async(
@@ -64,28 +65,14 @@ def _run_sync(
     -------
     RunResult
         Result from the agent execution.
+
+    Raises
+    ------
+    AsyncExecutionError
+        If execution fails or times out.
     """
     coro = Runner.run(agent, input, context=context)
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        return asyncio.run(coro)
-
-    if loop.is_running():
-        result: RunResult | None = None
-
-        def _thread_runner() -> None:
-            nonlocal result
-            result = asyncio.run(coro)
-
-        thread = threading.Thread(target=_thread_runner, daemon=True)
-        thread.start()
-        thread.join()
-        if result is None:
-            raise RuntimeError("Agent execution did not return a result.")
-        return result
-
-    return loop.run_until_complete(coro)
+    return run_coroutine_with_fallback(coro)
 
 
 def _run_streamed(
