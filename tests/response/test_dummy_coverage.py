@@ -8,7 +8,6 @@ def test_dummy_for_coverage(openai_settings):
     r = BaseResponse(
         instructions="hi",
         tools=[],
-        schema=None,
         output_structure=None,
         tool_handlers={},
         openai_settings=openai_settings,

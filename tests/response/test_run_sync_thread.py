@@ -9,7 +9,6 @@ def test_run_sync_thread(openai_settings):
     r = BaseResponse(
         instructions="hi",
         tools=[],
-        schema=None,
         output_structure=None,
         tool_handlers={},
         openai_settings=openai_settings,

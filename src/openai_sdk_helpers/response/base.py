@@ -77,7 +77,6 @@ class BaseResponse(Generic[T]):
         *,
         instructions: str,
         tools: Optional[list],
-        schema: Optional[Any],
         output_structure: Optional[Type[T]],
         tool_handlers: dict[str, ToolHandler],
         openai_settings: OpenAISettings,
@@ -95,10 +94,10 @@ class BaseResponse(Generic[T]):
             System instructions for the OpenAI response.
         tools : list or None
             Tool definitions for the OpenAI request.
-        schema : object or None
-            Optional response schema configuration.
         output_structure : type[BaseStructure] or None
-            Structure type used to parse tool call outputs.
+            Structure type used to parse tool call outputs. When provided, the
+            schema is automatically generated from this structure using its
+            ``response_format()`` method.
         tool_handlers : dict[str, ToolHandler]
             Mapping of tool names to handler callables.
         openai_settings : OpenAISettings
@@ -129,9 +128,13 @@ class BaseResponse(Generic[T]):
         self._save_path = Path(save_path) if save_path is not None else None
         self._instructions = instructions
         self._tools = tools if tools is not None else []
-        self._schema = schema
         self._output_structure = output_structure
         self._openai_settings = openai_settings
+
+        # Auto-generate schema from output_structure when provided
+        self._schema = (
+            output_structure.response_format() if output_structure is not None else None
+        )
 
         if not self._openai_settings.api_key:
             raise ValueError("OpenAI API key is required")

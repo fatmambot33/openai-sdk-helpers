@@ -36,7 +36,6 @@ def test_close_cleans_system_vector_storage(monkeypatch):
     base = BaseResponse(
         instructions="hi",
         tools=[],
-        schema=None,
         output_structure=None,
         tool_handlers={},
         openai_settings=settings,

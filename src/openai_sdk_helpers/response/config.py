@@ -32,13 +32,12 @@ class ResponseConfiguration(Generic[TIn, TOut]):
         contents are loaded at runtime.
     tools : Sequence[object], optional
         Tool definitions associated with the configuration. Default is None.
-    schema : ResponseTextConfigParam, optional
-        Text response configuration applied at generation time. Default is None.
     input_structure : Type[BaseStructure], optional
         Structure class used to parse or validate input. Must subclass
         BaseStructure. Default is None.
     output_structure : Type[BaseStructure], optional
-        Structure class used to format or validate output. Must subclass
+        Structure class used to format or validate output. Schema is
+        automatically generated from this structure. Must subclass
         BaseStructure. Default is None.
 
     Raises
@@ -66,7 +65,6 @@ class ResponseConfiguration(Generic[TIn, TOut]):
     >>> config = Configuration(
     ...     name="targeting_to_plan",
     ...     tools=None,
-    ...     schema=None,
     ...     input_structure=PromptStructure,
     ...     output_structure=WebSearchStructure,
     ... )
@@ -77,7 +75,6 @@ class ResponseConfiguration(Generic[TIn, TOut]):
     name: str
     instructions: str | Path
     tools: Optional[list]
-    schema: Optional[ResponseTextConfigParam]
     input_structure: Optional[Type[TIn]]
     output_structure: Optional[Type[TOut]]
 
@@ -172,7 +169,6 @@ class ResponseConfiguration(Generic[TIn, TOut]):
         return BaseResponse[TOut](
             instructions=self.instructions_text,
             tools=self.tools,
-            schema=self.schema,
             output_structure=self.output_structure,
             tool_handlers=tool_handlers,
             openai_settings=openai_settings,

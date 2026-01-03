@@ -15,7 +15,6 @@ def _build_config(instructions: str | Path) -> ResponseConfiguration:
         name="unit",
         instructions=instructions,
         tools=None,
-        schema=None,
         input_structure=None,
         output_structure=None,
     )
@@ -52,7 +51,6 @@ def test_invalid_instruction_type_raises_type_error() -> None:
             name="unit",
             instructions=invalid_instructions,
             tools=None,
-            schema=None,
             input_structure=None,
             output_structure=None,
         )

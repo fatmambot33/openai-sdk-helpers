@@ -31,7 +31,6 @@ class StreamlitWebSearch(BaseResponse[WebSearchStructure]):
                     tool_description="Tool to perform web searches and generate reports.",
                 )
             ],
-            schema=WebSearchStructure.response_format(),
             output_structure=WebSearchStructure,
             tool_handlers={"perform_search": perform_search},
             openai_settings=settings,
