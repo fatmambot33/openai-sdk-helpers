@@ -46,6 +46,9 @@ from .structure import (
     ExtendedSummaryStructure,
     ValidationResultStructure,
     AgentBlueprint,
+    create_plan,
+    execute_task,
+    execute_plan,
 )
 from .prompt import PromptRenderer
 from .config import OpenAISettings
@@ -66,7 +69,18 @@ from .response import (
     ResponseMessage,
     ResponseMessages,
     ResponseToolCall,
+    ResponseConfiguration,
+    ResponseRegistry,
+    get_default_registry,
+    parse_tool_arguments,
     attach_vector_store,
+)
+from .tools import (
+    serialize_tool_result,
+    tool_handler_factory,
+)
+from .utils import (
+    build_openai_settings,
 )
 
 __all__ = [
@@ -133,5 +147,15 @@ __all__ = [
     "ResponseMessage",
     "ResponseMessages",
     "ResponseToolCall",
+    "ResponseConfiguration",
+    "ResponseRegistry",
+    "get_default_registry",
+    "parse_tool_arguments",
     "attach_vector_store",
+    "serialize_tool_result",
+    "tool_handler_factory",
+    "build_openai_settings",
+    "create_plan",
+    "execute_task",
+    "execute_plan",
 ]

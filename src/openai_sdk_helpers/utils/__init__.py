@@ -1,8 +1,8 @@
 """Utility helpers for openai-sdk-helpers.
 
 This package provides common utility functions for type coercion, file
-handling, JSON serialization, and logging. These utilities are used
-throughout the openai_sdk_helpers package.
+handling, JSON serialization, logging, and OpenAI settings construction.
+These utilities are used throughout the openai_sdk_helpers package.
 
 Functions
 ---------
@@ -20,6 +20,8 @@ coerce_jsonable(value)
     Convert a value into a JSON-serializable representation.
 log(message, level)
     Log a message with basic configuration.
+build_openai_settings(**kwargs)
+    Build OpenAI settings from environment with validation.
 
 Classes
 -------
@@ -33,6 +35,7 @@ from __future__ import annotations
 
 from .core import (
     JSONSerializable,
+    build_openai_settings,
     check_filepath,
     coerce_jsonable,
     coerce_dict,
@@ -53,4 +56,5 @@ __all__ = [
     "JSONSerializable",
     "customJSONEncoder",
     "log",
+    "build_openai_settings",
 ]

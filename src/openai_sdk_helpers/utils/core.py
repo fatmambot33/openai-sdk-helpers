@@ -143,6 +143,133 @@ def coerce_dict(value: object) -> dict[str, Any]:
     raise TypeError("extra_client_kwargs must be a mapping or None")
 
 
+def build_openai_settings(
+    api_key: str | None = None,
+    org_id: str | None = None,
+    project_id: str | None = None,
+    base_url: str | None = None,
+    default_model: str | None = None,
+    timeout: float | str | None = None,
+    max_retries: int | str | None = None,
+    dotenv_path: Path | None = None,
+    **extra_kwargs: Any,
+) -> Any:  # Returns OpenAISettings but use Any to avoid circular import
+    """Build OpenAI settings from environment with explicit validation.
+
+    Convenience function for creating OpenAISettings with validation and
+    clear error messages. Reads from environment variables and validates
+    required fields, with explicit type coercion for timeout and max_retries.
+
+    Parameters
+    ----------
+    api_key : str or None, default None
+        API key for OpenAI authentication. If None, reads from OPENAI_API_KEY.
+    org_id : str or None, default None
+        Organization ID. If None, reads from OPENAI_ORG_ID.
+    project_id : str or None, default None
+        Project ID. If None, reads from OPENAI_PROJECT_ID.
+    base_url : str or None, default None
+        Base URL for API requests. If None, reads from OPENAI_BASE_URL.
+    default_model : str or None, default None
+        Default model name. If None, reads from OPENAI_MODEL.
+    timeout : float, str, or None, default None
+        Request timeout in seconds. If None, reads from OPENAI_TIMEOUT.
+        Can be string that will be parsed to float.
+    max_retries : int, str, or None, default None
+        Maximum retry attempts. If None, reads from OPENAI_MAX_RETRIES.
+        Can be string that will be parsed to int.
+    dotenv_path : Path or None, default None
+        Path to .env file. If None, searches for .env in current directory.
+    **extra_kwargs : Any
+        Additional keyword arguments for extra_client_kwargs.
+
+    Returns
+    -------
+    OpenAISettings
+        Configured settings instance.
+
+    Raises
+    ------
+    ValueError
+        If OPENAI_API_KEY is not found in environment or parameters.
+        If timeout cannot be parsed as float.
+        If max_retries cannot be parsed as int.
+    TypeError
+        If timeout or max_retries have invalid types.
+
+    Examples
+    --------
+    Build from explicit parameters:
+
+    >>> settings = build_openai_settings(
+    ...     api_key="sk-...",
+    ...     default_model="gpt-4o",
+    ...     timeout=30.0
+    ... )
+
+    Build from environment:
+
+    >>> settings = build_openai_settings()  # doctest: +SKIP
+
+    With custom .env location:
+
+    >>> settings = build_openai_settings(
+    ...     dotenv_path=Path("/path/to/.env")
+    ... )  # doctest: +SKIP
+    """
+    # Import at runtime to avoid circular import
+    from openai_sdk_helpers.config import OpenAISettings
+
+    # Parse timeout with validation
+    parsed_timeout: float | None = None
+    if timeout is not None:
+        try:
+            parsed_timeout = coerce_optional_float(timeout)
+        except (ValueError, TypeError) as exc:
+            raise ValueError(
+                f"Invalid timeout value '{timeout}'. Must be a number or numeric string."
+            ) from exc
+
+    # Parse max_retries with validation
+    parsed_max_retries: int | None = None
+    if max_retries is not None:
+        try:
+            parsed_max_retries = coerce_optional_int(max_retries)
+        except (ValueError, TypeError) as exc:
+            raise ValueError(
+                f"Invalid max_retries value '{max_retries}'. "
+                "Must be an integer or numeric string."
+            ) from exc
+
+    # Build settings using from_env with overrides
+    overrides = {}
+    if api_key is not None:
+        overrides["api_key"] = api_key
+    if org_id is not None:
+        overrides["org_id"] = org_id
+    if project_id is not None:
+        overrides["project_id"] = project_id
+    if base_url is not None:
+        overrides["base_url"] = base_url
+    if default_model is not None:
+        overrides["default_model"] = default_model
+    if parsed_timeout is not None:
+        overrides["timeout"] = parsed_timeout
+    if parsed_max_retries is not None:
+        overrides["max_retries"] = parsed_max_retries
+    if extra_kwargs:
+        overrides["extra_client_kwargs"] = extra_kwargs
+
+    try:
+        return OpenAISettings.from_env(dotenv_path=dotenv_path, **overrides)
+    except ValueError as exc:
+        # Re-raise with clearer message
+        raise ValueError(
+            "Failed to build OpenAI settings. Ensure OPENAI_API_KEY is set "
+            "in environment or passed as parameter."
+        ) from exc
+
+
 T = TypeVar("T")
 _configured_logging = False
 
@@ -465,4 +592,8 @@ __all__ = [
     "JSONSerializable",
     "customJSONEncoder",
     "log",
+    "coerce_optional_float",
+    "coerce_optional_int",
+    "coerce_dict",
+    "build_openai_settings",
 ]

@@ -33,20 +33,23 @@ attach_vector_store
 from __future__ import annotations
 
 from .base import BaseResponse
-from .config import ResponseConfiguration
+from .config import ResponseConfiguration, ResponseRegistry, get_default_registry
 from .messages import ResponseMessage, ResponseMessages
 from .runner import run_async, run_streamed, run_sync
-from .tool_call import ResponseToolCall
+from .tool_call import ResponseToolCall, parse_tool_arguments
 from .vector_store import attach_vector_store
 
 __all__ = [
     "BaseResponse",
     "ResponseConfiguration",
+    "ResponseRegistry",
+    "get_default_registry",
     "ResponseMessage",
     "ResponseMessages",
     "run_sync",
     "run_async",
     "run_streamed",
     "ResponseToolCall",
+    "parse_tool_arguments",
     "attach_vector_store",
 ]
