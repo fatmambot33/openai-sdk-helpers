@@ -2,17 +2,19 @@
 
 This module provides the PromptRenderer class for loading and rendering
 Jinja2 templates with context variables. Templates can be loaded from a
-specified directory or by absolute path.
+specified directory or by absolute path. Includes template caching for
+improved performance.
 """
 
 from __future__ import annotations
 
 import warnings
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
-from jinja2 import Environment, FileSystemLoader, Template
+from jinja2 import Environment, FileSystemLoader, Template, TemplateNotFound
 
 load_dotenv()
 warnings.filterwarnings("ignore")
@@ -23,7 +25,8 @@ class PromptRenderer:
 
     Loads and renders Jinja2 templates from a base directory or by absolute
     path. The renderer supports variable substitution, template inheritance,
-    and all standard Jinja2 features for creating dynamic prompts.
+    and all standard Jinja2 features for creating dynamic prompts. Templates
+    are cached using LRU cache for improved performance on repeated renders.
 
     Templates are loaded from a base directory (defaulting to the built-in
     prompt package directory) or can be specified with absolute paths.
@@ -38,6 +41,8 @@ class PromptRenderer:
     -------
     render(template_path, context=None)
         Render a Jinja2 template with the given context variables.
+    clear_cache()
+        Clear the template compilation cache.
 
     Examples
     --------
@@ -103,12 +108,29 @@ class PromptRenderer:
             autoescape=False,  # Prompts are plain text
         )
 
+    @lru_cache(maxsize=128)
+    def _compile_template(self, template_text: str) -> Template:
+        """Compile a template string with LRU caching.
+
+        Parameters
+        ----------
+        template_text : str
+            Raw template content to compile.
+
+        Returns
+        -------
+        Template
+            Compiled Jinja2 template ready for rendering.
+        """
+        return Template(template_text)
+
     def render(self, template_path: str, context: dict[str, Any] | None = None) -> str:
         """Render a Jinja2 template with the given context variables.
 
         Loads the template from either an absolute path or a path relative
         to the base directory. The template is rendered with the provided
-        context dictionary using Jinja2's template engine.
+        context dictionary using Jinja2's template engine. Templates are
+        cached for improved performance on repeated renders.
 
         For security, relative paths are validated to prevent path traversal
         attacks. Absolute paths are allowed but should be used with caution
@@ -135,6 +157,8 @@ class PromptRenderer:
         InputValidationError
             If the path contains suspicious patterns or attempts to escape
             the base directory.
+        TemplateNotFound
+            If the template cannot be loaded by Jinja2.
 
         Examples
         --------
@@ -164,9 +188,35 @@ class PromptRenderer:
                 base_dir=self.base_dir,
                 field_name="template_path",
             )
+
+        # Check if template exists and provide clear error message
+        if not template_path_.exists():
+            raise FileNotFoundError(
+                f"Template not found: {template_path_}. "
+                f"Ensure the template exists in {self.base_dir} or provide an absolute path."
+            )
+
+        # Read and cache-compile template
         template_path_text = template_path_.read_text()
-        template = Template(template_path_text)
+        template = self._compile_template(template_path_text)
         return template.render(context or {})
+
+    def clear_cache(self) -> None:
+        """Clear the template compilation cache.
+
+        Useful when templates are modified during runtime and need to be
+        reloaded. Call this method to force re-compilation of all templates
+        on next render.
+
+        Examples
+        --------
+        >>> renderer = PromptRenderer()
+        >>> renderer.render("template.jinja", {})  # Compiles and caches
+        >>> # ... modify template.jinja ...
+        >>> renderer.clear_cache()  # Clear cache
+        >>> renderer.render("template.jinja", {})  # Re-compiles
+        """
+        self._compile_template.cache_clear()
 
 
 __all__ = ["PromptRenderer"]
