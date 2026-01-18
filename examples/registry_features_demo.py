@@ -30,7 +30,6 @@ from openai_sdk_helpers import (
     PromptRenderer,
 )
 
-
 # Example 1: Response Registry
 # ============================
 

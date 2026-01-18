@@ -18,7 +18,6 @@ from openai_sdk_helpers.structure import (
     ValidationResultStructure,
 )
 
-
 # Example 1: Multi-Tool Configuration
 # =====================================
 

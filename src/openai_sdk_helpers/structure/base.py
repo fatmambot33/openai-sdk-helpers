@@ -23,7 +23,6 @@ from typing import (
 from pydantic import BaseModel, ConfigDict, Field
 from openai.types.responses.response_text_config_param import ResponseTextConfigParam
 
-
 # Internal imports
 
 from ..utils import check_filepath, BaseModelJSONSerializable

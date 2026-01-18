@@ -11,7 +11,6 @@ from typing import Any, TypeVar
 
 from .base import ResponseBase
 
-
 R = TypeVar("R", bound=ResponseBase[Any])
 
 

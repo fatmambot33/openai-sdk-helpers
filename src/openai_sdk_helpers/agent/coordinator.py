@@ -16,7 +16,6 @@ from ..utils import ensure_directory, log
 from .base import AgentBase
 from .configuration import AgentConfiguration
 
-
 PromptFn = Callable[[str], PromptStructure]
 BuildPlanFn = Callable[[str], PlanStructure]
 ExecutePlanFn = Callable[[PlanStructure], List[str]]

@@ -4,7 +4,6 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
-
 # Import normally instead of dynamic loading
 from openai_sdk_helpers.environment import get_data_path
 from openai_sdk_helpers.utils.coercion import ensure_list
