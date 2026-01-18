@@ -124,8 +124,6 @@ class ResponseBase(Generic[T]):
         Generate a response asynchronously and return parsed output.
     run_sync(content, attachments=None)
         Execute run_async synchronously with thread management.
-    run_streamed(content, attachments=None)
-        Execute run_async and await the result (streaming not yet supported).
     register_tool(func, tool_spec)
         Register a tool handler and definition from a ToolSpec.
     get_last_tool_message()
@@ -716,65 +714,6 @@ class ResponseBase(Generic[T]):
         thread.start()
         thread.join()
         return result
-
-    def run_streamed(
-        self,
-        content: str | list[str],
-        *,
-        files: str | list[str] | None = None,
-        use_vector_store: bool = False,
-    ) -> T | None:
-        """Execute run_async and await the result.
-
-        Streaming responses are not yet fully supported, so this method
-        simply awaits run_async to provide API compatibility with agent
-        interfaces.
-
-        Automatically detects file types:
-        - Images are sent as base64-encoded images
-        - Documents are sent as base64-encoded files (default)
-        - Documents can optionally use vector stores for RAG
-
-        Parameters
-        ----------
-        content : str or list[str]
-            Prompt text or list of prompt texts to send.
-        files : str, list[str], or None, default None
-            Optional file path or list of file paths. Each file is
-            automatically processed based on its type.
-        use_vector_store : bool, default False
-            If True, non-image files are uploaded to a vector store
-            for RAG-enabled search instead of inline base64 encoding.
-
-        Returns
-        -------
-        T or None
-            Parsed response object of type output_structure, or None.
-
-        Raises
-        ------
-        RuntimeError
-            If the API returns no output.
-            If a tool handler raises an exception.
-        ValueError
-            If the API invokes a tool with no registered handler.
-
-        Notes
-        -----
-        This method exists for API consistency but does not currently
-        provide true streaming functionality.
-
-        Examples
-        --------
-        >>> result = response.run_streamed("Analyze these files")
-        """
-        return asyncio.run(
-            self.run_async(
-                content=content,
-                files=files,
-                use_vector_store=use_vector_store,
-            )
-        )
 
     def get_last_tool_message(self) -> ResponseMessage | None:
         """Return the most recent tool message from conversation history.

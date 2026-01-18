@@ -5,7 +5,7 @@ from .base import AgentBase
 from .configuration import AgentConfiguration, AgentRegistry, get_default_registry
 from ..structure.plan.enum import AgentEnum
 from .coordinator import CoordinatorAgent
-from .runner import run_sync, run_async, run_streamed
+from .runner import run_sync, run_async
 from .search.base import SearchPlanner, SearchToolAgent, SearchWriter
 from .summarizer import SummarizerAgent
 from .translator import TranslatorAgent
@@ -23,7 +23,6 @@ __all__ = [
     "CoordinatorAgent",
     "run_sync",
     "run_async",
-    "run_streamed",
     "run_coroutine_agent_sync",
     "SearchPlanner",
     "SearchToolAgent",

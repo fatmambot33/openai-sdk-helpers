@@ -2,14 +2,14 @@
 
 These helpers provide a consistent interface around the lower-level functions in
 the ``agent.base`` module, allowing callers to execute agents with consistent
-signatures whether they need asynchronous, synchronous, or streamed results.
+signatures whether they need asynchronous or synchronous results.
 """
 
 from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-from agents import Agent, RunResult, RunResultStreaming, Runner, Session
+from agents import Agent, RunResult, Runner, Session
 
 from openai_sdk_helpers.utils.async_utils import run_coroutine_with_fallback
 from ..structure.base import StructureBase
@@ -109,46 +109,4 @@ def run_sync(
     return result
 
 
-def run_streamed(
-    agent: Agent,
-    input: str,
-    *,
-    context: Optional[Dict[str, Any]] = None,
-    output_structure: Optional[type[StructureBase]] = None,
-    session: Optional[Session] = None,
-) -> RunResultStreaming | StructureBase:
-    """Stream agent execution results.
-
-    Parameters
-    ----------
-    agent : Agent
-        Configured agent to execute.
-    input : str
-        Prompt or query string for the agent.
-    context : dict or None, default=None
-        Optional context dictionary passed to the agent.
-    output_structure : type[StructureBase] or None, default=None
-        Optional type used to cast the final output.
-    session : Session or None, default=None
-        Optional session for maintaining conversation history.
-
-    Returns
-    -------
-    RunResultStreaming
-        Streaming output wrapper from the agent execution.
-
-    Examples
-    --------
-    >>> from agents import Agent
-    >>> agent = Agent(name="test", instructions="test", model="gpt-4o-mini")
-    >>> result = run_streamed(agent, "Explain AI")  # doctest: +SKIP
-    >>> for chunk in result.stream_text():  # doctest: +SKIP
-    ...     print(chunk, end="")
-    """
-    result = Runner.run_streamed(agent, input, context=context, session=session)
-    if output_structure is not None:
-        return result.final_output_as(output_structure)
-    return result
-
-
-__all__ = ["run_sync", "run_async", "run_streamed"]
+__all__ = ["run_sync", "run_async"]

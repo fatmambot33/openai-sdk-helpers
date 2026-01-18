@@ -24,8 +24,6 @@ run_sync
     Execute a response workflow synchronously with resource cleanup.
 run_async
     Execute a response workflow asynchronously with resource cleanup.
-run_streamed
-    Execute a response workflow and return the asynchronous result.
 attach_vector_store
     Attach vector stores to a response's file_search tool.
 process_files
@@ -38,7 +36,7 @@ from .base import ResponseBase
 from .configuration import ResponseConfiguration, ResponseRegistry, get_default_registry
 from .files import process_files
 from .messages import ResponseMessage, ResponseMessages
-from .runner import run_async, run_streamed, run_sync
+from .runner import run_async, run_sync
 from .tool_call import ResponseToolCall
 from .vector_store import attach_vector_store
 
@@ -51,7 +49,6 @@ __all__ = [
     "ResponseMessages",
     "run_sync",
     "run_async",
-    "run_streamed",
     "ResponseToolCall",
     "attach_vector_store",
     "process_files",

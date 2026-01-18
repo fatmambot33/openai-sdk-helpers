@@ -43,7 +43,7 @@ structures, configuration helpers, and orchestration utilities—while leaving
 application-specific prompts and tools to the consuming project.
 
 **Important**: This library integrates with **two distinct OpenAI SDKs**:
-- **`openai-agents`** - Used by the `agent` module for high-level agent workflows with automatic tool handling and streaming
+- **`openai-agents`** - Used by the `agent` module for high-level agent workflows with automatic tool handling
 - **`openai`** - Used by the `response` module for direct API interactions with fine-grained control over responses
 
 The `agent` module provides a higher-level abstraction for building agents, while the `response` module offers lower-level control for custom response handling workflows.
@@ -267,7 +267,7 @@ response.close()
 ```
 
 **Key Differences:**
-- **Agent Module**: Higher-level abstraction with built-in streaming, automatic tool handling, and agent-specific workflows
+- **Agent Module**: Higher-level abstraction with automatic tool handling and agent-specific workflows
 - **Response Module**: Lower-level control with manual message management, custom tool handlers, and direct API access
 
 ## Advanced Usage
@@ -488,7 +488,7 @@ The package is organized around cohesive, reusable building blocks:
 
 ### Agent Modules (Built on `openai-agents` SDK)
 
-These modules use the `openai-agents` SDK for high-level agent workflows with automatic streaming, tool handling, and conversation management.
+These modules use the `openai-agents` SDK for high-level agent workflows with automatic tool handling and conversation management.
 
 - **`openai_sdk_helpers.agent.base.AgentBase`**  
   Base class for all agents with synchronous and asynchronous execution support.

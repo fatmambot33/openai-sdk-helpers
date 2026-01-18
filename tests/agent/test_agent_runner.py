@@ -39,16 +39,3 @@ def test_run_sync(mock_runner_run, mock_run_coroutine, mock_agent):
     )
     assert mock_run_coroutine.called
 
-
-@patch("openai_sdk_helpers.agent.runner.Runner.run_streamed")
-def test_run_streamed(mock_run_streamed, mock_agent):
-    """Test the run_streamed function."""
-    mock_result = MagicMock()
-    mock_run_streamed.return_value = mock_result
-
-    result = runner.run_streamed(mock_agent, input="test_input")
-
-    mock_run_streamed.assert_called_once_with(
-        mock_agent, "test_input", context=None, session=None
-    )
-    assert result == mock_result
