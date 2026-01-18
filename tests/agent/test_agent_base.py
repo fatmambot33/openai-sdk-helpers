@@ -138,16 +138,6 @@ def test_run_agent_sync(mock_run_sync, mock_config):
     mock_run_sync.assert_called_once()
 
 
-@patch("openai_sdk_helpers.agent.base.run_streamed")
-def test_run_agent_streamed(mock_run_streamed, mock_config):
-    """Test running the agent with streaming."""
-    mock_run_streamed.return_value = "result"
-    agent = AgentBase(configuration=mock_config)
-    result = agent.run_streamed("test_input")
-    assert result == "result"
-    mock_run_streamed.assert_called_once()
-
-
 def test_as_tool(mock_config):
     """Test returning the agent as a tool."""
     with warnings.catch_warnings():

@@ -6,14 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, Optional, Protocol, cast
 import uuid
 
-from agents import (
-    Agent,
-    Handoff,
-    InputGuardrail,
-    OutputGuardrail,
-    RunResultStreaming,
-    Session,
-)
+from agents import Agent, Handoff, InputGuardrail, OutputGuardrail, Session
 from agents.model_settings import ModelSettings
 from agents.run_context import RunContextWrapper
 from agents.tool import Tool
@@ -32,9 +25,7 @@ from ..utils import (
     log,
 )
 
-from ..tools import ToolHandlerRegistration, ToolSpec
-
-from .runner import run_async, run_streamed, run_sync
+from .runner import run_async, run_sync
 
 if TYPE_CHECKING:
     from ..settings import OpenAISettings
@@ -179,8 +170,6 @@ class AgentBase(DataclassJSONSerializable):
         Execute the agent asynchronously and optionally cast the result.
     run_sync(input, context, output_structure, session)
         Execute the agent synchronously.
-    run_streamed(input, context, output_structure, session)
-        Return a streaming result for the agent execution.
     as_tool()
         Return the agent as a callable tool.
     as_response_tool()
@@ -543,47 +532,6 @@ class AgentBase(DataclassJSONSerializable):
             output_structure=output_structure,
             session=session_to_use,
         )
-
-    def run_streamed(
-        self,
-        input: str,
-        *,
-        context: Optional[Dict[str, Any]] = None,
-        output_structure: Optional[type[StructureBase]] = None,
-        session: Optional[Any] = None,
-    ) -> RunResultStreaming | StructureBase:
-        """Stream the agent execution results.
-
-        Parameters
-        ----------
-        input : str
-            Prompt or query for the agent.
-        context : dict or None, default=None
-            Optional dictionary passed to the agent.
-        output_structure : type[StructureBase] or None, default=None
-            Optional type used to cast the final output.
-        session : Session or None, default=None
-            Optional session for maintaining conversation history across runs.
-            If not provided, uses the session from configuration if available.
-
-        Returns
-        -------
-        RunResultStreaming
-            Streaming output wrapper from the agent execution.
-        """
-        # Use session from parameter, fall back to configuration session
-        session_to_use = session if session is not None else self._session
-        output_structure_to_use = output_structure or self._output_structure
-        result = run_streamed(
-            agent=self.get_agent(),
-            input=input,
-            context=context,
-            output_structure=output_structure_to_use,
-            session=session_to_use,
-        )
-        if output_structure_to_use and hasattr(result, "final_output_as"):
-            return cast(Any, result).final_output_as(output_structure_to_use)
-        return result
 
     def as_tool(self) -> Tool:
         """Return the agent as a callable tool.

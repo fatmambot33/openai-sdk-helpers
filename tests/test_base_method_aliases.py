@@ -4,8 +4,6 @@ import asyncio
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 from openai_sdk_helpers.agent.base import AgentBase
 from openai_sdk_helpers.agent.configuration import AgentConfiguration
 from openai_sdk_helpers.structure import SummaryStructure
@@ -54,33 +52,25 @@ class _StubResponseBase(ResponseBase[Any]):
         self.messages = MagicMock()
 
 
-@patch("openai_sdk_helpers.agent.base.run_streamed")
 @patch("openai_sdk_helpers.agent.base.run_async", new_callable=AsyncMock)
 @patch("openai_sdk_helpers.agent.base.run_sync")
 def test_agent_base_run_aliases(
     mock_run_agent_sync: MagicMock,
     mock_run_agent: AsyncMock,
-    mock_run_agent_streamed: MagicMock,
 ) -> None:
     """Ensure AgentBase convenience helpers call the private runners directly."""
 
     mock_run_agent.return_value = "async-result"
     mock_run_agent_sync.return_value = "sync-result"
-    mock_run_agent_streamed.return_value = MagicMock(
-        final_output_as=lambda *_: "stream-result"
-    )
     agent = _StubAgentBase()
 
     result_run = agent.run_sync(input="hello")
     result_run_async = asyncio.run(agent.run_async(input="hello"))
-    result_stream = agent.run_streamed(input="hello", output_structure=SummaryStructure)
 
     assert result_run == "sync-result"
     assert result_run_async == "async-result"
-    assert result_stream == "stream-result"
     mock_run_agent_sync.assert_called_once()
     assert mock_run_agent.await_count == 1
-    mock_run_agent_streamed.assert_called_once()
 
 
 @patch.object(_StubResponseBase, "run_sync", return_value="sync-result")
@@ -88,13 +78,12 @@ def test_agent_base_run_aliases(
 def test_response_base_run_aliases(
     mock_run_response_async: AsyncMock, mock_run_response: MagicMock
 ) -> None:
-    """Validate ResponseBase exposes run, run_async, and run_streamed aliases."""
+    """Validate ResponseBase exposes run_sync and run_async aliases."""
 
     mock_run_response_async.return_value = "async-result"
     response = _StubResponseBase()
 
     assert response.run_sync(content="hello") == "sync-result"
     assert asyncio.run(response.run_async(content="hello")) == "async-result"
-    assert response.run_streamed(content="hello") == "async-result"
     mock_run_response.assert_called_once_with(content="hello")
-    assert mock_run_response_async.await_count == 2
+    assert mock_run_response_async.await_count == 1

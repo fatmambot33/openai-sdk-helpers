@@ -7,7 +7,6 @@ They simplify common usage patterns for both synchronous and asynchronous contex
 
 from __future__ import annotations
 
-import asyncio
 from typing import Any, TypeVar
 
 from .base import ResponseBase
@@ -100,49 +99,4 @@ async def run_async(
         response.close()
 
 
-def run_streamed(
-    response_cls: type[R],
-    *,
-    content: str,
-    response_kwargs: dict[str, Any] | None = None,
-) -> Any:
-    """Execute a response workflow and return the awaited result.
-
-    Provides API compatibility with agent interfaces. Streaming responses
-    are not currently fully supported, so this executes run_async and
-    awaits the result.
-
-    Parameters
-    ----------
-    response_cls : type[ResponseBase]
-        Response class to instantiate for the workflow.
-    content : str
-        Prompt text to send to the OpenAI API.
-    response_kwargs : dict[str, Any] or None, default None
-        Optional keyword arguments forwarded to response_cls constructor.
-
-    Returns
-    -------
-    Any
-        Parsed response from run_async, typically a structured output or None.
-
-    Notes
-    -----
-    This function exists for API consistency but does not currently provide
-    true streaming functionality.
-
-    Examples
-    --------
-    >>> from openai_sdk_helpers.response import run_streamed
-    >>> result = run_streamed(
-    ...     MyResponse,
-    ...     content="Process this text",
-    ...     response_kwargs={"openai_settings": settings}
-    ... )
-    """
-    return asyncio.run(
-        run_async(response_cls, content=content, response_kwargs=response_kwargs)
-    )
-
-
-__all__ = ["run_sync", "run_async", "run_streamed"]
+__all__ = ["run_sync", "run_async"]
