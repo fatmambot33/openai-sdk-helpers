@@ -24,6 +24,21 @@ class ResponseRegistry(RegistryBase["ResponseConfiguration"]):
     Inherits from RegistryBase to provide centralized storage and retrieval
     of response configurations, enabling reusable response specs across the application.
 
+    Methods
+    -------
+    register(configuration)
+        Add a configuration to the registry.
+    get(name)
+        Retrieve a configuration by name.
+    list_names()
+        Return all registered configuration names.
+    clear()
+        Remove all registered configurations.
+    save_to_directory(path)
+        Export all registered configurations to JSON files.
+    load_from_directory(path, config_class)
+        Load configurations from JSON files in a directory.
+
     Examples
     --------
     >>> registry = ResponseRegistry()
@@ -62,12 +77,11 @@ def get_default_registry() -> ResponseRegistry:
 
 @dataclass(frozen=True, slots=True)
 class ResponseConfiguration(DataclassJSONSerializable, Generic[TIn, TOut]):
-    """
-    Represent an immutable configuration describing input and output structures.
+    """Represent an immutable configuration describing input and output structures.
 
     Encapsulate all metadata required to define how a request is interpreted and
     how a response is structured, while enforcing strict type and runtime safety.
-    Inherits from DataclassJSONSerializable to support serialization to JSON format.
+    Inherit from DataclassJSONSerializable to support serialization to JSON format.
 
     Parameters
     ----------
@@ -88,9 +102,11 @@ class ResponseConfiguration(DataclassJSONSerializable, Generic[TIn, TOut]):
     system_vector_store : list[str], optional
         Optional list of vector store names to attach as system context.
         Default is None.
-    data_path : Path, str, or None, optional
-        Optional absolute directory path for storing artifacts. If not provided,
-        defaults to get_data_path(class_name). Default is None.
+    add_output_instructions : bool, optional
+        Whether to append output structure instructions to the prompt.
+        Default is False.
+    add_web_search_tool : bool, optional
+        Whether to append a web_search tool to the tool list. Default is False.
 
     Raises
     ------
@@ -109,6 +125,12 @@ class ResponseConfiguration(DataclassJSONSerializable, Generic[TIn, TOut]):
     -------
     __post_init__()
         Validate configuration invariants and enforce StructureBase subclassing.
+    get_resolved_instructions()
+        Return instructions with optional output structure guidance appended.
+    get_resolved_tools()
+        Return tools list with optional web_search tool appended.
+    gen_response(openai_settings, data_path=None, tool_handlers=None)
+        Build a ResponseBase instance from this configuration.
     to_json()
         Return a JSON-compatible dict representation (inherited from JSONSerializable).
     to_json_file(filepath)
@@ -120,7 +142,7 @@ class ResponseConfiguration(DataclassJSONSerializable, Generic[TIn, TOut]):
 
     Examples
     --------
-    >>> configuration = Configuration(
+    >>> configuration = ResponseConfiguration(
     ...     name="targeting_to_plan",
     ...     tools=None,
     ...     input_structure=PromptStructure,
@@ -140,8 +162,7 @@ class ResponseConfiguration(DataclassJSONSerializable, Generic[TIn, TOut]):
     add_web_search_tool: bool = False
 
     def __post_init__(self) -> None:
-        """
-        Validate configuration invariants after initialization.
+        """Validate configuration invariants after initialization.
 
         Enforce non-empty naming, correct typing of structures, and ensure that
         any declared structure subclasses StructureBase.
@@ -231,7 +252,9 @@ class ResponseConfiguration(DataclassJSONSerializable, Generic[TIn, TOut]):
         ----------
         openai_settings : OpenAISettings
             Authentication and model settings applied to the generated
-            :class:`ResponseBase`.
+            ResponseBase.
+        data_path : Path or None, default None
+            Optional override for the response artifact directory.
         tool_handlers : dict[str, ToolHandlerRegistration], optional
             Mapping of tool names to handler registrations. Registrations can include
             ToolSpec metadata to parse tool outputs by name. Defaults to an empty
