@@ -81,8 +81,9 @@ class ResponseBase(Generic[T]):
         and naming vector stores.
     instructions : str
         System instructions provided to the OpenAI API for context.
-    tools : list or None
-        Tool definitions for the OpenAI API request. Pass None for no tools.
+    tools : list[ToolHandlerRegistration] or None
+        Tool handler registrations for the OpenAI API request. Pass None for
+        no tools.
     output_structure : type[StructureBase] or None
         Structure class used to parse tool call outputs. When provided,
         the schema is automatically generated using the structure's
@@ -120,9 +121,9 @@ class ResponseBase(Generic[T]):
 
     Methods
     -------
-    run_async(content, attachments=None)
+    run_async(content, files=None, use_vector_store=False)
         Generate a response asynchronously and return parsed output.
-    run_sync(content, attachments=None)
+    run_sync(content, files=None, use_vector_store=False)
         Execute run_async synchronously with thread management.
     register_tool(func, tool_spec)
         Register a tool handler and definition from a ToolSpec.
@@ -179,8 +180,9 @@ class ResponseBase(Generic[T]):
             and naming vector stores.
         instructions : str
             System instructions provided to the OpenAI API for context.
-        tools : list or None
-            Tool definitions for the OpenAI API request. Pass None for no tools.
+        tools : list[ToolHandlerRegistration] or None
+            Tool handler registrations for the OpenAI API request. Pass None for
+            no tools.
         output_structure : type[StructureBase] or None
             Structure class used to parse tool call outputs. When provided,
             the schema is automatically generated using the structure's
@@ -381,7 +383,7 @@ class ResponseBase(Generic[T]):
         func: Callable[..., Any],
         *,
         tool_spec: ToolSpec,
-    ):
+    ) -> None:
         """Register a tool handler and definition using a ToolSpec.
 
         Parameters
@@ -394,9 +396,20 @@ class ResponseBase(Generic[T]):
 
         Returns
         -------
-        tuple[dict[str, Callable[..., Any]], dict[str, Any]]
-            Tool handler mapping and tool definition created from the ToolSpec.
+        None
+            Register the tool handler and definition for this response session.
+
+        Raises
+        ------
+        ValueError
+            If tool_spec.tool_name is empty.
+
+        Examples
+        --------
+        >>> response.register_tool(run_search, tool_spec=search_tool_spec)
         """
+        if not tool_spec.tool_name:
+            raise ValueError("tool_spec.tool_name must be a non-empty string")
         self._tool_handlers[tool_spec.tool_name] = ToolHandlerRegistration(
             handler=func,
             tool_spec=tool_spec,
