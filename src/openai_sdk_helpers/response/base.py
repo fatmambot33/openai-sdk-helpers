@@ -487,7 +487,7 @@ class ResponseBase(Generic[T]):
         content: str | list[str],
         files: str | list[str] | None = None,
         use_vector_store: bool = False,
-    ) -> T | None:
+    ) -> T | str:
         """Generate a response asynchronously from the OpenAI API.
 
         Builds input messages, sends the request to OpenAI, processes any
@@ -512,8 +512,8 @@ class ResponseBase(Generic[T]):
 
         Returns
         -------
-        T or None
-            Parsed response object of type output_structure, or None if
+        T or str
+            Parsed response object of type output_structure, or raw string if
             no structured output was produced.
 
         Raises
@@ -608,11 +608,9 @@ class ResponseBase(Generic[T]):
 
                 if tool_spec is not None:
                     output_dict = tool_spec.output_structure.from_json(tool_result)
-                    output_dict.console_print()
                     parsed_result = cast(T, output_dict)
                 elif self._output_structure:
                     output_dict = self._output_structure.from_json(tool_result)
-                    output_dict.console_print()
                     parsed_result = output_dict
                 else:
                     print(tool_result)
@@ -633,7 +631,7 @@ class ResponseBase(Generic[T]):
                         print(raw_text)
         if parsed_result is not None:
             return parsed_result
-        return None
+        return response.output_text
 
     def run_sync(
         self,
@@ -641,7 +639,7 @@ class ResponseBase(Generic[T]):
         *,
         files: str | list[str] | None = None,
         use_vector_store: bool = False,
-    ) -> T | None:
+    ) -> T | str:
         """Execute run_async synchronously with proper event loop handling.
 
         Automatically detects if an event loop is already running and uses
@@ -666,8 +664,8 @@ class ResponseBase(Generic[T]):
 
         Returns
         -------
-        T or None
-            Parsed response object of type output_structure, or None.
+        T or str
+            Parsed response object of type output_structure, or raw string.
 
         Raises
         ------
@@ -693,7 +691,7 @@ class ResponseBase(Generic[T]):
         ... )
         """
 
-        async def runner() -> T | None:
+        async def runner() -> T | str:
             return await self.run_async(
                 content=content,
                 files=files,
@@ -704,7 +702,7 @@ class ResponseBase(Generic[T]):
             asyncio.get_running_loop()
         except RuntimeError:
             return asyncio.run(runner())
-        result: T | None = None
+        result: T | str = ""
 
         def _thread_func() -> None:
             nonlocal result

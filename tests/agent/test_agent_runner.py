@@ -38,4 +38,3 @@ def test_run_sync(mock_runner_run, mock_run_coroutine, mock_agent):
         mock_agent, "test_input", context=None, session=None
     )
     assert mock_run_coroutine.called
-
