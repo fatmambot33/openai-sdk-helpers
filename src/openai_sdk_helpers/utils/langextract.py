@@ -165,13 +165,14 @@ def build_langextract_adapter(
     if extractor is None:
         langextract_module = _import_langextract_module()
         if hasattr(langextract_module, "extract"):
-            extractor = langextract_module.extract
+            resolved_extractor = langextract_module.extract
         elif hasattr(langextract_module, "Extractor"):
-            extractor = langextract_module.Extractor()
+            resolved_extractor = langextract_module.Extractor()
         else:
             raise AttributeError(
                 "LangExtract module does not expose extract or Extractor."
             )
+        return LangExtractAdapter(extractor=resolved_extractor)
     return LangExtractAdapter(extractor=extractor)
 
 

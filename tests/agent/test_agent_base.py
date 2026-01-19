@@ -30,7 +30,6 @@ class MockConfig(BaseModel):
         return self.instructions
 
     description: str | None = None
-    model: str | None = None
     template_path: str | None = None
     input_structure: type[StructureBase] | None = None
     output_structure: type[StructureBase] | None = None
