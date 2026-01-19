@@ -51,7 +51,7 @@ def test_get_prompt_no_enum_values():
 def test_get_schema():
     """Test the get_schema method."""
     schema = DummyStructure.get_schema()
-    assert schema["title"] == "OutputStructure"
+    assert schema["title"] == "StructureBase"
     properties = schema["properties"]
     assert "name" in properties
     assert "age" in properties
@@ -197,12 +197,13 @@ def test_from_raw_input(caplog):
 
 def test_save_schema_to_file(tmp_path):
     """Test the save_schema_to_file method."""
-    DummyStructure.DATA_PATH = tmp_path
-    schema_path = DummyStructure.save_schema_to_file()
+    schema_path = DummyStructure.save_schema_to_file(
+        tmp_path / "DummyStructure_schema.json"
+    )
     assert schema_path.exists()
     assert schema_path.name == "DummyStructure_schema.json"
     with open(schema_path, "r") as f:
         import json
 
         schema_data = json.load(f)
-    assert schema_data["title"] == "OutputStructure"
+    assert schema_data["title"] == "StructureBase"

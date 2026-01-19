@@ -13,8 +13,8 @@ from pathlib import Path
 import inspect
 import logging
 import ast
-from typing import Any, TypeVar, get_args, get_origin
-from pydantic import BaseModel
+from typing import Any, ClassVar, TypeVar, get_args, get_origin
+from pydantic import BaseModel, ConfigDict
 from ...logging import log
 
 from .utils import customJSONEncoder
@@ -53,6 +53,88 @@ class BaseModelJSONSerializable(BaseModel):
     >>> cfg.to_json()
     {'name': 'test', 'value': 42}
     """
+
+    @staticmethod
+    def format_output(label: str, *, value: Any) -> str:
+        """
+        Format a label and value for string output.
+
+        Handles None values and lists appropriately.
+
+        Parameters
+        ----------
+        label : str
+            Label describing the value.
+        value : Any
+            Value to format for display.
+
+        Returns
+        -------
+        str
+            Formatted string (for example ``"- Label: Value"``).
+        """
+        if not value:
+            return f"- {label}: None"
+        if isinstance(value, list):
+            return f"- {label}: {', '.join(str(v) for v in value)}"
+        return f"- {label}: {str(value)}"
+
+    def __repr__(self) -> str:
+        """
+        Generate a string representation of the structure.
+
+        Returns
+        -------
+        str
+            Formatted string for the ``logic`` field.
+        """
+        return "\n".join(
+            [
+                BaseModelJSONSerializable.format_output(field, value=value)
+                for field, value in self.model_dump().items()
+            ]
+        )
+
+    def __str__(self) -> str:
+        """
+        Generate a string representation of the structure.
+
+        Returns
+        -------
+        str
+            Formatted string for the ``logic`` field.
+        """
+        return self.__repr__()
+
+    def to_markdown(self) -> str:
+        """
+        Generate a markdown representation of the structure.
+
+        Returns
+        -------
+        str
+            Formatted markdown string for the structure.
+        """
+        return self.__repr__()
+
+    @classmethod
+    def _get_all_fields(cls) -> dict[Any, Any]:
+        """Collect all fields from the class hierarchy including inherited ones.
+
+        Traverses the method resolution order (MRO) to gather fields from
+        all parent classes that inherit from BaseModel, ensuring inherited
+        fields are included in schema generation.
+
+        Returns
+        -------
+        dict[Any, Any]
+            Mapping of field names to Pydantic ModelField instances.
+        """
+        fields = {}
+        for base in reversed(cls.__mro__):  # Traverse inheritance tree
+            if issubclass(base, BaseModel) and hasattr(base, "model_fields"):
+                fields.update(base.model_fields)  # Merge fields from parent
+        return fields
 
     def to_json(self) -> dict[str, Any]:
         """Return a JSON-compatible dict representation.

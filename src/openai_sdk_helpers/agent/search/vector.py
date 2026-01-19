@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Callable, List, Optional
+from typing import Any, Callable, List, Optional
 
 from agents import custom_span, gen_trace_id, trace
 from agents.model_settings import ModelSettings
@@ -21,6 +21,7 @@ from ...vector_storage import VectorStorage
 from ..configuration import AgentConfiguration
 from ..utils import run_coroutine_agent_sync
 from .base import SearchPlanner, SearchToolAgent, SearchWriter
+from ..base import AgentBase
 
 MAX_CONCURRENT_SEARCHES = 10
 
@@ -51,14 +52,12 @@ class VectorAgentPlanner(SearchPlanner[VectorSearchPlanStructure]):
     >>> planner = VectorSearchPlanner(default_model="gpt-4o-mini")
     """
 
-    def __init__(
-        self, prompt_dir: Optional[Path] = None, default_model: Optional[str] = None
-    ) -> None:
-        """Initialize the planner agent."""
-        prompt_directory = prompt_dir or DEFAULT_PROMPT_DIR
-        super().__init__(prompt_dir=prompt_directory, default_model=default_model)
-
-    def _configure_agent(self) -> AgentConfiguration:
+    def _configure_agent(
+        self,
+        template_path: Path | str | None = None,
+        model: str | None = None,
+        **kwargs: Any,
+    ) -> AgentConfiguration:
         """Return configuration for the vector planner agent.
 
         Returns
@@ -72,6 +71,8 @@ class VectorAgentPlanner(SearchPlanner[VectorSearchPlanStructure]):
             description="Plan vector searches based on a user query.",
             output_structure=VectorSearchPlanStructure,
             model_settings=ModelSettings(tool_choice="none"),
+            template_path=template_path,
+            model=model,
         )
 
 
@@ -118,30 +119,13 @@ class VectorSearchTool(
     >>> tool = VectorSearchTool(default_model="gpt-4o-mini", store_name="my_store")
     """
 
-    def __init__(
+    def _configure_agent(
         self,
         *,
-        prompt_dir: Optional[Path] = None,
-        default_model: Optional[str] = None,
-        store_name: Optional[str] = None,
-        max_concurrent_searches: int = MAX_CONCURRENT_SEARCHES,
-        vector_storage: Optional[VectorStorage] = None,
-        vector_storage_factory: Optional[Callable[[str], VectorStorage]] = None,
-    ) -> None:
-        """Initialize the search tool agent."""
-        prompt_directory = prompt_dir or DEFAULT_PROMPT_DIR
-        self._vector_storage: Optional[VectorStorage] = None
-        self._store_name = store_name or "editorial"
-        self._vector_storage_factory = vector_storage_factory
-        if vector_storage is not None:
-            self._vector_storage = vector_storage
-        super().__init__(
-            prompt_dir=prompt_directory,
-            default_model=default_model,
-            max_concurrent_searches=max_concurrent_searches,
-        )
-
-    def _configure_agent(self) -> AgentConfiguration:
+        template_path: Path | str | None = None,
+        model: str | None = None,
+        **kwargs: Any,
+    ) -> AgentConfiguration:
         """Return configuration for the vector search tool agent.
 
         Returns
@@ -149,6 +133,9 @@ class VectorSearchTool(
         AgentConfiguration
             Configuration with name, description, and input type.
         """
+        if kwargs.get("store_name") is None:
+            raise ValueError("store_name must be provided to configure the agent.")
+        self._store_name = kwargs["store_name"]
         return AgentConfiguration(
             name="vector_search",
             instructions="Agent instructions",
@@ -156,6 +143,8 @@ class VectorSearchTool(
             input_structure=VectorSearchPlanStructure,
             output_structure=VectorSearchItemResultsStructure,
             model_settings=ModelSettings(tool_choice="none"),
+            template_path=template_path,
+            model=model,
         )
 
     def _get_vector_storage(self) -> VectorStorage:
@@ -166,11 +155,8 @@ class VectorSearchTool(
         VectorStorage
             Vector storage helper for executing searches.
         """
-        if self._vector_storage is None:
-            if self._vector_storage_factory is not None:
-                self._vector_storage = self._vector_storage_factory(self._store_name)
-            else:
-                self._vector_storage = VectorStorage(store_name=self._store_name)
+
+        self._vector_storage = VectorStorage(store_name=self._store_name)
         return self._vector_storage
 
     async def run_search(
@@ -229,23 +215,24 @@ class VectorSearchWriter(SearchWriter[VectorSearchReportStructure]):
     """
 
     def __init__(
-        self, prompt_dir: Optional[Path] = None, default_model: Optional[str] = None
+        self,
+        template_path: Path | str | None = None,
+        model: str | None = None,
+        **kwargs: Any,
     ) -> None:
         """Initialize the writer agent."""
-        prompt_directory = prompt_dir or DEFAULT_PROMPT_DIR
-        configuration = AgentConfiguration(
-            name="vector_writer",
-            instructions="Agent instructions",
-            description="Agent that writes a report based on search results.",
-            output_structure=VectorSearchReportStructure,
+        configuration = self._configure_agent(
+            template_path=template_path, model=model, **kwargs
         )
-        super().__init__(
-            configuration=configuration,
-            template_path=prompt_directory,
-            default_model=default_model,
-        )
+        super().__init__(configuration=configuration, kwargs=kwargs)
 
-    def _configure_agent(self) -> AgentConfiguration:
+    def _configure_agent(
+        self,
+        *,
+        template_path: Path | str | None = None,
+        model: str | None = None,
+        **kwargs: Any,
+    ) -> AgentConfiguration:
         """Return configuration for the vector writer agent.
 
         Returns
@@ -259,10 +246,12 @@ class VectorSearchWriter(SearchWriter[VectorSearchReportStructure]):
             description="Write a report based on search results.",
             output_structure=VectorSearchReportStructure,
             model_settings=ModelSettings(tool_choice="none"),
+            template_path=template_path,
+            model=model,
         )
 
 
-class VectorAgentSearch:
+class VectorAgentSearch(AgentBase):
     """Manage the complete vector search workflow.
 
     This high-level agent orchestrates a multi-step research process that plans
@@ -361,18 +350,16 @@ class VectorAgentSearch:
         trace_id = gen_trace_id()
         with trace("VectorSearch trace", trace_id=trace_id):
             planner = VectorAgentPlanner(
-                prompt_dir=self._prompt_dir, default_model=self._default_model
+                template_path=self._prompt_dir, model=self._default_model
             )
             tool = VectorSearchTool(
-                prompt_dir=self._prompt_dir,
-                default_model=self._default_model,
-                store_name=self._vector_store_name,
+                template_path=self._prompt_dir,
+                model=self._default_model,
                 max_concurrent_searches=self._max_concurrent_searches,
-                vector_storage=self._vector_storage,
-                vector_storage_factory=self._vector_storage_factory,
+                **{"store_name": self._vector_store_name},
             )
             writer = VectorSearchWriter(
-                prompt_dir=self._prompt_dir, default_model=self._default_model
+                template_path=self._prompt_dir, model=self._default_model
             )
             with custom_span("vector_search.plan"):
                 search_plan = await planner.run_agent(query=search_query)

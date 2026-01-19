@@ -117,38 +117,5 @@ class TaskStructure(StructureBase):
             return value
         return AgentEnum(value)
 
-    def print(self) -> str:
-        """Return a human-readable representation of the task.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        str
-            Multi-line description of the task metadata.
-
-        Raises
-        ------
-        None
-
-        Examples
-        --------
-        >>> TaskStructure(prompt="Test").print()
-        'Task type: ...'  # doctest: +SKIP
-        """
-        return "\n".join(
-            [
-                StructureBase.format_output("Task type", value=self.task_type),
-                StructureBase.format_output("Prompt", value=self.prompt),
-                StructureBase.format_output("Context", value=self.context),
-                StructureBase.format_output("Status", value=self.status),
-                StructureBase.format_output("Start date", value=self.start_date),
-                StructureBase.format_output("End date", value=self.end_date),
-                StructureBase.format_output("Results", value=self.results),
-            ]
-        )
-
 
 __all__ = ["TaskStructure"]

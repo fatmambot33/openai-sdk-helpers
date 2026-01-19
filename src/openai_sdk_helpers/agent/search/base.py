@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Generic, List, Optional, TypeVar, Union
+from typing import Any, Generic, List, Optional, TypeVar, Union
 
 from ..base import AgentBase
 from ..configuration import AgentConfiguration
@@ -64,18 +64,23 @@ class SearchPlanner(AgentBase, Generic[PlanType]):
 
     def __init__(
         self,
-        prompt_dir: Optional[Path] = None,
-        default_model: Optional[str] = None,
+        template_path: Path | str | None = None,
+        model: str | None = None,
+        **kwargs: Any,
     ) -> None:
         """Initialize the planner agent."""
-        configuration = self._configure_agent()
-        super().__init__(
-            configuration=configuration,
-            default_model=default_model,
+        configuration = self._configure_agent(
+            template_path=template_path, model=model, **kwargs
         )
+        super().__init__(configuration=configuration)
 
     @abstractmethod
-    def _configure_agent(self) -> AgentConfiguration:
+    def _configure_agent(
+        self,
+        template_path: Path | str | None = None,
+        model: str | None = None,
+        **kwargs: Any,
+    ) -> AgentConfiguration:
         """Return configuration for this planner.
 
         Returns
@@ -123,9 +128,9 @@ class SearchToolAgent(AgentBase, Generic[ItemType, ResultType, PlanType]):
 
     Parameters
     ----------
-    prompt_dir : Path, optional
+    template_path : Path | str | None, optional
         Directory containing prompt templates.
-    default_model : str, optional
+    model : str | None, optional
         Default model identifier to use when not defined in configuration.
     max_concurrent_searches : int, default=10
         Maximum number of concurrent search operations.
@@ -147,7 +152,7 @@ class SearchToolAgent(AgentBase, Generic[ItemType, ResultType, PlanType]):
     Examples
     --------
     >>> class MyTool(SearchToolAgent):
-    ...     def _configure_agent(self):
+    ...     def _configure_agent(self, *, template_path: Path | str | None = None, model: str | None = None):
     ...         return AgentConfiguration(
     ...             name="my_tool",
     ...             description="Executes searches",
@@ -161,21 +166,23 @@ class SearchToolAgent(AgentBase, Generic[ItemType, ResultType, PlanType]):
     def __init__(
         self,
         *,
-        prompt_dir: Optional[Path] = None,
-        default_model: Optional[str] = None,
+        template_path: Path | str | None = None,
+        model: str | None = None,
         max_concurrent_searches: int = 10,
     ) -> None:
         """Initialize the search tool agent."""
         self._max_concurrent_searches = max_concurrent_searches
-        configuration = self._configure_agent()
-        super().__init__(
-            configuration=configuration,
-            template_path=prompt_dir,
-            default_model=default_model,
-        )
+        configuration = self._configure_agent(template_path=template_path, model=model)
+        super().__init__(configuration=configuration)
 
     @abstractmethod
-    def _configure_agent(self) -> AgentConfiguration:
+    def _configure_agent(
+        self,
+        *,
+        template_path: Path | str | None = None,
+        model: str | None = None,
+        **kwargs,
+    ) -> AgentConfiguration:
         """Return configuration for this tool agent.
 
         Returns
@@ -246,9 +253,9 @@ class SearchWriter(AgentBase, Generic[ReportType]):
 
     Parameters
     ----------
-    prompt_dir : Path, optional
+    template_path : Path | str | None, optional
         Directory containing prompt templates.
-    default_model : str, optional
+    default_model : str | None, optional
         Default model identifier to use when not defined in configuration.
 
     Methods

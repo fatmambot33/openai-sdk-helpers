@@ -12,6 +12,8 @@ from agents.run_context import RunContextWrapper
 from agents.tool import Tool
 from jinja2 import Template
 
+from ..environment import get_data_path
+
 from ..utils.json.data_class import DataclassJSONSerializable
 from ..structure.base import StructureBase
 from ..tools import (
@@ -43,6 +45,11 @@ class AgentConfigurationProtocol(Protocol):
     @property
     def description(self) -> Optional[str]:
         """Agent description."""
+        ...
+
+    @property
+    def template_path(self) -> Optional[str | Path]:
+        """Template path."""
         ...
 
     @property
@@ -185,9 +192,8 @@ class AgentBase(DataclassJSONSerializable):
         *,
         configuration: AgentConfigurationProtocol,
         run_context_wrapper: Optional[RunContextWrapper[Dict[str, Any]]] = None,
-        template_path: Path | str | None = None,
         data_path: Path | str | None = None,
-        default_model: Optional[str] = None,
+        **kwargs: Any,
     ) -> None:
         """Initialize the AgentBase using a configuration object.
 
@@ -197,34 +203,29 @@ class AgentBase(DataclassJSONSerializable):
             Configuration describing this agent.
         run_context_wrapper : RunContextWrapper or None, default=None
             Optional wrapper providing runtime context for prompt rendering.
-        template_path : Path or None, default=None
-            Optional directory holding prompt templates. Used when
-            ``configuration.template_path`` is not provided or is relative. If
-            ``configuration.template_path`` is an absolute path, this parameter is
-            ignored.
-        default_model : str or None, default=None
             Optional fallback model identifier if the configuration does not supply one.
         """
         self._configuration = configuration
         self.uuid = uuid.uuid4()
-        self._model = configuration.model or default_model
+        self._model = configuration.model
         if self._model is None:
             raise ValueError(
-                f"Model must be specified in configuration or as default_model for agent '{configuration.name}'."
+                f"Model must be specified in configuration for agent '{configuration.name}'."
             )
 
         # Build template from file or fall back to instructions
-        if template_path is None:
+        self._template_path = configuration.template_path
+        if self._template_path is None:
             instructions_text = configuration.instructions_text
             self._template = Template(instructions_text)
             self._instructions = instructions_text
         else:
-            template_path = Path(template_path)
-            if not template_path.exists():
+            self._template_path = Path(self._template_path)
+            if not self._template_path.exists():
                 raise FileNotFoundError(
-                    f"Template for agent '{self._configuration.name}' not found at {template_path}."
+                    f"Template for agent '{self._configuration.name}' not found at {self._template_path}."
                 )
-            self._template = Template(template_path.read_text(encoding="utf-8"))
+            self._template = Template(self._template_path.read_text(encoding="utf-8"))
             self._instructions = None
 
         # Resolve data_path with class name appended
@@ -724,7 +725,7 @@ class AgentBase(DataclassJSONSerializable):
             target = Path(filepath)
         else:
             filename = f"{str(self.uuid).lower()}.json"
-            target = self._data_path / self.name / filename
+            target = get_data_path("askPAT") / self.name / filename
 
         checked = check_filepath(filepath=target)
         self.to_json_file(filepath=checked)

@@ -87,6 +87,7 @@ class SummarizerAgent(AgentBase):
             description="Summarize passages into concise findings.",
             template_path=template_path,
             output_structure=SummaryStructure,
+            model=default_model,
         )
 
         super().__init__(

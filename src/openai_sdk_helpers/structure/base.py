@@ -28,7 +28,6 @@ from openai.types.responses.response_text_config_param import ResponseTextConfig
 from ..utils import check_filepath, BaseModelJSONSerializable
 
 T = TypeVar("T", bound="StructureBase")
-DEFAULT_DATA_PATH: Path | None = None
 
 
 class StructureBase(BaseModelJSONSerializable):
@@ -45,9 +44,9 @@ class StructureBase(BaseModelJSONSerializable):
 
     Attributes
     ----------
-    DATA_PATH : Path or None, class attribute
-        Optional location for saving schema files. Set at class level
-        before calling save_schema_to_file.
+    model_config : ConfigDict
+        Pydantic model configuration with strict validation and enum handling.
+
 
     Methods
     -------
@@ -79,8 +78,6 @@ class StructureBase(BaseModelJSONSerializable):
         Produce Field overrides for dynamic schema customization.
     print()
         Return a string representation of the structure.
-    console_print()
-        Print the string representation to stdout.
 
     Examples
     --------
@@ -107,10 +104,8 @@ class StructureBase(BaseModelJSONSerializable):
     """
 
     model_config = ConfigDict(
-        title="OutputStructure", use_enum_values=False, strict=True, extra="forbid"
+        title=__qualname__, use_enum_values=False, strict=True, extra="forbid"
     )
-    DATA_PATH: ClassVar[Path | None] = DEFAULT_DATA_PATH
-    """Optional location for saving schema files."""
 
     @classmethod
     def get_prompt(cls, add_enum_values: bool = True) -> str:
@@ -130,31 +125,6 @@ class StructureBase(BaseModelJSONSerializable):
         if not prompt_lines:
             return "No structured prompt available."
         return "# Output Format\n" + "\n".join(prompt_lines)
-
-    @classmethod
-    def _get_all_fields(cls) -> dict[Any, Any]:
-        """Collect all fields from the class hierarchy including inherited ones.
-
-        Traverses the method resolution order (MRO) to gather fields from
-        all parent classes that inherit from BaseModel, ensuring inherited
-        fields are included in schema generation.
-
-        Results are computed once per class and cached for performance.
-
-        Returns
-        -------
-        dict[Any, Any]
-            Mapping of field names to Pydantic ModelField instances.
-        """
-        # Use class-level caching for performance
-        cache_attr = "_all_fields_cache"
-        if not hasattr(cls, cache_attr):
-            fields = {}
-            for base in reversed(cls.__mro__):  # Traverse inheritance tree
-                if issubclass(base, BaseModel) and hasattr(base, "model_fields"):
-                    fields.update(base.model_fields)  # Merge fields from parent
-            setattr(cls, cache_attr, fields)
-        return getattr(cls, cache_attr)
 
     @classmethod
     def _get_field_prompt(
@@ -204,12 +174,12 @@ class StructureBase(BaseModelJSONSerializable):
         )
 
     @classmethod
-    def get_input_prompt_list(cls, add_enum_values: bool = True) -> list[str]:
+    def get_input_prompt_list(cls, add_enums: bool = True) -> list[str]:
         """Dynamically build a structured prompt including inherited fields.
 
         Parameters
         ----------
-        add_enum_values : bool, default=True
+        add_enums : bool, default=True
             Whether enumeration values should be included.
 
         Returns
@@ -220,9 +190,7 @@ class StructureBase(BaseModelJSONSerializable):
         prompt_lines = []
         all_fields = cls._get_all_fields()
         for field_name, field in all_fields.items():
-            prompt_lines.append(
-                cls._get_field_prompt(field_name, field, add_enum_values)
-            )
+            prompt_lines.append(cls._get_field_prompt(field_name, field, add_enums))
         return prompt_lines
 
     @classmethod
@@ -422,65 +390,35 @@ class StructureBase(BaseModelJSONSerializable):
         return cleaned_schema
 
     @classmethod
-    def save_schema_to_file(cls) -> Path:
+    def save_schema_to_file(cls, file_path: Path) -> Path:
         """Save the generated JSON schema to a file.
 
         Generates the schema using get_schema and saves it to a JSON file
         within the DATA_PATH directory. The filename is derived from the
         class name.
 
+        Parameters
+        ----------
+        file_path : Path
+            Full path (including filename) where the schema should be saved.
+
         Returns
         -------
         Path
             Absolute path to the saved schema file.
 
-        Raises
-        ------
-        RuntimeError
-            If DATA_PATH is not set on the class.
 
         Examples
         --------
         >>> MyStructure.DATA_PATH = Path("./schemas")
-        >>> schema_path = MyStructure.save_schema_to_file()
+        >>> schema_path = MyStructure.save_schema_to_file(file_path=MyStructure.DATA_PATH / "MyStructure_schema.json")
         >>> print(schema_path)
         PosixPath('./schemas/MyStructure_schema.json')
         """
-        schema = cls.get_schema()
-        if cls.DATA_PATH is None:
-            raise RuntimeError(
-                "DATA_PATH is not set. Set StructureBase.DATA_PATH before saving."
-            )
-        file_path = cls.DATA_PATH / f"{cls.__name__}_schema.json"
         check_filepath(file_path)
         with file_path.open("w", encoding="utf-8") as file_handle:
-            json.dump(schema, file_handle, indent=2, ensure_ascii=False)
+            json.dump(cls.get_schema(), file_handle, indent=2, ensure_ascii=False)
         return file_path
-
-    @staticmethod
-    def format_output(label: str, *, value: Any) -> str:
-        """
-        Format a label and value for string output.
-
-        Handles None values and lists appropriately.
-
-        Parameters
-        ----------
-        label : str
-            Label describing the value.
-        value : Any
-            Value to format for display.
-
-        Returns
-        -------
-        str
-            Formatted string (for example ``"- Label: Value"``).
-        """
-        if not value:
-            return f"- {label}: None"
-        if isinstance(value, list):
-            return f"- {label}: {', '.join(str(v) for v in value)}"
-        return f"- {label}: {str(value)}"
 
     @classmethod
     def schema_overrides(cls) -> dict[str, Any]:
@@ -509,15 +447,6 @@ class StructureBase(BaseModelJSONSerializable):
                 for field, value in self.model_dump().items()
             ]
         )
-
-    def console_print(self) -> None:
-        """Output the result of :meth:`print` to stdout.
-
-        Returns
-        -------
-        None
-        """
-        print(self.print())
 
 
 @dataclass(frozen=True)

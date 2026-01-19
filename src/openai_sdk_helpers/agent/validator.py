@@ -83,6 +83,7 @@ class ValidatorAgent(AgentBase):
             instructions="Agent instructions",
             description="Validate user input and agent output against guardrails.",
             output_structure=ValidationResultStructure,
+            model=default_model,
         )
         super().__init__(
             configuration=configuration,

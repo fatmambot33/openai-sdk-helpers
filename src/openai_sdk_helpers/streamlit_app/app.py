@@ -177,7 +177,7 @@ def _render_summary(result: Any, response: ResponseBase[Any]) -> str:
     the result cannot be formatted directly.
     """
     if isinstance(result, StructureBase):
-        return result.print()
+        return str(result)
     if isinstance(result, str):
         return result
     if isinstance(result, dict):

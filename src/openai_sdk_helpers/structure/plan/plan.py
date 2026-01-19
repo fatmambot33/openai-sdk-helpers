@@ -57,26 +57,6 @@ class PlanStructure(StructureBase):
         description="Ordered list of agent tasks to execute.",
     )
 
-    def print(self) -> str:
-        """Return a human-readable representation of the plan.
-
-        Returns
-        -------
-        str
-            Concatenated description of each task with task numbers.
-
-        Examples
-        --------
-        >>> plan = PlanStructure()
-        >>> plan.print()
-        'No tasks defined.'
-        """
-        if not self.tasks:
-            return "No tasks defined."
-        return "\n\n".join(
-            [f"Task {idx + 1}:\n{task.print()}" for idx, task in enumerate(self.tasks)]
-        )
-
     def __len__(self) -> int:
         """Return the number of tasks in the plan.
 

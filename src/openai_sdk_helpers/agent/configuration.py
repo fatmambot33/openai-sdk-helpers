@@ -176,17 +176,17 @@ class AgentConfiguration(DataclassJSONSerializable):
 
     name: str
     instructions: str | Path
-    description: Optional[str] = None
-    model: Optional[str] = None
-    template_path: Optional[str | Path] = None
-    input_structure: Optional[Type[StructureBase]] = None
-    output_structure: Optional[Type[StructureBase]] = None
-    tools: Optional[list] = None
-    model_settings: Optional[ModelSettings] = None
-    handoffs: Optional[list[Agent | Handoff]] = None
-    input_guardrails: Optional[list[InputGuardrail]] = None
-    output_guardrails: Optional[list[OutputGuardrail]] = None
-    session: Optional[Session] = None
+    description: str | None = None
+    model: str | None = None
+    template_path: str | Path | None = None
+    input_structure: type[StructureBase] | None = None
+    output_structure: type[StructureBase] | None = None
+    tools: list | None = None
+    model_settings: ModelSettings | None = None
+    handoffs: list[Agent | Handoff] | None = None
+    input_guardrails: list[InputGuardrail] | None = None
+    output_guardrails: list[OutputGuardrail] | None = None
+    session: Session | None = None
     add_output_instructions: bool = False
     add_web_search_tool: bool = False
 
@@ -294,7 +294,6 @@ class AgentConfiguration(DataclassJSONSerializable):
     def gen_agent(
         self,
         run_context_wrapper: Any = None,
-        prompt_dir: Path | None = None,
         default_model: str | None = None,
     ) -> Any:
         """Create a AgentBase instance from this configuration.
@@ -329,7 +328,6 @@ class AgentConfiguration(DataclassJSONSerializable):
         return AgentBase(
             configuration=self,
             run_context_wrapper=run_context_wrapper,
-            default_model=default_model,
         )
 
     def replace(self, **changes: Any) -> AgentConfiguration:

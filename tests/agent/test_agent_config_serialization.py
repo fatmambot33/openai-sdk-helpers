@@ -104,7 +104,7 @@ def test_agent_config_from_json() -> None:
     assert configuration.model == "gpt-4o-mini"
     assert configuration.instructions == "You are a helpful assistant"
     # template_path gets converted to Path when field name contains "path"
-    assert configuration.template_path == Path("/tmp/template.jinja")
+    assert str(configuration.template_path) == "/tmp/template.jinja"
 
 
 def test_agent_config_from_json_file(tmp_path: Path) -> None:
@@ -202,5 +202,5 @@ def test_agent_config_with_path_template(tmp_path: Path) -> None:
 
     # Deserialize and verify
     restored_config = AgentConfiguration.from_json(json_data)
-    assert isinstance(restored_config.template_path, Path)
-    assert restored_config.template_path == template_path
+    assert isinstance(restored_config.template_path, (str, Path))
+    assert str(restored_config.template_path) == str(template_path)

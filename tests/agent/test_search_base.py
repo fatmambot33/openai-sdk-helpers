@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+from typing import Any
+from pathlib import Path
 from typing import List
 from unittest.mock import AsyncMock, patch
 
@@ -46,12 +48,18 @@ class MockReportStructure(StructureBase):
 class TestSearchPlanner(SearchPlanner[MockPlanStructure]):
     """Concrete planner implementation for testing."""
 
-    def _configure_agent(self) -> AgentConfiguration:
+    def _configure_agent(
+        self,
+        template_path: Path | str | None = None,
+        model: str | None = None,
+        **kwargs: Any,
+    ) -> AgentConfiguration:
         return AgentConfiguration(
             name="test_planner",
             instructions="Test instructions",
             description="Test planner",
             output_structure=MockPlanStructure,
+            model="gpt-4o-mini",
         )
 
 
@@ -60,12 +68,18 @@ class TestSearchToolAgent(
 ):
     """Concrete tool agent implementation for testing."""
 
-    def _configure_agent(self) -> AgentConfiguration:
+    def _configure_agent(
+        self,
+        template_path: Path | str | None = None,
+        model: str | None = None,
+        **kwargs: Any,
+    ) -> AgentConfiguration:
         return AgentConfiguration(
             name="test_tool",
             instructions="Test instructions",
             description="Test tool",
             input_structure=MockPlanStructure,
+            model="gpt-4o-mini",
         )
 
     async def run_search(self, item: MockItemStructure) -> MockResultStructure:
@@ -82,6 +96,7 @@ class TestSearchWriter(SearchWriter[MockReportStructure]):
             instructions="Test instructions",
             description="Test writer",
             output_structure=MockReportStructure,
+            model="gpt-4o-mini",
         )
 
 
@@ -119,6 +134,7 @@ class TestSearchPlannerClass:
                 instructions="Test instructions",
                 description="Test planner",
                 output_structure=MockPlanStructure,
+                model="gpt-4o-mini",
             ),
         ) as mock_config:
             planner = TestSearchPlanner(default_model="gpt-4o-mini")
@@ -131,18 +147,14 @@ class TestSearchToolAgentClass:
     @pytest.mark.asyncio
     async def test_tool_initialization(self) -> None:
         """Test tool agent initialization."""
-        tool = TestSearchToolAgent(
-            default_model="gpt-4o-mini", max_concurrent_searches=5
-        )
+        tool = TestSearchToolAgent(model="gpt-4o-mini", max_concurrent_searches=5)
         assert tool._max_concurrent_searches == 5
         assert tool.name == "test_tool"
 
     @pytest.mark.asyncio
     async def test_tool_run_agent_executes_searches(self) -> None:
         """Test tool agent executes all searches with concurrency control."""
-        tool = TestSearchToolAgent(
-            default_model="gpt-4o-mini", max_concurrent_searches=2
-        )
+        tool = TestSearchToolAgent(model="gpt-4o-mini", max_concurrent_searches=2)
 
         items = [MockItemStructure(query=f"query_{i}") for i in range(3)]
         plan = MockPlanStructure(searches=items)
@@ -158,9 +170,7 @@ class TestSearchToolAgentClass:
     @pytest.mark.asyncio
     async def test_tool_respects_concurrency_limit(self) -> None:
         """Test that tool respects max concurrent searches."""
-        tool = TestSearchToolAgent(
-            default_model="gpt-4o-mini", max_concurrent_searches=1
-        )
+        tool = TestSearchToolAgent(model="gpt-4o-mini", max_concurrent_searches=1)
 
         concurrent_count = 0
         max_concurrent = 0
@@ -185,7 +195,7 @@ class TestSearchToolAgentClass:
     @pytest.mark.asyncio
     async def test_tool_handles_empty_searches(self) -> None:
         """Test tool agent handles empty search list."""
-        tool = TestSearchToolAgent(default_model="gpt-4o-mini")
+        tool = TestSearchToolAgent(model="gpt-4o-mini")
         plan = MockPlanStructure(searches=[])
 
         results = await tool.run_agent(plan)
@@ -195,7 +205,7 @@ class TestSearchToolAgentClass:
     @pytest.mark.asyncio
     async def test_tool_filters_none_results(self) -> None:
         """Test tool agent filters out None results."""
-        tool = TestSearchToolAgent(default_model="gpt-4o-mini")
+        tool = TestSearchToolAgent(model="gpt-4o-mini")
 
         async def search_with_none(
             item: MockItemStructure,
@@ -231,6 +241,7 @@ class TestSearchWriterClass:
             instructions="Test instructions",
             description="Test writer",
             output_structure=MockReportStructure,
+            model="gpt-4o-mini",
         )
         writer = TestSearchWriter(
             configuration=configuration, default_model="gpt-4o-mini"
@@ -246,10 +257,9 @@ class TestSearchWriterClass:
             instructions="Test instructions",
             description="Test writer",
             output_structure=MockReportStructure,
+            model="gpt-4o-mini",
         )
-        writer = TestSearchWriter(
-            configuration=configuration, default_model="gpt-4o-mini"
-        )
+        writer = TestSearchWriter(configuration=configuration, model="gpt-4o-mini")
         mock_report = MockReportStructure(report="final report")
         results = [
             MockResultStructure(text="r1"),
@@ -278,6 +288,7 @@ class TestSearchWriterClass:
             instructions="Test instructions",
             description="Test writer",
             output_structure=MockReportStructure,
+            model="gpt-4o-mini",
         )
         writer = TestSearchWriter(
             configuration=configuration, default_model="gpt-4o-mini"
@@ -300,13 +311,13 @@ class TestSearchAgentInheritance:
 
     def test_planner_type_parameters(self) -> None:
         """Test that planner type parameters work correctly."""
-        planner = TestSearchPlanner(default_model="gpt-4o-mini")
+        planner = TestSearchPlanner(model="gpt-4o-mini")
         # Type is correctly bound to MockPlanStructure
         assert planner._output_structure == MockPlanStructure
 
     def test_tool_type_parameters(self) -> None:
         """Test that tool agent type parameters work correctly."""
-        tool = TestSearchToolAgent(default_model="gpt-4o-mini")
+        tool = TestSearchToolAgent(model="gpt-4o-mini")
         # Tool is properly typed with all three type variables
         assert tool.name == "test_tool"
         assert tool._max_concurrent_searches == 10
@@ -318,6 +329,7 @@ class TestSearchAgentInheritance:
             instructions="Test instructions",
             description="Test writer",
             output_structure=MockReportStructure,
+            model="gpt-4o-mini",
         )
         writer = TestSearchWriter(
             configuration=configuration, default_model="gpt-4o-mini"
@@ -331,9 +343,7 @@ class TestSearchAgentConcurrency:
     @pytest.mark.asyncio
     async def test_concurrent_search_execution(self) -> None:
         """Test searches execute concurrently with proper limits."""
-        tool = TestSearchToolAgent(
-            default_model="gpt-4o-mini", max_concurrent_searches=3
-        )
+        tool = TestSearchToolAgent(model="gpt-4o-mini", max_concurrent_searches=3)
 
         start_times = {}
         end_times = {}
@@ -372,6 +382,7 @@ class TestSearchAgentErrorHandling:
             instructions="Test instructions",
             description="Test writer",
             output_structure=MockReportStructure,
+            model="gpt-4o-mini",
         )
         writer = TestSearchWriter(
             configuration=configuration, default_model="gpt-4o-mini"

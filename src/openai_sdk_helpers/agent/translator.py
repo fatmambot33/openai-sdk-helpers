@@ -84,12 +84,14 @@ class TranslatorAgent(AgentBase):
         --------
         >>> translator = TranslatorAgent(default_model="gpt-4o-mini")
         """
+        # Use None for template_path unless a file is provided
         configuration = AgentConfiguration(
             name="translator",
             instructions="Agent instructions",
             description="Translate text into the requested language.",
-            template_path=prompt_dir or DEFAULT_PROMPT_DIR,
+            template_path=None,
             output_structure=TranslationStructure,
+            model=default_model,
         )
         super().__init__(
             configuration=configuration,

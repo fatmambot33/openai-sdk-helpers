@@ -10,7 +10,7 @@ from agents.model_settings import ModelSettings
 from agents.tool import WebSearchTool
 
 from ...structure.prompt import PromptStructure
-
+from ..base import AgentBase
 from ...structure.web_search import (
     WebSearchItemStructure,
     WebSearchItemResultStructure,
@@ -51,13 +51,12 @@ class WebAgentPlanner(SearchPlanner[WebSearchPlanStructure]):
     >>> planner = WebAgentPlanner(default_model="gpt-4o-mini")
     """
 
-    def __init__(
-        self, prompt_dir: Optional[Path] = None, default_model: Optional[str] = None
-    ) -> None:
-        """Initialize the planner agent."""
-        super().__init__(prompt_dir=prompt_dir, default_model=default_model)
-
-    def _configure_agent(self) -> AgentConfiguration:
+    def _configure_agent(
+        self,
+        template_path: Path | str | None = None,
+        model: str | None = None,
+        **kwargs: Any,
+    ) -> AgentConfiguration:
         """Return configuration for the web planner agent.
 
         Returns
@@ -69,6 +68,8 @@ class WebAgentPlanner(SearchPlanner[WebSearchPlanStructure]):
             name="web_planner",
             instructions="Agent instructions",
             description="Agent that plans web searches based on a user query.",
+            template_path=template_path,
+            model=model,
             output_structure=WebSearchPlanStructure,
         )
 
@@ -84,8 +85,8 @@ class WebSearchToolAgent(
     ----------
     prompt_dir : Path or None, default=None
         Directory containing prompt templates.
-    default_model : str or None, default=None
-        Default model identifier to use when not defined in configuration.
+    model : str or None, default=None
+        Model identifier to use when not defined in configuration.
 
     Methods
     -------
@@ -97,24 +98,20 @@ class WebSearchToolAgent(
     Raises
     ------
     ValueError
-        If the default model is not provided.
+        If the model is not provided.
 
     Examples
     --------
-    >>> tool = WebSearchToolAgent(default_model="gpt-4o-mini")
+    >>> tool = WebSearchToolAgent(model="gpt-4o-mini")
     """
 
-    def __init__(
-        self, prompt_dir: Optional[Path] = None, default_model: Optional[str] = None
-    ) -> None:
-        """Initialize the search tool agent."""
-        super().__init__(
-            prompt_dir=prompt_dir,
-            default_model=default_model,
-            max_concurrent_searches=MAX_CONCURRENT_SEARCHES,
-        )
-
-    def _configure_agent(self) -> AgentConfiguration:
+    def _configure_agent(
+        self,
+        *,
+        template_path: Path | str | None = None,
+        model: str | None = None,
+        **kwargs: Any,
+    ) -> AgentConfiguration:
         """Return configuration for the web search tool agent.
 
         Returns
@@ -126,6 +123,8 @@ class WebSearchToolAgent(
             name="web_search",
             instructions="Agent instructions",
             description="Agent that performs web searches and summarizes results.",
+            template_path=template_path,
+            model=model,
             input_structure=WebSearchPlanStructure,
             tools=[WebSearchTool()],
             model_settings=ModelSettings(tool_choice="required"),
@@ -187,9 +186,9 @@ class WebAgentWriter(SearchWriter[WebSearchReportStructure]):
 
     Parameters
     ----------
-    prompt_dir : Path or None, default=None
+    template_path : Path or None, default=None
         Directory containing prompt templates.
-    default_model : str or None, default=None
+    model : str or None, default=None
         Default model identifier to use when not defined in configuration.
 
     Methods
@@ -208,22 +207,23 @@ class WebAgentWriter(SearchWriter[WebSearchReportStructure]):
     """
 
     def __init__(
-        self, prompt_dir: Optional[Path] = None, default_model: Optional[str] = None
+        self,
+        template_path: Path | str | None = None,
+        model: str | None = None,
+        **kwargs: Any,
     ) -> None:
         """Initialize the writer agent."""
-        configuration = AgentConfiguration(
-            name="web_writer",
-            instructions="Agent instructions",
-            description="Agent that writes a report based on web search results.",
-            output_structure=WebSearchReportStructure,
+        configuration = self._configure_agent(
+            template_path=template_path, model=model, **kwargs
         )
-        super().__init__(
-            configuration=configuration,
-            template_path=prompt_dir,
-            default_model=default_model,
-        )
+        super().__init__(configuration=configuration, kwargs=kwargs)
 
-    def _configure_agent(self) -> AgentConfiguration:
+    def _configure_agent(
+        self,
+        template_path: Path | str | None = None,
+        model: str | None = None,
+        **kwargs: Any,
+    ) -> AgentConfiguration:
         """Return configuration for the web writer agent.
 
         Returns
@@ -235,11 +235,13 @@ class WebAgentWriter(SearchWriter[WebSearchReportStructure]):
             name="web_writer",
             instructions="Agent instructions",
             description="Agent that writes a report based on web search results.",
+            template_path=template_path,
+            model=model,
             output_structure=WebSearchReportStructure,
         )
 
 
-class WebAgentSearch:
+class WebAgentSearch(AgentBase):
     """Manage the complete web search workflow.
 
     Parameters
@@ -272,15 +274,6 @@ class WebAgentSearch:
     >>> search = WebAgentSearch(default_model="gpt-4o-mini")
     """
 
-    def __init__(
-        self,
-        prompt_dir: Optional[Path] = None,
-        default_model: Optional[str] = None,
-    ) -> None:
-        """Create the main web search agent."""
-        self._prompt_dir = prompt_dir
-        self._default_model = default_model
-
     async def run_agent_async(self, search_query: str) -> WebSearchStructure:
         """Execute the entire research workflow for ``search_query``.
 
@@ -297,14 +290,12 @@ class WebAgentSearch:
         trace_id = gen_trace_id()
         with trace("WebAgentSearch trace", trace_id=trace_id):
             planner = WebAgentPlanner(
-                prompt_dir=self._prompt_dir, default_model=self._default_model
+                template_path=self._template_path, model=self.model
             )
             tool = WebSearchToolAgent(
-                prompt_dir=self._prompt_dir, default_model=self._default_model
+                template_path=self._template_path, model=self.model
             )
-            writer = WebAgentWriter(
-                prompt_dir=self._prompt_dir, default_model=self._default_model
-            )
+            writer = WebAgentWriter(template_path=self._template_path, model=self.model)
             search_plan = await planner.run_agent(query=search_query)
             search_results = await tool.run_agent(search_plan=search_plan)
             search_report = await writer.run_agent(search_query, search_results)

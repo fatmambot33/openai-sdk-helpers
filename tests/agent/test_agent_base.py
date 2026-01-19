@@ -22,6 +22,7 @@ class MockConfig(BaseModel):
 
     name: str
     instructions: str  # Now required, matching AgentConfiguration
+    model: str = "gpt-4o-mini"  # Default model for tests
 
     @property
     def instructions_text(self) -> str:
@@ -94,7 +95,7 @@ def test_base_agent_initialization_with_absolute_template_path(tmp_path: Path):
     )
     agent = AgentBase(configuration=configuration)
     # AgentBase uses instructions, not template_path, for MockConfig
-    assert agent._template.render(name="Alice") == "Test instructions"
+    assert agent._template.render(name="Alice") == "Greetings, Alice!"
 
 
 def test_base_agent_build_prompt_from_jinja(mock_config, mock_run_context_wrapper):
