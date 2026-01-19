@@ -155,7 +155,6 @@ class VectorSearchTool(
         VectorStorage
             Vector storage helper for executing searches.
         """
-
         self._vector_storage = VectorStorage(store_name=self._store_name)
         return self._vector_storage
 
