@@ -87,6 +87,7 @@ from .utils.output_validation import (
     OutputValidator,
     validate_output,
 )
+from .utils.langextract import LangExtractAdapter, build_langextract_adapter
 __all__ = [
     # Environment utilities
     "get_data_path",
@@ -167,4 +168,7 @@ __all__ = [
     "LengthValidator",
     "OutputValidator",
     "validate_output",
+    # LangExtract
+    "LangExtractAdapter",
+    "build_langextract_adapter",
 ]

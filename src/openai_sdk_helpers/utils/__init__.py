@@ -87,6 +87,10 @@ from .encoding import (
     get_mime_type,
     is_image_file,
 )
+from .langextract import (
+    LangExtractAdapter,
+    build_langextract_adapter,
+)
 
 __all__ = [
     "ensure_list",
@@ -130,6 +134,9 @@ __all__ = [
     "create_image_data_url",
     "create_file_data_url",
     "is_image_file",
+    # LangExtract
+    "LangExtractAdapter",
+    "build_langextract_adapter",
     # Registry
     "RegistryBase",
 ]

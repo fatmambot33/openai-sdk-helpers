@@ -550,6 +550,17 @@ These modules use the standard `openai` SDK for direct API interactions with fin
 - **`openai_sdk_helpers.utils`**  
   JSON serialization helpers, logging utilities, and common validation functions.
 
+- **`openai_sdk_helpers.utils.langextract`**  
+  Adapter helpers for running LangExtract-style extractors and validating the
+  results into Pydantic models.
+
+## Related Projects
+
+- **[LangExtract](https://github.com/google/langextract)**  
+  Google-maintained toolkit for extracting structured data from language model
+  outputs, which can complement the validation and response utilities in
+  `openai-sdk-helpers`.
+
 ## Contributing
 
 Contributions are welcome! We appreciate functional changes accompanied by
