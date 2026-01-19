@@ -43,7 +43,7 @@ def test_coordinator_agent_integration(tmp_path):
             summarize_fn=summarize_fn,
             module_data_path=tmp_path,
             name="test_module",
-            default_model="test_model",
+            model="test_model",
         )
 
         pm.run_plan("test prompt")

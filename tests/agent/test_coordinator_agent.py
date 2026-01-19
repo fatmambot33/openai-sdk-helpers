@@ -58,7 +58,7 @@ def coordinator_agent(
             summarize_fn=mock_summarize_fn,
             module_data_path=tmp_path,
             name="test_module",
-            default_model="test_model",
+            model="test_model",
         )
 
 
