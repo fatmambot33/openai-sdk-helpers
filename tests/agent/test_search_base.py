@@ -90,7 +90,12 @@ class TestSearchToolAgent(
 class TestSearchWriter(SearchWriter[MockReportStructure]):
     """Concrete writer implementation for testing."""
 
-    def _configure_agent(self) -> AgentConfiguration:
+    def _configure_agent(
+        self,
+        template_path: Path | str | None = None,
+        model: str | None = None,
+        **kwargs: Any,
+    ) -> AgentConfiguration:
         return AgentConfiguration(
             name="test_writer",
             instructions="Test instructions",
@@ -106,14 +111,14 @@ class TestSearchPlannerClass:
     @pytest.mark.asyncio
     async def test_planner_initialization(self) -> None:
         """Test planner agent initialization with default model."""
-        planner = TestSearchPlanner(default_model="gpt-4o-mini")
+        planner = TestSearchPlanner(model="gpt-4o-mini")
         assert planner.name == "test_planner"
         assert planner._output_structure == MockPlanStructure
 
     @pytest.mark.asyncio
     async def test_planner_run_agent(self) -> None:
         """Test planner run_agent calls run_async."""
-        planner = TestSearchPlanner(default_model="gpt-4o-mini")
+        planner = TestSearchPlanner(model="gpt-4o-mini")
         mock_plan = MockPlanStructure(searches=[MockItemStructure(query="q1")])
 
         with patch.object(
@@ -137,7 +142,7 @@ class TestSearchPlannerClass:
                 model="gpt-4o-mini",
             ),
         ) as mock_config:
-            planner = TestSearchPlanner(default_model="gpt-4o-mini")
+            planner = TestSearchPlanner(model="gpt-4o-mini")
             mock_config.assert_called_once()
 
 
@@ -243,9 +248,7 @@ class TestSearchWriterClass:
             output_structure=MockReportStructure,
             model="gpt-4o-mini",
         )
-        writer = TestSearchWriter(
-            configuration=configuration, default_model="gpt-4o-mini"
-        )
+        writer = TestSearchWriter(configuration=configuration)
         assert writer.name == "test_writer"
         assert writer._output_structure == MockReportStructure
 
@@ -259,7 +262,7 @@ class TestSearchWriterClass:
             output_structure=MockReportStructure,
             model="gpt-4o-mini",
         )
-        writer = TestSearchWriter(configuration=configuration, model="gpt-4o-mini")
+        writer = TestSearchWriter(configuration=configuration)
         mock_report = MockReportStructure(report="final report")
         results = [
             MockResultStructure(text="r1"),
@@ -290,9 +293,7 @@ class TestSearchWriterClass:
             output_structure=MockReportStructure,
             model="gpt-4o-mini",
         )
-        writer = TestSearchWriter(
-            configuration=configuration, default_model="gpt-4o-mini"
-        )
+        writer = TestSearchWriter(configuration=configuration)
         results = [
             MockResultStructure(text="result 1"),
             MockResultStructure(text="result 2"),
@@ -331,9 +332,7 @@ class TestSearchAgentInheritance:
             output_structure=MockReportStructure,
             model="gpt-4o-mini",
         )
-        writer = TestSearchWriter(
-            configuration=configuration, default_model="gpt-4o-mini"
-        )
+        writer = TestSearchWriter(configuration=configuration)
         assert writer._output_structure == MockReportStructure
 
 
@@ -384,9 +383,7 @@ class TestSearchAgentErrorHandling:
             output_structure=MockReportStructure,
             model="gpt-4o-mini",
         )
-        writer = TestSearchWriter(
-            configuration=configuration, default_model="gpt-4o-mini"
-        )
+        writer = TestSearchWriter(configuration=configuration)
 
         # List of results
         results = [

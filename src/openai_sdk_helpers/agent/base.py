@@ -127,7 +127,7 @@ class AgentBase(DataclassJSONSerializable):
     ...     description="A custom agent",
     ...     model="gpt-4o-mini"
     ... )
-    >>> agent = AgentBase(configuration=configuration, default_model="gpt-4o-mini")
+    >>> agent = AgentBase(configuration=configuration)
     >>> result = agent.run_sync("What is 2+2?")
 
     Use absolute path to template:
@@ -137,7 +137,7 @@ class AgentBase(DataclassJSONSerializable):
     ...     template_path="/absolute/path/to/template.jinja",
     ...     model="gpt-4o-mini"
     ... )
-    >>> agent = AgentBase(configuration=configuration, default_model="gpt-4o-mini")
+    >>> agent = AgentBase(configuration=configuration)
 
     Use async execution:
 
@@ -193,7 +193,6 @@ class AgentBase(DataclassJSONSerializable):
         configuration: AgentConfigurationProtocol,
         run_context_wrapper: Optional[RunContextWrapper[Dict[str, Any]]] = None,
         data_path: Path | str | None = None,
-        **kwargs: Any,
     ) -> None:
         """Initialize the AgentBase using a configuration object.
 
@@ -203,7 +202,8 @@ class AgentBase(DataclassJSONSerializable):
             Configuration describing this agent.
         run_context_wrapper : RunContextWrapper or None, default=None
             Optional wrapper providing runtime context for prompt rendering.
-            Optional fallback model identifier if the configuration does not supply one.
+        data_path : Path | str | None, default=None
+            Optional base path for storing agent data.
         """
         self._configuration = configuration
         self.uuid = uuid.uuid4()
@@ -689,7 +689,7 @@ class AgentBase(DataclassJSONSerializable):
 
         Examples
         --------
-        >>> agent = AgentBase(configuration, default_model="gpt-4o-mini")
+        >>> agent = AgentBase(configuration)
         >>> try:
         ...     result = agent.run_sync("query")
         ... finally:
@@ -725,7 +725,7 @@ class AgentBase(DataclassJSONSerializable):
             target = Path(filepath)
         else:
             filename = f"{str(self.uuid).lower()}.json"
-            target = get_data_path("askPAT") / self.name / filename
+            target = self._data_path / self.name / filename
 
         checked = check_filepath(filepath=target)
         self.to_json_file(filepath=checked)

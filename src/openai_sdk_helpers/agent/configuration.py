@@ -150,7 +150,7 @@ class AgentConfiguration(DataclassJSONSerializable):
         Return the resolved instruction content as a string.
     resolve_prompt_path(prompt_dir)
         Resolve the prompt template path for this configuration.
-    gen_agent(run_context_wrapper, prompt_dir, default_model)
+    gen_agent(run_context_wrapper)
         Create a AgentBase instance from this configuration.
     replace(**changes)
         Create a new AgentConfiguration with specified fields replaced.
@@ -294,7 +294,6 @@ class AgentConfiguration(DataclassJSONSerializable):
     def gen_agent(
         self,
         run_context_wrapper: Any = None,
-        default_model: str | None = None,
     ) -> Any:
         """Create a AgentBase instance from this configuration.
 
@@ -304,10 +303,6 @@ class AgentConfiguration(DataclassJSONSerializable):
         ----------
         run_context_wrapper : RunContextWrapper or None, default=None
             Optional wrapper providing runtime context for prompt rendering.
-        prompt_dir : Path or None, default=None
-            Optional directory holding prompt templates.
-        default_model : str or None, default=None
-            Optional fallback model identifier if configuration doesn't specify one.
 
         Returns
         -------

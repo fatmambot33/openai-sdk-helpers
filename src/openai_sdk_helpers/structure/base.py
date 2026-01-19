@@ -393,9 +393,8 @@ class StructureBase(BaseModelJSONSerializable):
     def save_schema_to_file(cls, file_path: Path) -> Path:
         """Save the generated JSON schema to a file.
 
-        Generates the schema using get_schema and saves it to a JSON file
-        within the DATA_PATH directory. The filename is derived from the
-        class name.
+        Generates the schema using get_schema and saves it to the provided
+        file path.
 
         Parameters
         ----------
