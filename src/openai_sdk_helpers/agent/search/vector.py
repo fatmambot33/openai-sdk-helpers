@@ -242,7 +242,7 @@ class VectorSearchWriter(SearchWriter[VectorSearchReportStructure]):
         configuration = self._configure_agent(
             template_path=template_path, model=model, **kwargs
         )
-        super().__init__(configuration=configuration, kwargs=kwargs)
+        super().__init__(configuration=configuration)
 
     def _configure_agent(
         self,
