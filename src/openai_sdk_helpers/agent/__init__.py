@@ -13,6 +13,7 @@ from .validator import ValidatorAgent
 from .utils import run_coroutine_agent_sync
 from .search.vector import VectorAgentSearch
 from .search.web import WebAgentSearch
+
 __all__ = [
     "AgentBase",
     "AgentConfiguration",

@@ -122,6 +122,7 @@ class VectorSearchTool(
         *,
         template_path: Path | str | None = None,
         model: str | None = None,
+        **kwargs: Any,
     ) -> AgentConfiguration:
         """Return configuration for the vector search tool agent.
 
