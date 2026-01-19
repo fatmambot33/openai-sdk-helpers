@@ -73,20 +73,21 @@ class BaseModelJSONSerializable(BaseModel):
         str
             Formatted string (for example ``"- Label: Value"``).
         """
-        if not value:
+        if value is None:
             return f"- {label}: None"
         if isinstance(value, list):
-            return f"- {label}: {', '.join(str(v) for v in value)}"
+            formatted = ", ".join(str(v) for v in value)
+            return f"- {label}: {formatted or '[]'}"
         return f"- {label}: {str(value)}"
 
     def __repr__(self) -> str:
         """
-        Generate a string representation of the structure.
+        Generate a string representation of the model fields.
 
         Returns
         -------
         str
-            Formatted string for the ``logic`` field.
+            Formatted string for the model fields.
         """
         return "\n".join(
             [
@@ -97,23 +98,23 @@ class BaseModelJSONSerializable(BaseModel):
 
     def __str__(self) -> str:
         """
-        Generate a string representation of the structure.
+        Generate a string representation of the model fields.
 
         Returns
         -------
         str
-            Formatted string for the ``logic`` field.
+            Formatted string for the model fields.
         """
         return self.__repr__()
 
     def to_markdown(self) -> str:
         """
-        Generate a markdown representation of the structure.
+        Generate a markdown representation of the model fields.
 
         Returns
         -------
         str
-            Formatted markdown string for the structure.
+            Formatted markdown string for the model fields.
         """
         return self.__repr__()
 

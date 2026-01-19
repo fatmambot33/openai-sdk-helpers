@@ -41,10 +41,10 @@ class CoordinatorAgent(AgentBase):
         Name of the parent module for data organization.
     configuration : AgentConfiguration or None, default=None
         Optional agent configuration describing prompts and metadata.
-    prompt_dir : Path or None, default=None
-        Optional directory holding prompt templates.
-    default_model : str or None, default=None
-        Optional fallback model identifier.
+    template_path : Path or None, default=None
+        Optional template file path for prompt rendering.
+    model : str or None, default=None
+        Model identifier to use for coordinator operations.
 
     Methods
     -------
@@ -85,7 +85,7 @@ class CoordinatorAgent(AgentBase):
         name: str,
         configuration: Optional[AgentConfiguration] = None,
         template_path: Optional[Path] = None,
-        default_model: Optional[str] = None,
+        model: Optional[str] = None,
     ) -> None:
         """Initialize the project manager with injected workflow helpers.
 
@@ -106,9 +106,9 @@ class CoordinatorAgent(AgentBase):
         configuration : AgentConfiguration or None, default=None
             Optional agent configuration describing prompts and metadata.
         template_path : Path or None, default=None
-            Optional directory holding prompt templates.
-        default_model : str or None, default=None
-            Optional fallback model identifier.
+            Optional template file path for prompt rendering.
+        model : str or None, default=None
+            Model identifier to use for coordinator operations.
 
         Raises
         ------
@@ -132,7 +132,7 @@ class CoordinatorAgent(AgentBase):
                 instructions="Coordinate agents for planning and summarization.",
                 description="Coordinates agents for planning and summarization.",
                 template_path=template_path,
-                model=default_model,
+                model=model,
             )
         super().__init__(configuration=configuration)
         self._prompt_fn = prompt_fn

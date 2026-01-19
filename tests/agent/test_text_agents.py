@@ -14,7 +14,7 @@ from openai_sdk_helpers.structure.base import StructureBase
 async def test_summarizer_agent_runs_with_metadata():
     """Ensure the summarizer forwards metadata context."""
 
-    agent = SummarizerAgent(default_model="gpt-4o-mini")
+    agent = SummarizerAgent(model="gpt-4o-mini")
     fake_agent = MagicMock()
     summary = SummaryStructure(text="summary")
 
@@ -42,7 +42,7 @@ async def test_summarizer_allows_output_override():
 
         text: str
 
-    agent = SummarizerAgent(default_model="gpt-4o-mini")
+    agent = SummarizerAgent(model="gpt-4o-mini")
     fake_agent = MagicMock()
 
     with (
@@ -61,7 +61,7 @@ async def test_summarizer_allows_output_override():
 async def test_translator_merges_context():
     """TranslatorAgent should combine the target language and extra context."""
 
-    agent = TranslatorAgent(default_model="gpt-4o-mini")
+    agent = TranslatorAgent(model="gpt-4o-mini")
     fake_agent = MagicMock()
 
     with (
@@ -83,7 +83,7 @@ async def test_translator_merges_context():
 def test_summarizer_default_prompt():
     """SummarizerAgent should expose a default Jinja prompt when none provided."""
 
-    agent = SummarizerAgent(default_model="gpt-4o-mini")
+    agent = SummarizerAgent(model="gpt-4o-mini")
 
     prompt = agent._build_prompt_from_jinja()
     # SummarizerAgent uses instructions, not a default template
@@ -93,7 +93,7 @@ def test_summarizer_default_prompt():
 def test_translator_default_prompt():
     """TranslatorAgent should fall back to a sensible default prompt."""
 
-    agent = TranslatorAgent(default_model="gpt-4o-mini")
+    agent = TranslatorAgent(model="gpt-4o-mini")
 
     prompt = agent._build_prompt_from_jinja()
     # TranslatorAgent uses instructions, not a default template
@@ -103,7 +103,7 @@ def test_translator_default_prompt():
 def test_translator_run_sync_forwards_context():
     """TranslatorAgent.run_sync should pass the target language into context."""
 
-    agent = TranslatorAgent(default_model="gpt-4o-mini")
+    agent = TranslatorAgent(model="gpt-4o-mini")
     fake_agent = MagicMock()
     fake_result = MagicMock()
     fake_result.final_output_as.return_value = TranslationStructure(text="translated")

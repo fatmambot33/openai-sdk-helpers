@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, Optional, Type
+from typing import Any, Dict, Optional
 
 from ..structure import SummaryStructure
 from ..structure.base import StructureBase
 from .base import AgentBase
 from .configuration import AgentConfiguration
-from ..environment import DEFAULT_PROMPT_DIR
 
 
 class SummarizerAgent(AgentBase):
@@ -21,11 +20,10 @@ class SummarizerAgent(AgentBase):
 
     Parameters
     ----------
-    prompt_dir : Path or None, default=None
-        Optional directory containing Jinja prompt templates. Defaults to the
-        packaged ``prompt`` directory when not provided.
-    default_model : str or None, default=None
-        Fallback model identifier when not specified elsewhere.
+    template_path : Path | str | None, default=None
+        Optional template file path for prompt rendering.
+    model : str | None, default=None
+        Model identifier to use for summarization.
     output_structure : type[StructureBase], default=SummaryStructure
         Type describing the expected summary output.
 
@@ -34,7 +32,7 @@ class SummarizerAgent(AgentBase):
     Basic usage with default settings:
 
     >>> from openai_sdk_helpers.agent import SummarizerAgent
-    >>> summarizer = SummarizerAgent(default_model="gpt-4o-mini")
+    >>> summarizer = SummarizerAgent(model="gpt-4o-mini")
     >>> summary = summarizer.run_sync("Long text to summarize...")
     >>> print(summary.text)
 
@@ -42,7 +40,7 @@ class SummarizerAgent(AgentBase):
 
     >>> import asyncio
     >>> async def main():
-    ...     summarizer = SummarizerAgent(default_model="gpt-4o-mini")
+    ...     summarizer = SummarizerAgent(model="gpt-4o-mini")
     ...     result = await summarizer.run_agent(
     ...         text="Article content...",
     ...         metadata={"source": "news.txt", "date": "2025-01-01"}
@@ -59,27 +57,26 @@ class SummarizerAgent(AgentBase):
     def __init__(
         self,
         *,
-        template_path: Optional[Path] = None,
-        default_model: Optional[str] = None,
+        template_path: Path | str | None = None,
+        model: str | None = None,
     ) -> None:
         """Initialize the summarizer agent configuration.
 
         Parameters
         ----------
-        prompt_dir : Path or None, default=None
-            Optional directory containing Jinja prompt templates. Defaults to the
-            packaged ``prompt`` directory when not provided.
-        default_model : str or None, default=None
-            Fallback model identifier when not specified elsewhere.
+        template_path : Path | str | None, default=None
+            Optional template file path for prompt rendering.
+        model : str | None, default=None
+            Model identifier to use for summarization.
 
         Raises
         ------
         ValueError
-            If the default model is not provided.
+            If the model is not provided.
 
         Examples
         --------
-        >>> summarizer = SummarizerAgent(default_model="gpt-4o-mini")
+        >>> summarizer = SummarizerAgent(model="gpt-4o-mini")
         """
         configuration = AgentConfiguration(
             name="summarizer",
@@ -87,13 +84,10 @@ class SummarizerAgent(AgentBase):
             description="Summarize passages into concise findings.",
             template_path=template_path,
             output_structure=SummaryStructure,
-            model=default_model,
+            model=model,
         )
 
-        super().__init__(
-            configuration=configuration,
-            default_model=default_model,
-        )
+        super().__init__(configuration=configuration)
 
     async def run_agent(
         self, text: str, metadata: Optional[Dict[str, Any]] = None

@@ -31,10 +31,10 @@ class WebAgentPlanner(SearchPlanner[WebSearchPlanStructure]):
 
     Parameters
     ----------
-    prompt_dir : Path or None, default=None
-        Directory containing prompt templates.
-    default_model : str or None, default=None
-        Default model identifier to use when not defined in configuration.
+    template_path : Path | str | None, default=None
+        Template file path for prompt rendering.
+    model : str | None, default=None
+        Model identifier to use when not defined in configuration.
 
     Methods
     -------
@@ -44,11 +44,11 @@ class WebAgentPlanner(SearchPlanner[WebSearchPlanStructure]):
     Raises
     ------
     ValueError
-        If the default model is not provided.
+        If the configuration omits a model identifier.
 
     Examples
     --------
-    >>> planner = WebAgentPlanner(default_model="gpt-4o-mini")
+    >>> planner = WebAgentPlanner(model="gpt-4o-mini")
     """
 
     def _configure_agent(
@@ -83,8 +83,8 @@ class WebSearchToolAgent(
 
     Parameters
     ----------
-    prompt_dir : Path or None, default=None
-        Directory containing prompt templates.
+    template_path : Path | str | None, default=None
+        Template file path for prompt rendering.
     model : str or None, default=None
         Model identifier to use when not defined in configuration.
 
@@ -186,10 +186,10 @@ class WebAgentWriter(SearchWriter[WebSearchReportStructure]):
 
     Parameters
     ----------
-    template_path : Path or None, default=None
-        Directory containing prompt templates.
-    model : str or None, default=None
-        Default model identifier to use when not defined in configuration.
+    template_path : Path | str | None, default=None
+        Template file path for prompt rendering.
+    model : str | None, default=None
+        Model identifier to use when not defined in configuration.
 
     Methods
     -------
@@ -199,11 +199,11 @@ class WebAgentWriter(SearchWriter[WebSearchReportStructure]):
     Raises
     ------
     ValueError
-        If the default model is not provided.
+        If the configuration omits a model identifier.
 
     Examples
     --------
-    >>> writer = WebAgentWriter(default_model="gpt-4o-mini")
+    >>> writer = WebAgentWriter(model="gpt-4o-mini")
     """
 
     def __init__(
@@ -216,7 +216,7 @@ class WebAgentWriter(SearchWriter[WebSearchReportStructure]):
         configuration = self._configure_agent(
             template_path=template_path, model=model, **kwargs
         )
-        super().__init__(configuration=configuration, kwargs=kwargs)
+        super().__init__(configuration=configuration)
 
     def _configure_agent(
         self,
@@ -246,10 +246,10 @@ class WebAgentSearch(AgentBase):
 
     Parameters
     ----------
-    prompt_dir : Path or None, default=None
-        Directory containing prompt templates.
-    default_model : str or None, default=None
-        Default model identifier to use when not defined in configuration.
+    template_path : Path | str | None, default=None
+        Template file path for prompt rendering.
+    model : str | None, default=None
+        Model identifier to use when not defined in configuration.
 
     Methods
     -------
@@ -267,12 +267,36 @@ class WebAgentSearch(AgentBase):
     Raises
     ------
     ValueError
-        If the default model is not provided.
+        If the model identifier is not provided.
 
     Examples
     --------
-    >>> search = WebAgentSearch(default_model="gpt-4o-mini")
+    >>> search = WebAgentSearch(model="gpt-4o-mini")
     """
+
+    def __init__(
+        self,
+        *,
+        template_path: Path | str | None = None,
+        model: str | None = None,
+    ) -> None:
+        """Initialize the web search orchestration agent.
+
+        Parameters
+        ----------
+        template_path : Path | str | None, default=None
+            Optional template file path for prompt rendering.
+        model : str | None, default=None
+            Model identifier to use when not defined in configuration.
+        """
+        configuration = AgentConfiguration(
+            name="web_agent_search",
+            instructions="Agent instructions",
+            description="Run a multi-step web search workflow.",
+            template_path=template_path,
+            model=model,
+        )
+        super().__init__(configuration=configuration)
 
     async def run_agent_async(self, search_query: str) -> WebSearchStructure:
         """Execute the entire research workflow for ``search_query``.

@@ -8,7 +8,6 @@ from typing import Any, Dict, Optional
 
 from ..structure import TranslationStructure
 from ..structure.base import StructureBase
-from ..environment import DEFAULT_PROMPT_DIR
 
 from .base import AgentBase
 from .configuration import AgentConfiguration
@@ -22,18 +21,17 @@ class TranslatorAgent(AgentBase):
 
     Parameters
     ----------
-    prompt_dir : Path or None, default=None
-        Optional directory containing Jinja prompt templates. Defaults to the
-        packaged ``prompt`` directory when not provided.
-    default_model : str or None, default=None
-        Fallback model identifier when not specified elsewhere.
+    template_path : Path | str | None, default=None
+        Optional template file path for prompt rendering.
+    model : str | None, default=None
+        Model identifier to use for translation.
 
     Examples
     --------
     Basic translation:
 
     >>> from openai_sdk_helpers.agent import TranslatorAgent
-    >>> translator = TranslatorAgent(default_model="gpt-4o-mini")
+    >>> translator = TranslatorAgent(model="gpt-4o-mini")
     >>> result = translator.run_sync("Hello world", target_language="Spanish")
     >>> print(result.text)
     'Hola mundo'
@@ -42,7 +40,7 @@ class TranslatorAgent(AgentBase):
 
     >>> import asyncio
     >>> async def main():
-    ...     translator = TranslatorAgent(default_model="gpt-4o-mini")
+    ...     translator = TranslatorAgent(model="gpt-4o-mini")
     ...     result = await translator.run_agent(
     ...         text="Good morning",
     ...         target_language="French",
@@ -62,41 +60,36 @@ class TranslatorAgent(AgentBase):
     def __init__(
         self,
         *,
-        prompt_dir: Optional[Path] = None,
-        default_model: Optional[str] = None,
+        template_path: Path | str | None = None,
+        model: str | None = None,
     ) -> None:
         """Initialize the translation agent configuration.
 
         Parameters
         ----------
-        prompt_dir : Path or None, default=None
-            Optional directory containing Jinja prompt templates. Defaults to the
-            packaged ``prompt`` directory when not provided.
-        default_model : str or None, default=None
-            Fallback model identifier when not specified elsewhere.
+        template_path : Path | str | None, default=None
+            Optional template file path for prompt rendering.
+        model : str | None, default=None
+            Model identifier to use for translation.
 
         Raises
         ------
         ValueError
-            If the default model is not provided.
+            If the model is not provided.
 
         Examples
         --------
-        >>> translator = TranslatorAgent(default_model="gpt-4o-mini")
+        >>> translator = TranslatorAgent(model="gpt-4o-mini")
         """
-        # Use None for template_path unless a file is provided
         configuration = AgentConfiguration(
             name="translator",
             instructions="Agent instructions",
             description="Translate text into the requested language.",
-            template_path=None,
+            template_path=template_path,
             output_structure=TranslationStructure,
-            model=default_model,
+            model=model,
         )
-        super().__init__(
-            configuration=configuration,
-            default_model=default_model,
-        )
+        super().__init__(configuration=configuration)
 
     async def run_agent(
         self,

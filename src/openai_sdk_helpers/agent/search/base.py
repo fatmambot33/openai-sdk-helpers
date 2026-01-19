@@ -33,10 +33,10 @@ class SearchPlanner(AgentBase, Generic[PlanType]):
 
     Parameters
     ----------
-    prompt_dir : Path, optional
-        Directory containing prompt templates.
-    default_model : str, optional
-        Default model identifier to use when not defined in configuration.
+    template_path : Path | str | None, optional
+        Template file path for prompt rendering.
+    model : str | None, optional
+        Model identifier to use when not defined in configuration.
 
     Methods
     -------
@@ -48,18 +48,18 @@ class SearchPlanner(AgentBase, Generic[PlanType]):
     Raises
     ------
     ValueError
-        If the default model is not provided.
+        If the configuration omits a model identifier.
 
     Examples
     --------
     >>> class MyPlanner(SearchPlanner):
-    ...     def _configure_agent(self):
+    ...     def _configure_agent(self, template_path=None, model=None):
     ...         return AgentConfiguration(
     ...             name="my_planner",
     ...             description="Plans searches",
     ...             output_structure=WebSearchPlanStructure,
     ...         )
-    >>> planner = MyPlanner(default_model="gpt-4o-mini")
+    >>> planner = MyPlanner(model="gpt-4o-mini")
     """
 
     def __init__(
@@ -129,9 +129,9 @@ class SearchToolAgent(AgentBase, Generic[ItemType, ResultType, PlanType]):
     Parameters
     ----------
     template_path : Path | str | None, optional
-        Directory containing prompt templates.
+        Template file path for prompt rendering.
     model : str | None, optional
-        Default model identifier to use when not defined in configuration.
+        Model identifier to use when not defined in configuration.
     max_concurrent_searches : int, default=10
         Maximum number of concurrent search operations.
 
@@ -147,7 +147,7 @@ class SearchToolAgent(AgentBase, Generic[ItemType, ResultType, PlanType]):
     Raises
     ------
     ValueError
-        If the default model is not provided.
+        If the configuration omits a model identifier.
 
     Examples
     --------
@@ -160,7 +160,7 @@ class SearchToolAgent(AgentBase, Generic[ItemType, ResultType, PlanType]):
     ...         )
     ...     async def run_search(self, item):
     ...         return "result"
-    >>> tool = MyTool(default_model="gpt-4o-mini")
+    >>> tool = MyTool(model="gpt-4o-mini")
     """
 
     def __init__(
@@ -169,10 +169,15 @@ class SearchToolAgent(AgentBase, Generic[ItemType, ResultType, PlanType]):
         template_path: Path | str | None = None,
         model: str | None = None,
         max_concurrent_searches: int = 10,
+        **kwargs: Any,
     ) -> None:
         """Initialize the search tool agent."""
         self._max_concurrent_searches = max_concurrent_searches
-        configuration = self._configure_agent(template_path=template_path, model=model)
+        configuration = self._configure_agent(
+            template_path=template_path,
+            model=model,
+            **kwargs,
+        )
         super().__init__(configuration=configuration)
 
     @abstractmethod
@@ -181,7 +186,7 @@ class SearchToolAgent(AgentBase, Generic[ItemType, ResultType, PlanType]):
         *,
         template_path: Path | str | None = None,
         model: str | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> AgentConfiguration:
         """Return configuration for this tool agent.
 
@@ -254,9 +259,9 @@ class SearchWriter(AgentBase, Generic[ReportType]):
     Parameters
     ----------
     template_path : Path | str | None, optional
-        Directory containing prompt templates.
-    default_model : str | None, optional
-        Default model identifier to use when not defined in configuration.
+        Template file path for prompt rendering.
+    model : str | None, optional
+        Model identifier to use when not defined in configuration.
 
     Methods
     -------
@@ -268,18 +273,18 @@ class SearchWriter(AgentBase, Generic[ReportType]):
     Raises
     ------
     ValueError
-        If the default model is not provided.
+        If the configuration omits a model identifier.
 
     Examples
     --------
     >>> class MyWriter(SearchWriter):
-    ...     def _configure_agent(self):
+    ...     def _configure_agent(self, template_path=None, model=None):
     ...         return AgentConfiguration(
     ...             name="my_writer",
     ...             description="Writes reports",
     ...             output_structure=WebSearchReportStructure,
     ...         )
-    >>> writer = MyWriter(default_model="gpt-4o-mini")
+    >>> writer = MyWriter(model="gpt-4o-mini")
     """
 
     async def run_agent(

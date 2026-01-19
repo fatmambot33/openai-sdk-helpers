@@ -10,7 +10,7 @@ from openai_sdk_helpers.structure import ValidationResultStructure
 async def test_validator_agent_merges_context():
     """ValidatorAgent should merge optional context into the guardrail check."""
 
-    agent = ValidatorAgent(default_model="gpt-4o-mini")
+    agent = ValidatorAgent(model="gpt-4o-mini")
     fake_agent = MagicMock()
     validation = ValidationResultStructure(
         input_safe=True,
@@ -48,7 +48,7 @@ async def test_validator_agent_merges_context():
 def test_validator_agent_default_prompt():
     """ValidatorAgent should provide a guardrail-focused default prompt."""
 
-    agent = ValidatorAgent(default_model="gpt-4o-mini")
+    agent = ValidatorAgent(model="gpt-4o-mini")
 
     prompt = agent._build_prompt_from_jinja()
     # ValidatorAgent uses instructions, not a default template

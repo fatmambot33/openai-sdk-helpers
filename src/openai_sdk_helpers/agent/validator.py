@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 from ..structure.validation import ValidationResultStructure
@@ -18,18 +19,17 @@ class ValidatorAgent(AgentBase):
 
     Parameters
     ----------
-    prompt_dir : Path or None, default=None
-        Optional directory containing Jinja prompt templates. Defaults to the
-        packaged ``prompt`` directory when not provided.
-    default_model : str or None, default=None
-        Fallback model identifier when not specified elsewhere.
+    template_path : Path | str | None, default=None
+        Optional template file path for prompt rendering.
+    model : str | None, default=None
+        Model identifier to use for validation.
 
     Examples
     --------
     Validate user input:
 
     >>> from openai_sdk_helpers.agent import ValidatorAgent
-    >>> validator = ValidatorAgent(default_model="gpt-4o-mini")
+    >>> validator = ValidatorAgent(model="gpt-4o-mini")
     >>> result = validator.run_sync("Tell me about Python programming")
     >>> print(result.input_safe)  # True
     >>> print(result.violations)  # []
@@ -38,7 +38,7 @@ class ValidatorAgent(AgentBase):
 
     >>> import asyncio
     >>> async def main():
-    ...     validator = ValidatorAgent(default_model="gpt-4o-mini")
+    ...     validator = ValidatorAgent(model="gpt-4o-mini")
     ...     result = await validator.run_agent(
     ...         user_input="Summarize this document",
     ...         agent_output="Summary containing PII...",
@@ -57,38 +57,36 @@ class ValidatorAgent(AgentBase):
     def __init__(
         self,
         *,
-        default_model: Optional[str] = None,
+        template_path: Path | str | None = None,
+        model: str | None = None,
     ) -> None:
         """Initialize the validator agent configuration.
 
         Parameters
         ----------
-        prompt_dir : Path or None, default=None
-            Optional directory containing Jinja prompt templates. Defaults to the
-            packaged ``prompt`` directory when not provided.
-        default_model : str or None, default=None
-            Fallback model identifier when not specified elsewhere.
+        template_path : Path | str | None, default=None
+            Optional template file path for prompt rendering.
+        model : str | None, default=None
+            Model identifier to use for validation.
 
         Raises
         ------
         ValueError
-            If the default model is not provided.
+            If the model is not provided.
 
         Examples
         --------
-        >>> validator = ValidatorAgent(default_model="gpt-4o-mini")
+        >>> validator = ValidatorAgent(model="gpt-4o-mini")
         """
         configuration = AgentConfiguration(
             name="validator",
             instructions="Agent instructions",
             description="Validate user input and agent output against guardrails.",
+            template_path=template_path,
             output_structure=ValidationResultStructure,
-            model=default_model,
+            model=model,
         )
-        super().__init__(
-            configuration=configuration,
-            default_model=default_model,
-        )
+        super().__init__(configuration=configuration)
 
     async def run_agent(
         self,

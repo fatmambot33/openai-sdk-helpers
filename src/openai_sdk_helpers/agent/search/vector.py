@@ -31,11 +31,10 @@ class VectorAgentPlanner(SearchPlanner[VectorSearchPlanStructure]):
 
     Parameters
     ----------
-    prompt_dir : Path or None, default=None
-        Directory containing prompt templates. Defaults to the packaged
-        ``prompt`` directory when not provided.
-    default_model : str or None, default=None
-        Default model identifier to use when not defined in configuration.
+    template_path : Path | str | None, optional
+        Template file path for prompt rendering.
+    model : str | None, optional
+        Model identifier to use when not defined in configuration.
 
     Methods
     -------
@@ -45,11 +44,11 @@ class VectorAgentPlanner(SearchPlanner[VectorSearchPlanStructure]):
     Raises
     ------
     ValueError
-        If the default model is not provided.
+        If the configuration omits a model identifier.
 
     Examples
     --------
-    >>> planner = VectorSearchPlanner(default_model="gpt-4o-mini")
+    >>> planner = VectorSearchPlanner(model="gpt-4o-mini")
     """
 
     def _configure_agent(
@@ -87,12 +86,11 @@ class VectorSearchTool(
 
     Parameters
     ----------
-    prompt_dir : Path or None, default=None
-        Directory containing prompt templates. Defaults to the packaged
-        ``prompt`` directory when not provided.
-    default_model : str or None, default=None
-        Default model identifier to use when not defined in configuration.
-    store_name : str or None, default=None
+    template_path : Path | str | None, optional
+        Template file path for prompt rendering.
+    model : str | None, optional
+        Model identifier to use when not defined in configuration.
+    store_name : str
         Name of the vector store to query.
     max_concurrent_searches : int, default=MAX_CONCURRENT_SEARCHES
         Maximum number of concurrent vector search tasks to run.
@@ -112,11 +110,11 @@ class VectorSearchTool(
     Raises
     ------
     ValueError
-        If the default model is not provided.
+        If the configuration omits a model identifier.
 
     Examples
     --------
-    >>> tool = VectorSearchTool(default_model="gpt-4o-mini", store_name="my_store")
+    >>> tool = VectorSearchTool(model="gpt-4o-mini", store_name="my_store")
     """
 
     def _configure_agent(
@@ -124,7 +122,6 @@ class VectorSearchTool(
         *,
         template_path: Path | str | None = None,
         model: str | None = None,
-        **kwargs: Any,
     ) -> AgentConfiguration:
         """Return configuration for the vector search tool agent.
 
@@ -133,9 +130,8 @@ class VectorSearchTool(
         AgentConfiguration
             Configuration with name, description, and input type.
         """
-        if kwargs.get("store_name") is None:
+        if self._store_name is None:
             raise ValueError("store_name must be provided to configure the agent.")
-        self._store_name = kwargs["store_name"]
         return AgentConfiguration(
             name="vector_search",
             instructions="Agent instructions",
@@ -147,6 +143,26 @@ class VectorSearchTool(
             model=model,
         )
 
+    def __init__(
+        self,
+        *,
+        store_name: str,
+        template_path: Path | str | None = None,
+        model: str | None = None,
+        max_concurrent_searches: int = MAX_CONCURRENT_SEARCHES,
+        vector_storage: Optional[VectorStorage] = None,
+        vector_storage_factory: Optional[Callable[[str], VectorStorage]] = None,
+    ) -> None:
+        """Initialize the vector search tool agent."""
+        self._vector_storage = vector_storage
+        self._vector_storage_factory = vector_storage_factory
+        self._store_name = store_name
+        super().__init__(
+            template_path=template_path,
+            model=model,
+            max_concurrent_searches=max_concurrent_searches,
+        )
+
     def _get_vector_storage(self) -> VectorStorage:
         """Return a cached vector storage instance.
 
@@ -155,7 +171,11 @@ class VectorSearchTool(
         VectorStorage
             Vector storage helper for executing searches.
         """
-        self._vector_storage = VectorStorage(store_name=self._store_name)
+        if self._vector_storage is None:
+            if self._vector_storage_factory is not None:
+                self._vector_storage = self._vector_storage_factory(self._store_name)
+            else:
+                self._vector_storage = VectorStorage(store_name=self._store_name)
         return self._vector_storage
 
     async def run_search(
@@ -192,11 +212,10 @@ class VectorSearchWriter(SearchWriter[VectorSearchReportStructure]):
 
     Parameters
     ----------
-    prompt_dir : Path or None, default=None
-        Directory containing prompt templates. Defaults to the packaged
-        ``prompt`` directory when not provided.
-    default_model : str or None, default=None
-        Default model identifier to use when not defined in configuration.
+    template_path : Path | str | None, optional
+        Template file path for prompt rendering.
+    model : str | None, optional
+        Model identifier to use when not defined in configuration.
 
     Methods
     -------
@@ -206,11 +225,11 @@ class VectorSearchWriter(SearchWriter[VectorSearchReportStructure]):
     Raises
     ------
     ValueError
-        If the default model is not provided.
+        If the configuration omits a model identifier.
 
     Examples
     --------
-    >>> writer = VectorSearchWriter(default_model="gpt-4o-mini")
+    >>> writer = VectorSearchWriter(model="gpt-4o-mini")
     """
 
     def __init__(
@@ -312,7 +331,7 @@ class VectorAgentSearch(AgentBase):
     Raises
     ------
     ValueError
-        If the default model is not provided.
+        If the model identifier is not provided.
     """
 
     def __init__(
@@ -355,7 +374,7 @@ class VectorAgentSearch(AgentBase):
                 template_path=self._prompt_dir,
                 model=self._default_model,
                 max_concurrent_searches=self._max_concurrent_searches,
-                **{"store_name": self._vector_store_name},
+                store_name=self._vector_store_name,
             )
             writer = VectorSearchWriter(
                 template_path=self._prompt_dir, model=self._default_model

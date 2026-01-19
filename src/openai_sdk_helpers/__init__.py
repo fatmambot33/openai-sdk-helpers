@@ -87,9 +87,6 @@ from .utils.output_validation import (
     OutputValidator,
     validate_output,
 )
-from dotenv import load_dotenv
-
-load_dotenv()
 __all__ = [
     # Environment utilities
     "get_data_path",
