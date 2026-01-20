@@ -445,7 +445,7 @@ def _log_pass_deltas(metrics: dict[str, Any]) -> None:
         previous = num_items
 
     if deltas:
-        log(f\"Extraction pass deltas: {', '.join(deltas)}\")
+        log(f"Extraction pass deltas: {', '.join(deltas)}")
 
 
 def _ensure_provider_env() -> None:
