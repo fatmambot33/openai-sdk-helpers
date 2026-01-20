@@ -129,7 +129,9 @@ class DocumentExtractor:
                         results[index] = future.result()
                     except ExtractionError as exc:
                         if return_partial:
-                            errors.append({"document_id": document_id, "error": str(exc)})
+                            errors.append(
+                                {"document_id": document_id, "error": str(exc)}
+                            )
                         else:
                             raise
         else:
@@ -269,7 +271,9 @@ class DocumentExtractor:
             elif isinstance(entry, Sequence) and len(entry) == 2:
                 document_id, text = entry
                 if not isinstance(text, str):
-                    raise InputValidationError("Document tuple must include text string.")
+                    raise InputValidationError(
+                        "Document tuple must include text string."
+                    )
                 yield document_id if isinstance(document_id, str) else None, text
             else:
                 raise InputValidationError(
@@ -356,9 +360,7 @@ def _map_items(raw_output: Any) -> list[ExtractionItem]:
             or "unknown"
         )
         extraction_text = (
-            item.get("extraction_text")
-            or item.get("text")
-            or item.get("value")
+            item.get("extraction_text") or item.get("text") or item.get("value")
         )
         if not extraction_text:
             raise ExtractionError("LangExtract output item missing extraction_text.")

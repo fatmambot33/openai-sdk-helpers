@@ -55,8 +55,7 @@ def render_extraction_html(text: str, result: ExtractionResult) -> str:
 def _wrap_html(content: str, spans: list[tuple[int, int, Any]]) -> str:
     """Wrap the highlighted content in a minimal HTML template."""
     legend_items = "".join(
-        f"<li><code>{html.escape(str(label))}</code></li>"
-        for _, _, label in spans
+        f"<li><code>{html.escape(str(label))}</code></li>" for _, _, label in spans
     )
     legend = f"<ul>{legend_items}</ul>" if legend_items else ""
     return (

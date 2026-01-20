@@ -218,10 +218,12 @@ if __name__ == "__main__":
     print("\n" + "=" * 70)
     print("Summary")
     print("=" * 70)
-    print("""
+    print(
+        """
 ✓ Wrapper unwrapping: Arguments wrapped by tool name are automatically unwrapped
 ✓ Async support: Async functions work seamlessly with event loop detection
 ✓ Sync tools: ToolSpec handles input and output validation for sync tools
 ✓ No manual thread handling: Event loop management is automatic
 ✓ Validation still works: Pydantic validation happens after unwrapping
-    """)
+    """
+    )

@@ -28,6 +28,7 @@ def test_langextract_import_error(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_langextract_failure_wrapped(monkeypatch: pytest.MonkeyPatch) -> None:
     """Wrap LangExtract failures in ExtractionError."""
+
     def _raise_error(text: str, **kwargs: object) -> None:
         raise ValueError("boom")
 
