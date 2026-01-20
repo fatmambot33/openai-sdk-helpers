@@ -16,6 +16,9 @@ cd "$(git rev-parse --show-toplevel)"
 # Track overall status
 FAILED=0
 
+pip install --upgrade pip
+pip install --upgrade ".[dev]"
+
 # Style Checks
 echo "▶ Running pydocstyle..."
 if pydocstyle src; then
