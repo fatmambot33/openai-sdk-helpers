@@ -110,37 +110,35 @@ class DocumentExtractor:
                 langextract_kwargs=kwargs,
             )
 
-        results: list[ExtractionResult] = []
+        results: list[ExtractionResult | None] = [None] * len(documents)
         errors: list[dict[str, str]] = []
         if max_workers and max_workers > 1:
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                future_map = {
+                future_map: dict[Any, tuple[int, str | None]] = {
                     executor.submit(
                         self._extract_single,
                         document_id,
                         text,
                         langextract_kwargs=kwargs,
-                    ): (document_id, text)
-                    for document_id, text in documents
+                    ): (index, document_id)
+                    for index, (document_id, text) in enumerate(documents)
                 }
                 for future in as_completed(future_map):
-                    document_id, _ = future_map[future]
+                    index, document_id = future_map[future]
                     try:
-                        results.append(future.result())
+                        results[index] = future.result()
                     except ExtractionError as exc:
                         if return_partial:
                             errors.append({"document_id": document_id, "error": str(exc)})
                         else:
                             raise
         else:
-            for document_id, text in documents:
+            for index, (document_id, text) in enumerate(documents):
                 try:
-                    results.append(
-                        self._extract_single(
-                            document_id,
-                            text,
-                            langextract_kwargs=kwargs,
-                        )
+                    results[index] = self._extract_single(
+                        document_id,
+                        text,
+                        langextract_kwargs=kwargs,
                     )
                 except ExtractionError as exc:
                     if return_partial:
@@ -148,19 +146,21 @@ class DocumentExtractor:
                     else:
                         raise
 
+        ordered_results = [result for result in results if result is not None]
+
         if errors:
-            for result in results:
+            for result in ordered_results:
                 result.metrics.setdefault("errors", errors)
             log(f"Extraction completed with {len(errors)} error(s).")
 
-        if results:
-            total_items = sum(len(result.items) for result in results)
+        if ordered_results:
+            total_items = sum(len(result.items) for result in ordered_results)
             log(
                 "Batch extraction complete: "
-                f\"{len(results)} document(s), {total_items} item(s) total.\"
+                f"{len(ordered_results)} document(s), {total_items} item(s) total."
             )
 
-        return results
+        return ordered_results
 
     async def aextract(
         self,
