@@ -93,11 +93,6 @@ from .utils.output_validation import (
 from .utils.langextract import LangExtractAdapter, build_langextract_adapter
 from .extract import (
     DocumentExtractor,
-    run_extraction,
-    build_examples_from_schema,
-    build_prompt_from_schema,
-    render_extraction_html,
-    SchemaLike,
 )
 
 __all__ = [
@@ -188,9 +183,4 @@ __all__ = [
     "build_langextract_adapter",
     # Extraction helpers
     "DocumentExtractor",
-    "run_extraction",
-    "build_examples_from_schema",
-    "build_prompt_from_schema",
-    "render_extraction_html",
-    "SchemaLike",
 ]
