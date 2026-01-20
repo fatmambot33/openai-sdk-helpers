@@ -53,6 +53,10 @@ VectorSearchReportStructure
     Complete vector search report.
 ValidationResultStructure
     Validation results with pass/fail status.
+ExtractionItem
+    Extracted item with source span data.
+ExtractionResult
+    Structured extraction results for a document.
 
 Functions
 ---------
@@ -72,6 +76,7 @@ from __future__ import annotations
 
 from .agent_blueprint import AgentBlueprint
 from .base import *
+from .extraction import ExtractionItem, ExtractionResult
 from .plan import *
 from .prompt import PromptStructure
 from .responses import *
@@ -109,6 +114,8 @@ __all__ = [
     "VectorSearchPlanStructure",
     "VectorSearchStructure",
     "ValidationResultStructure",
+    "ExtractionItem",
+    "ExtractionResult",
     "assistant_tool_definition",
     "assistant_format",
     "response_tool_definition",

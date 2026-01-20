@@ -119,3 +119,12 @@ class ResourceCleanupError(OpenAISDKError):
     """
 
     pass
+
+
+class ExtractionError(OpenAISDKError):
+    """Extraction execution failed.
+
+    Raised when LangExtract operations fail or output validation fails.
+    """
+
+    pass
