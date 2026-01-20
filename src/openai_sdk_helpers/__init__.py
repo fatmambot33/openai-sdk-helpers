@@ -16,6 +16,7 @@ from .errors import (
     InputValidationError,
     AsyncExecutionError,
     ResourceCleanupError,
+    ExtractionError,
 )
 
 from .utils.validation import (
@@ -40,6 +41,8 @@ from .structure import (
     ExtendedSummaryStructure,
     ValidationResultStructure,
     AgentBlueprint,
+    ExtractionItem,
+    ExtractionResult,
     create_plan,
     execute_task,
     execute_plan,
@@ -88,6 +91,14 @@ from .utils.output_validation import (
     validate_output,
 )
 from .utils.langextract import LangExtractAdapter, build_langextract_adapter
+from .extract import (
+    DocumentExtractor,
+    run_extraction,
+    build_examples_from_schema,
+    build_prompt_from_schema,
+    render_extraction_html,
+    SchemaLike,
+)
 
 __all__ = [
     # Environment utilities
@@ -106,6 +117,7 @@ __all__ = [
     "InputValidationError",
     "AsyncExecutionError",
     "ResourceCleanupError",
+    "ExtractionError",
     # Validation
     "validate_non_empty_string",
     "validate_max_length",
@@ -143,6 +155,8 @@ __all__ = [
     "WebSearchStructure",
     "VectorSearchStructure",
     "ValidationResultStructure",
+    "ExtractionItem",
+    "ExtractionResult",
     "ResponseBase",
     "ResponseMessage",
     "ResponseMessages",
@@ -172,4 +186,11 @@ __all__ = [
     # LangExtract
     "LangExtractAdapter",
     "build_langextract_adapter",
+    # Extraction helpers
+    "DocumentExtractor",
+    "run_extraction",
+    "build_examples_from_schema",
+    "build_prompt_from_schema",
+    "render_extraction_html",
+    "SchemaLike",
 ]
