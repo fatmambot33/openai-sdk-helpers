@@ -814,9 +814,31 @@ class Document(StructureBase):
         )
 
 
+class DocumentExtractorConfig(StructureBase):
+    """Confoguration settings for the extractor."""
+
+    prompt_description: str = spec_field(
+        "prompt_description",
+        allow_null=False,
+        description="Prompt description used by LangExtract.",
+        examples=["Extract entities from the text."],
+    )
+    extraction_classes: list[str] = spec_field(
+        "extraction_classes",
+        description="List of extraction classes to be extracted.",
+        default_factory=list,
+    )
+    examples: list[ExampleData] = spec_field(
+        "examples",
+        description="Example payloads supplied to LangExtract.",
+        default_factory=list,
+    )
+
+
 __all__ = [
     "AnnotatedDocument",
     "Document",
     "ExampleData",
     "Extraction",
+    "DocumentExtractorConfig",
 ]
