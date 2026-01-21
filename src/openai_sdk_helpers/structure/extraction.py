@@ -277,6 +277,7 @@ class Document(StructureBase):
     )
 
     def __post_init__(self) -> None:
+        """Post-initialization processing."""
         if self.document_id is None:
             self._document_id = f"doc_{uuid.uuid4().hex[:8]}"
         if self.tokenized_text is None:
@@ -285,7 +286,6 @@ class Document(StructureBase):
 
     def to_dataclass(self) -> LXDocument:
         """Convert to LangExtract Document dataclass."""
-
         lx_doc = LXDocument(
             text=self.text,
             document_id=self.document_id,

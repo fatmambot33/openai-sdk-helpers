@@ -455,6 +455,7 @@ class StructureBase(BaseModelJSONSerializable):
         ----------
         data : Any
             Dataclass instance to convert.
+
         Returns
         -------
         T
