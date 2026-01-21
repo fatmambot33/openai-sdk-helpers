@@ -8,6 +8,7 @@ generation, validation, and serialization.
 from __future__ import annotations
 
 # Standard library imports
+import dataclasses
 import inspect
 import json
 from dataclasses import dataclass
@@ -15,6 +16,7 @@ from pathlib import Path
 from typing import (
     Any,
     ClassVar,
+    Mapping,
     TypeVar,
     cast,
 )
@@ -454,14 +456,24 @@ class StructureBase(BaseModelJSONSerializable):
         Parameters
         ----------
         data : Any
-            Dataclass instance to convert.
+            Dataclass instance, mapping, or object with attributes to convert.
+            Private attributes (prefixed with ``_``) are ignored.
 
         Returns
         -------
         T
             New instance of the structure populated from the dataclass.
         """
-        return cls(**data.__dict__)
+        def _filter_private(items: list[tuple[str, Any]]) -> dict[str, Any]:
+            return {name: value for name, value in items if not name.startswith("_")}
+
+        if dataclasses.is_dataclass(data):
+            payload = dataclasses.asdict(data, dict_factory=_filter_private)
+        elif isinstance(data, Mapping):
+            payload = _filter_private(list(data.items()))
+        else:
+            payload = _filter_private(list(vars(data).items()))
+        return cls(**payload)
 
 
 @dataclass(frozen=True)

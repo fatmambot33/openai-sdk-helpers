@@ -286,9 +286,12 @@ class Document(StructureBase):
 
     def to_dataclass(self) -> LXDocument:
         """Convert to LangExtract Document dataclass."""
+        document_id = self.document_id
+        if document_id is None:
+            document_id = getattr(self, "_document_id", None)
         lx_doc = LXDocument(
             text=self.text,
-            document_id=self.document_id,
+            document_id=document_id,
             additional_context=self.additional_context,
         )
         if self.tokenized_text is None:
