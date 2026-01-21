@@ -32,6 +32,76 @@ class CharInterval(StructureBase):
         Convert to a LangExtract ``CharInterval`` dataclass.
     """
 
+    start_pos: int | None = spec_field(
+        "start_pos",
+        description="The starting position of the interval (inclusive).",
+    )
+    end_pos: int | None = spec_field(
+        "end_pos",
+        description="The ending position of the interval (exclusive).",
+    )
+
+    def to_dataclass(self) -> LXCharInterval:
+        """Convert to LangExtract CharInterval dataclass."""
+        return LXCharInterval(
+            start_pos=self.start_pos,
+            end_pos=self.end_pos,
+        )
+
+    @classmethod
+    def from_dataclass(cls, data: LXCharInterval) -> "CharInterval":
+        """Create a CharInterval from a LangExtract dataclass.
+
+        Parameters
+        ----------
+        data : LXCharInterval
+            LangExtract CharInterval dataclass instance.
+        """
+        return cls(
+            start_pos=data.start_pos,
+            end_pos=data.end_pos,
+        )
+
+
+class AlignmentStatus(Enum):
+    MATCH_EXACT = "match_exact"
+    MATCH_GREATER = "match_greater"
+    MATCH_LESSER = "match_lesser"
+    MATCH_FUZZY = "match_fuzzy"
+
+    def to_dataclass(self) -> LXAlignmentStatus:
+        """Convert to LangExtract AlignmentStatus dataclass."""
+        return LXAlignmentStatus(self.value)
+
+    @classmethod
+    def from_dataclass(cls, data: LXAlignmentStatus) -> "AlignmentStatus":
+        """Create an AlignmentStatus from a LangExtract dataclass.
+
+        Parameters
+        ----------
+        data : LXAlignmentStatus
+            LangExtract alignment status dataclass instance.
+        """
+        return cls(data.value)
+
+
+class TokenCharInterval(StructureBase):
+    """Represents an interval over characters in tokenized text.
+
+    The interval is defined by a start position (inclusive) and an end position
+    (exclusive).
+
+    Attributes
+    ----------
+      start_pos: The starting position of the interval (inclusive).
+      end_pos: The ending position of the interval (exclusive).
+
+    Methods
+    -------
+    to_dataclass()
+        Convert to a LangExtract ``CharInterval`` dataclass.
+    """
+
     start_pos: int = spec_field(
         "start_pos",
         description="The starting position of the interval (inclusive).",
@@ -43,19 +113,26 @@ class CharInterval(StructureBase):
         default=0,
     )
 
-    def to_dataclass(self) -> LXCharInterval:
+    def to_dataclass(self) -> LXtokenizer.CharInterval:
         """Convert to LangExtract CharInterval dataclass."""
-        return LXCharInterval(
+        return LXtokenizer.CharInterval(
             start_pos=self.start_pos,
             end_pos=self.end_pos,
         )
 
+    @classmethod
+    def from_dataclass(cls, data: LXtokenizer.CharInterval) -> "TokenCharInterval":
+        """Create a TokenCharInterval from a LangExtract dataclass.
 
-class AlignmentStatus(Enum):
-    MATCH_EXACT = "match_exact"
-    MATCH_GREATER = "match_greater"
-    MATCH_LESSER = "match_lesser"
-    MATCH_FUZZY = "match_fuzzy"
+        Parameters
+        ----------
+        data : LXtokenizer.CharInterval
+            LangExtract CharInterval dataclass instance.
+        """
+        return cls(
+            start_pos=data.start_pos,
+            end_pos=data.end_pos,
+        )
 
 
 class TokenInterval(StructureBase):
@@ -93,6 +170,20 @@ class TokenInterval(StructureBase):
             end_index=self.end_index,
         )
 
+    @classmethod
+    def from_dataclass(cls, data: LXtokenizer.TokenInterval) -> "TokenInterval":
+        """Create a TokenInterval from a LangExtract dataclass.
+
+        Parameters
+        ----------
+        data : LXtokenizer.TokenInterval
+            LangExtract TokenInterval dataclass instance.
+        """
+        return cls(
+            start_index=data.start_index,
+            end_index=data.end_index,
+        )
+
 
 class TokenType(IntEnum):
     """Enumeration of token types produced during tokenization.
@@ -107,6 +198,21 @@ class TokenType(IntEnum):
     WORD = 0
     NUMBER = 1
     PUNCTUATION = 2
+
+    def to_dataclass(self) -> LXtokenizer.TokenType:
+        """Convert to LangExtract TokenType dataclass."""
+        return LXtokenizer.TokenType(self.value)
+
+    @classmethod
+    def from_dataclass(cls, data: LXtokenizer.TokenType) -> "TokenType":
+        """Create a TokenType from a LangExtract dataclass.
+
+        Parameters
+        ----------
+        data : LXtokenizer.TokenType
+            LangExtract token type dataclass instance.
+        """
+        return cls(data.value)
 
 
 class Token(StructureBase):
@@ -135,10 +241,10 @@ class Token(StructureBase):
         "token_type",
         description="The type of the token, as defined by TokenType.",
     )
-    char_interval: CharInterval = spec_field(
+    char_interval: TokenCharInterval | None = spec_field(
         "char_interval",
         description="The character interval within the original text that this token spans.",
-        default_factory=CharInterval,
+        allow_null=True,
     )
     first_token_after_newline: bool = spec_field(
         "first_token_after_newline",
@@ -148,12 +254,67 @@ class Token(StructureBase):
 
     def to_dataclass(self) -> LXtokenizer.Token:
         """Convert to LangExtract Token dataclass."""
-        return LXtokenizer.Token(
+        token = LXtokenizer.Token(
             index=self.index,
             token_type=LXtokenizer.TokenType(self.token_type),
-            char_interval=self.char_interval.to_dataclass(),
             first_token_after_newline=self.first_token_after_newline,
         )
+        if self.char_interval is not None:
+            token.char_interval = self.char_interval.to_dataclass()
+        return token
+
+    @classmethod
+    def from_dataclass(cls, data: LXtokenizer.Token) -> "Token":
+        """Create a Token from a LangExtract dataclass.
+
+        Parameters
+        ----------
+        data : LXtokenizer.Token
+            LangExtract token dataclass instance.
+        """
+        char_interval = (
+            TokenCharInterval.from_dataclass(data.char_interval)
+            if data.char_interval is not None
+            else None
+        )
+        return cls(
+            index=data.index,
+            token_type=TokenType.from_dataclass(data.token_type),
+            char_interval=char_interval,
+            first_token_after_newline=data.first_token_after_newline,
+        )
+
+    @staticmethod
+    def from_dataclass_list(data: list[LXtokenizer.Token]) -> list["Token"]:
+        """Create a list of Tokens from a list of LangExtract dataclasses.
+
+        Parameters
+        ----------
+        data : list[LXtokenizer.Token]
+            List of LangExtract token dataclass instances.
+
+        Returns
+        -------
+        list[Token]
+            List of structured token models.
+        """
+        return [Token.from_dataclass(item) for item in data]
+
+    @staticmethod
+    def to_dataclass_list(data: list["Token"]) -> list[LXtokenizer.Token]:
+        """Convert a list of Tokens to LangExtract Token dataclasses.
+
+        Parameters
+        ----------
+        data : list[Token]
+            List of structured token models.
+
+        Returns
+        -------
+        list[LXtokenizer.Token]
+            List of LangExtract token dataclass instances.
+        """
+        return [item.to_dataclass() for item in data]
 
 
 class TokenizedText(StructureBase):
@@ -180,10 +341,23 @@ class TokenizedText(StructureBase):
 
     def to_dataclass(self) -> LXtokenizer.TokenizedText:
         """Convert to LangExtract TokenizedText dataclass."""
-        lx_tokens = [token.to_dataclass() for token in self.tokens]
         return LXtokenizer.TokenizedText(
             text=self.text,
-            tokens=lx_tokens,
+            tokens=Token.to_dataclass_list(self.tokens),
+        )
+
+    @classmethod
+    def from_dataclass(cls, data: LXtokenizer.TokenizedText) -> "TokenizedText":
+        """Create a TokenizedText from a LangExtract dataclass.
+
+        Parameters
+        ----------
+        data : LXtokenizer.TokenizedText
+            LangExtract TokenizedText dataclass instance.
+        """
+        return cls(
+            text=data.text,
+            tokens=Token.from_dataclass_list(data.tokens),
         )
 
 
@@ -229,7 +403,7 @@ class Extraction(StructureBase):
         allow_null=False,
         description="Raw text captured for the extracted item.",
     )
-    description: str = spec_field(
+    description: str | None = spec_field(
         "description",
         allow_null=True,
         description="Optional description of the extracted item.",
@@ -239,22 +413,22 @@ class Extraction(StructureBase):
         default=None,
         description="Additional attributes attached to the item.",
     )
-    char_interval: CharInterval = spec_field(
+    char_interval: CharInterval | None = spec_field(
         "char_interval",
         allow_null=True,
         description="Character interval of the extracted item in the source text.",
     )
-    alignment_status: AlignmentStatus = spec_field(
+    alignment_status: AlignmentStatus | None = spec_field(
         "alignment_status",
         allow_null=True,
         description="Alignment status of the extracted item.",
     )
-    extraction_index: int = spec_field(
+    extraction_index: int | None = spec_field(
         "extraction_index",
         description="Index of the extraction in the list of extractions.",
         allow_null=True,
     )
-    group_index: int = spec_field(
+    group_index: int | None = spec_field(
         "group_index",
         description="Index of the group this item belongs to, if applicable.",
         allow_null=True,
@@ -275,11 +449,15 @@ class Extraction(StructureBase):
             LangExtract extraction dataclass instance.
         """
         char_interval = (
-            self.char_interval.to_dataclass() if self.char_interval is not None else None
+            self.char_interval.to_dataclass()
+            if self.char_interval is not None
+            else None
         )
-        alignment_status = None
-        if self.alignment_status is not None:
-            alignment_status = LXAlignmentStatus(self.alignment_status.value)
+        alignment_status = (
+            self.alignment_status.to_dataclass()
+            if self.alignment_status is not None
+            else None
+        )
         token_interval = (
             self.token_interval.to_dataclass()
             if self.token_interval is not None
@@ -297,6 +475,24 @@ class Extraction(StructureBase):
             token_interval=token_interval,
         )
 
+    @staticmethod
+    def to_dataclass_list(
+        data: list[Extraction],
+    ) -> list[LXExtraction]:
+        """Convert a list of Extractions to LangExtract Extraction dataclasses.
+
+        Parameters
+        ----------
+        data : list[Extraction]
+            List of structured extraction models.
+
+        Returns
+        -------
+        list[LXExtraction]
+            List of LangExtract extraction dataclass instances.
+        """
+        return [item.to_dataclass() for item in data]
+
     @classmethod
     def from_dataclass(cls, data: LXExtraction) -> "Extraction":
         """Create an extraction from a LangExtract dataclass.
@@ -311,15 +507,13 @@ class Extraction(StructureBase):
         Extraction
             Structured extraction model.
         """
-        if not isinstance(data, LXExtraction):
-            return super().from_dataclass(data)
         char_interval = (
             CharInterval.from_dataclass(data.char_interval)
             if data.char_interval is not None
             else None
         )
         alignment_status = (
-            AlignmentStatus(data.alignment_status.value)
+            AlignmentStatus.from_dataclass(data.alignment_status)
             if data.alignment_status is not None
             else None
         )
@@ -339,6 +533,26 @@ class Extraction(StructureBase):
             attributes=data.attributes,
             token_interval=token_interval,
         )
+
+    @staticmethod
+    def from_dataclass_list(
+        data: list[LXExtraction] | None,
+    ) -> list["Extraction"]:
+        """Create a list of extractions from a list of LangExtract dataclasses.
+
+        Parameters
+        ----------
+        data : list[LXExtraction]
+            List of LangExtract extraction dataclass instances.
+
+        Returns
+        -------
+        list[Extraction]
+            List of structured extraction models.
+        """
+        if data is None:
+            return []
+        return [Extraction.from_dataclass(item) for item in data]
 
 
 class ExampleData(StructureBase):
@@ -376,10 +590,9 @@ class ExampleData(StructureBase):
         LXExampleData
             LangExtract example dataclass instance.
         """
-        lx_extractions = [extraction.to_dataclass() for extraction in self.extractions]
         return LXExampleData(
             text=self.text,
-            extractions=lx_extractions,
+            extractions=Extraction.to_dataclass_list(self.extractions),
         )
 
     @classmethod
@@ -396,13 +609,7 @@ class ExampleData(StructureBase):
         ExampleData
             Structured example data model.
         """
-        if not isinstance(data, LXExampleData):
-            return super().from_dataclass(data)
-        extractions = (
-            [Extraction.from_dataclass(item) for item in data.extractions]
-            if data.extractions is not None
-            else []
-        )
+        extractions = Extraction.from_dataclass_list(data.extractions)
         return cls(text=data.text, extractions=extractions)
 
 
@@ -467,7 +674,7 @@ class AnnotatedDocument(StructureBase):
             LangExtract annotated document dataclass instance.
         """
         lx_extractions = (
-            [extraction.to_dataclass() for extraction in self.extractions]
+            Extraction.to_dataclass_list(self.extractions)
             if self.extractions is not None
             else None
         )
@@ -494,10 +701,8 @@ class AnnotatedDocument(StructureBase):
         AnnotatedDocument
             Structured annotated document model.
         """
-        if not isinstance(data, LXAnnotatedDocument):
-            return super().from_dataclass(data)
         extractions = (
-            [Extraction.from_dataclass(item) for item in data.extractions]
+            Extraction.from_dataclass_list(data.extractions)
             if data.extractions is not None
             else None
         )
@@ -596,8 +801,6 @@ class Document(StructureBase):
         Document
             Structured document model.
         """
-        if not isinstance(data, LXDocument):
-            return super().from_dataclass(data)
         tokenized_text = (
             TokenizedText.from_dataclass(data.tokenized_text)
             if data.tokenized_text is not None

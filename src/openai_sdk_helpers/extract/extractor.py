@@ -89,6 +89,7 @@ class DocumentExtractor:
             fence_output=True,
             use_schema_constraints=False,
         )
+
         def _convert(data: typing.Any) -> AnnotatedDocument:
             if isinstance(data, LXAnnotatedDocument):
                 return AnnotatedDocument.from_dataclass(data)
