@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import os
 import typing
 import langextract as lx
@@ -63,11 +64,18 @@ class DocumentExtractor:
         if isinstance(result, list):
             extracted_items = []
             for doc in result:
-                extraction = AnnotatedDocument.from_dataclass(doc)
+                extraction = self._convert_extraction(doc)
                 extracted_items.append(extraction)
             return extracted_items
 
-        return [AnnotatedDocument.from_dataclass(result)]
+        return [self._convert_extraction(result)]
+
+    @staticmethod
+    def _convert_extraction(data: typing.Any) -> AnnotatedDocument:
+        """Convert a LangExtract payload into an AnnotatedDocument."""
+        if dataclasses.is_dataclass(data):
+            return AnnotatedDocument.from_dataclass(data)
+        return AnnotatedDocument.model_validate(data)
 
 
 __all__ = ["DocumentExtractor", "ExtractionError"]
