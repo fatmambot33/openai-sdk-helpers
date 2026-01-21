@@ -468,7 +468,7 @@ class StructureBase(BaseModelJSONSerializable):
         def _filter_private(items: list[tuple[str, Any]]) -> dict[str, Any]:
             return {name: value for name, value in items if not name.startswith("_")}
 
-        if dataclasses.is_dataclass(data):
+        if dataclasses.is_dataclass(data) and not isinstance(data, type):
             payload = dataclasses.asdict(data, dict_factory=_filter_private)
         elif isinstance(data, Mapping):
             payload = _filter_private(list(data.items()))
