@@ -76,7 +76,7 @@ from __future__ import annotations
 
 from .agent_blueprint import AgentBlueprint
 from .base import *
-from .extraction import AnnotatedDocument, Document
+from .extraction import AnnotatedDocument, Document, ExampleData, Extraction
 from .plan import *
 from .prompt import PromptStructure
 from .responses import *
@@ -116,6 +116,8 @@ __all__ = [
     "ValidationResultStructure",
     "AnnotatedDocument",
     "Document",
+    "ExampleData",
+    "Extraction",
     "assistant_tool_definition",
     "assistant_format",
     "response_tool_definition",

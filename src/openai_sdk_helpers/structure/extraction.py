@@ -6,8 +6,12 @@ from typing import Any
 import uuid
 from enum import Enum, IntEnum
 from langextract.core.data import (
+    AlignmentStatus as LXAlignmentStatus,
     AnnotatedDocument as LXAnnotatedDocument,
+    CharInterval as LXCharInterval,
     Document as LXDocument,
+    ExampleData as LXExampleData,
+    Extraction as LXExtraction,
 )
 
 from langextract.core import tokenizer as LXtokenizer
@@ -21,6 +25,11 @@ class CharInterval(StructureBase):
     ----------
       start_pos: The starting position of the interval (inclusive).
       end_pos: The ending position of the interval (exclusive).
+
+    Methods
+    -------
+    to_dataclass()
+        Convert to a LangExtract ``CharInterval`` dataclass.
     """
 
     start_pos: int = spec_field(
@@ -34,9 +43,9 @@ class CharInterval(StructureBase):
         default=0,
     )
 
-    def to_dataclass(self) -> LXtokenizer.CharInterval:
+    def to_dataclass(self) -> LXCharInterval:
         """Convert to LangExtract CharInterval dataclass."""
-        return LXtokenizer.CharInterval(
+        return LXCharInterval(
             start_pos=self.start_pos,
             end_pos=self.end_pos,
         )
@@ -49,7 +58,7 @@ class AlignmentStatus(Enum):
     MATCH_FUZZY = "match_fuzzy"
 
 
-class TokenInterval:
+class TokenInterval(StructureBase):
     """Represents an interval over tokens in tokenized text.
 
     The interval is defined by a start index (inclusive) and an end index
@@ -59,6 +68,11 @@ class TokenInterval:
     ----------
       start_index: The index of the first token in the interval.
       end_index: The index one past the last token in the interval.
+
+    Methods
+    -------
+    to_dataclass()
+        Convert to a LangExtract ``TokenInterval`` dataclass.
     """
 
     start_index: int = spec_field(
@@ -173,8 +187,8 @@ class TokenizedText(StructureBase):
         )
 
 
-class AnnotatedDocument(StructureBase):
-    """Represent a single extracted item from a document.
+class Extraction(StructureBase):
+    """Represent a single extraction from a document.
 
     Attributes
     ----------
@@ -182,17 +196,27 @@ class AnnotatedDocument(StructureBase):
         Label or class assigned to the extracted item.
     extraction_text : str
         Raw text captured for the extracted item.
+    description : str | None
+        Optional description of the extracted item.
     attributes : dict[str, Any]
         Additional attributes attached to the item. Default is an empty dict.
-    source_span : tuple[int, int] | None
-        Character span in the source document, if available.
-    source_id : str | None
-        Identifier for the source document, if available.
+    char_interval : CharInterval | None
+        Character interval in the source text.
+    alignment_status : AlignmentStatus | None
+        Alignment status of the extracted item.
+    extraction_index : int | None
+        Index of the extraction in the list of extractions.
+    group_index : int | None
+        Index of the group this item belongs to, if applicable.
+    token_interval : TokenInterval | None
+        Token interval of the extracted item.
 
     Methods
     -------
-    None
-        This structure relies on ``StructureBase`` methods.
+    to_dataclass()
+        Convert to a LangExtract ``Extraction`` dataclass.
+    from_dataclass(data)
+        Create an extraction from a LangExtract dataclass.
     """
 
     extraction_class: str = spec_field(
@@ -210,9 +234,9 @@ class AnnotatedDocument(StructureBase):
         allow_null=True,
         description="Optional description of the extracted item.",
     )
-    attributes: dict[str, Any] = spec_field(
+    attributes: dict[str, Any] | None = spec_field(
         "attributes",
-        default_factory=dict,
+        default=None,
         description="Additional attributes attached to the item.",
     )
     char_interval: CharInterval = spec_field(
@@ -236,23 +260,280 @@ class AnnotatedDocument(StructureBase):
         allow_null=True,
     )
 
+    token_interval: TokenInterval | None = spec_field(
+        "token_interval",
+        description="Token interval of the extracted item.",
+        allow_null=True,
+    )
+
+    def to_dataclass(self) -> LXExtraction:
+        """Convert to LangExtract Extraction dataclass.
+
+        Returns
+        -------
+        LXExtraction
+            LangExtract extraction dataclass instance.
+        """
+        char_interval = (
+            self.char_interval.to_dataclass() if self.char_interval is not None else None
+        )
+        alignment_status = None
+        if self.alignment_status is not None:
+            alignment_status = LXAlignmentStatus(self.alignment_status.value)
+        token_interval = (
+            self.token_interval.to_dataclass()
+            if self.token_interval is not None
+            else None
+        )
+        return LXExtraction(
+            extraction_class=self.extraction_class,
+            extraction_text=self.extraction_text,
+            char_interval=char_interval,
+            alignment_status=alignment_status,
+            extraction_index=self.extraction_index,
+            group_index=self.group_index,
+            description=self.description,
+            attributes=self.attributes,
+            token_interval=token_interval,
+        )
+
+    @classmethod
+    def from_dataclass(cls, data: LXExtraction) -> "Extraction":
+        """Create an extraction from a LangExtract dataclass.
+
+        Parameters
+        ----------
+        data : LXExtraction
+            LangExtract extraction dataclass instance.
+
+        Returns
+        -------
+        Extraction
+            Structured extraction model.
+        """
+        if not isinstance(data, LXExtraction):
+            return super().from_dataclass(data)
+        char_interval = (
+            CharInterval.from_dataclass(data.char_interval)
+            if data.char_interval is not None
+            else None
+        )
+        alignment_status = (
+            AlignmentStatus(data.alignment_status.value)
+            if data.alignment_status is not None
+            else None
+        )
+        token_interval = (
+            TokenInterval.from_dataclass(data.token_interval)
+            if data.token_interval is not None
+            else None
+        )
+        return cls(
+            extraction_class=data.extraction_class,
+            extraction_text=data.extraction_text,
+            char_interval=char_interval,
+            alignment_status=alignment_status,
+            extraction_index=data.extraction_index,
+            group_index=data.group_index,
+            description=data.description,
+            attributes=data.attributes,
+            token_interval=token_interval,
+        )
+
+
+class ExampleData(StructureBase):
+    """Represent example data for structured prompting.
+
+    Attributes
+    ----------
+    text : str
+        Raw text for the example.
+    extractions : list[Extraction]
+        Extractions associated with the text. Default is an empty list.
+
+    Methods
+    -------
+    to_dataclass()
+        Convert to a LangExtract ``ExampleData`` dataclass.
+    """
+
+    text: str = spec_field(
+        "text",
+        allow_null=False,
+        description="Raw text for the example.",
+    )
+    extractions: list[Extraction] = spec_field(
+        "extractions",
+        description="Extractions associated with the text.",
+        default_factory=list,
+    )
+
+    def to_dataclass(self) -> LXExampleData:
+        """Convert to LangExtract ExampleData dataclass.
+
+        Returns
+        -------
+        LXExampleData
+            LangExtract example dataclass instance.
+        """
+        lx_extractions = [extraction.to_dataclass() for extraction in self.extractions]
+        return LXExampleData(
+            text=self.text,
+            extractions=lx_extractions,
+        )
+
+    @classmethod
+    def from_dataclass(cls, data: LXExampleData) -> "ExampleData":
+        """Create example data from a LangExtract dataclass.
+
+        Parameters
+        ----------
+        data : LXExampleData
+            LangExtract example dataclass instance.
+
+        Returns
+        -------
+        ExampleData
+            Structured example data model.
+        """
+        if not isinstance(data, LXExampleData):
+            return super().from_dataclass(data)
+        extractions = (
+            [Extraction.from_dataclass(item) for item in data.extractions]
+            if data.extractions is not None
+            else []
+        )
+        return cls(text=data.text, extractions=extractions)
+
+
+class AnnotatedDocument(StructureBase):
+    """Represent a document annotated with extractions.
+
+    Attributes
+    ----------
+    document_id : str | None
+        Identifier for the document.
+    extractions : list[Extraction] | None
+        Extractions associated with the document.
+    text : str | None
+        Raw text representation of the document.
+    tokenized_text : TokenizedText | None
+        Tokenized text for the document.
+
+    Methods
+    -------
+    to_dataclass()
+        Convert to a LangExtract ``AnnotatedDocument`` dataclass.
+    from_dataclass(data)
+        Create an annotated document from a LangExtract dataclass.
+    """
+
+    document_id: str | None = spec_field(
+        "document_id",
+        description="Identifier for the document.",
+        allow_null=True,
+    )
+    extractions: list[Extraction] | None = spec_field(
+        "extractions",
+        description="Extractions associated with the document.",
+        allow_null=True,
+        default_factory=list,
+    )
+    text: str | None = spec_field(
+        "text",
+        description="Raw text representation of the document.",
+        allow_null=True,
+    )
+    tokenized_text: TokenizedText | None = spec_field(
+        "tokenized_text",
+        description="Tokenized representation of the document text.",
+        allow_null=True,
+    )
+
+    def model_post_init(self, __context: Any) -> None:
+        """Populate default identifiers and tokenized text after validation."""
+        if self.document_id is None:
+            self.document_id = f"doc_{uuid.uuid4().hex[:8]}"
+        if self.text and self.tokenized_text is None:
+            tokenized = LXtokenizer.tokenize(self.text)
+            self.tokenized_text = TokenizedText.from_dataclass(tokenized)
+
+    def to_dataclass(self) -> LXAnnotatedDocument:
+        """Convert to LangExtract AnnotatedDocument dataclass.
+
+        Returns
+        -------
+        LXAnnotatedDocument
+            LangExtract annotated document dataclass instance.
+        """
+        lx_extractions = (
+            [extraction.to_dataclass() for extraction in self.extractions]
+            if self.extractions is not None
+            else None
+        )
+        lx_doc = LXAnnotatedDocument(
+            document_id=self.document_id,
+            extractions=lx_extractions,
+            text=self.text,
+        )
+        if self.tokenized_text is not None:
+            lx_doc.tokenized_text = self.tokenized_text.to_dataclass()
+        return lx_doc
+
+    @classmethod
+    def from_dataclass(cls, data: LXAnnotatedDocument) -> "AnnotatedDocument":
+        """Create an annotated document from a LangExtract dataclass.
+
+        Parameters
+        ----------
+        data : LXAnnotatedDocument
+            LangExtract annotated document dataclass instance.
+
+        Returns
+        -------
+        AnnotatedDocument
+            Structured annotated document model.
+        """
+        if not isinstance(data, LXAnnotatedDocument):
+            return super().from_dataclass(data)
+        extractions = (
+            [Extraction.from_dataclass(item) for item in data.extractions]
+            if data.extractions is not None
+            else None
+        )
+        tokenized_text = (
+            TokenizedText.from_dataclass(data.tokenized_text)
+            if data.tokenized_text is not None
+            else None
+        )
+        return cls(
+            document_id=data.document_id,
+            extractions=extractions,
+            text=data.text,
+            tokenized_text=tokenized_text,
+        )
+
 
 class Document(StructureBase):
     """Store extraction results for a document.
 
     Attributes
     ----------
+    text : str
+        Raw text representation for the document.
     document_id : str | None
         Identifier for the source document.
-    items : list[ExtractionItem]
-        Extracted items for the document.
-    metrics : dict[str, Any]
-        Metrics and diagnostics for the extraction. Default is an empty dict.
+    additional_context : str | None
+        Additional context to supplement prompt instructions.
+    tokenized_text : TokenizedText | None
+        Tokenized representation of the document text.
 
     Methods
     -------
-    None
-        This structure relies on ``StructureBase`` methods.
+    to_dataclass()
+        Convert to a LangExtract ``Document`` dataclass.
+    from_dataclass(data)
+        Create a document from a LangExtract dataclass.
     """
 
     text: str = spec_field(
@@ -276,25 +557,63 @@ class Document(StructureBase):
         allow_null=True,
     )
 
-    def __post_init__(self) -> None:
-        """Post-initialization processing."""
+    def model_post_init(self, __context: Any) -> None:
+        """Populate default identifiers and tokenized text after validation."""
         if self.document_id is None:
             self.document_id = f"doc_{uuid.uuid4().hex[:8]}"
-        if self.tokenized_text is None:
-            _tokenized_text = LXtokenizer.tokenize(self.text)
-            self.tokenized_text = TokenizedText.from_dataclass(_tokenized_text)
+        if self.tokenized_text is None and self.text:
+            tokenized = LXtokenizer.tokenize(self.text)
+            self.tokenized_text = TokenizedText.from_dataclass(tokenized)
 
     def to_dataclass(self) -> LXDocument:
-        """Convert to LangExtract Document dataclass."""
+        """Convert to LangExtract Document dataclass.
+
+        Returns
+        -------
+        LXDocument
+            LangExtract document dataclass instance.
+        """
         lx_doc = LXDocument(
             text=self.text,
             document_id=self.document_id,
             additional_context=self.additional_context,
         )
-        if self.tokenized_text is None:
-            raise ValueError("tokenized_text is None, cannot convert to LXDocument.")
-        lx_doc.tokenized_text = self.tokenized_text.to_dataclass()
+        if self.tokenized_text is not None:
+            lx_doc.tokenized_text = self.tokenized_text.to_dataclass()
         return lx_doc
 
+    @classmethod
+    def from_dataclass(cls, data: LXDocument) -> "Document":
+        """Create a document from a LangExtract dataclass.
 
-__all__ = ["AnnotatedDocument", "Document"]
+        Parameters
+        ----------
+        data : LXDocument
+            LangExtract document dataclass instance.
+
+        Returns
+        -------
+        Document
+            Structured document model.
+        """
+        if not isinstance(data, LXDocument):
+            return super().from_dataclass(data)
+        tokenized_text = (
+            TokenizedText.from_dataclass(data.tokenized_text)
+            if data.tokenized_text is not None
+            else None
+        )
+        return cls(
+            text=data.text,
+            document_id=data.document_id,
+            additional_context=data.additional_context,
+            tokenized_text=tokenized_text,
+        )
+
+
+__all__ = [
+    "AnnotatedDocument",
+    "Document",
+    "ExampleData",
+    "Extraction",
+]
