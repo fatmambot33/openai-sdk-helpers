@@ -447,6 +447,21 @@ class StructureBase(BaseModelJSONSerializable):
             ]
         )
 
+    @classmethod
+    def from_dataclass(cls: type[T], data: Any) -> T:
+        """Create an instance from a dataclass object.
+
+        Parameters
+        ----------
+        data : Any
+            Dataclass instance to convert.
+        Returns
+        -------
+        T
+            New instance of the structure populated from the dataclass.
+        """
+        return cls(**data.__dict__)
+
 
 @dataclass(frozen=True)
 class SchemaOptions:

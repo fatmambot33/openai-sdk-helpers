@@ -17,7 +17,7 @@ cd "$(git rev-parse --show-toplevel)"
 FAILED=0
 
 pip install --upgrade pip
-pip install --upgrade ".[dev]"
+pip install --upgrade -e ".[dev]"
 
 # Style Checks
 echo "▶ Running pydocstyle..."

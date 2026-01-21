@@ -2,21 +2,12 @@
 
 from __future__ import annotations
 
-import asyncio
 import os
-import time
-from collections.abc import Iterable, Mapping, Sequence
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any
 import typing
 import langextract as lx
-from langextract.core.data import AnnotatedDocument
-import textwrap
-from openai_sdk_helpers import prompt
 
-from ..errors import ExtractionError, InputValidationError
-from ..logging import log
-from ..structure.extraction import ExtractionItem, ExtractionResult
+from ..errors import ExtractionError
+from ..structure.extraction import AnnotatedDocument, Document
 
 
 class DocumentExtractor:
@@ -51,18 +42,20 @@ class DocumentExtractor:
         max_workers: int = 1,
     ) -> None:
         """Initialize the extractor."""
-        self._model_id = model_id
+        self.model_id = model_id
         self.prompt = prompt_description
         self.examples = examples
         self.max_workers = max_workers
 
-    def extract(self, input_text: str) -> list[ExtractionItem]:
+    def extract(self, input_text: Document | list[Document]) -> list[AnnotatedDocument]:
         """Run the extraction."""
+        if isinstance(input_text, Document):
+            input_text = [input_text]
         result = lx.extract(
             text_or_documents=input_text,
             prompt_description=self.prompt,
             examples=self.examples,
-            model_id=self._model_id,  # Automatically selects OpenAI provider
+            model_id=self.model_id,  # Automatically selects OpenAI provider
             api_key=os.environ.get("OPENAI_API_KEY"),
             fence_output=True,
             use_schema_constraints=False,
@@ -70,40 +63,11 @@ class DocumentExtractor:
         if isinstance(result, list):
             extracted_items = []
             for doc in result:
-                extraction = ExtractionResult.from_annotated_document(doc)
+                extraction = AnnotatedDocument.from_dataclass(doc)
                 extracted_items.append(extraction)
             return extracted_items
 
-        return [ExtractionItem.from_annotated_document(result)]
-
-
-def _normalize_span(span: Any) -> tuple[int, int] | None:
-    """Normalize span data into a tuple."""
-    if span is None:
-        return None
-    if isinstance(span, tuple) and len(span) == 2:
-        return int(span[0]), int(span[1])
-    if isinstance(span, list) and len(span) == 2:
-        return int(span[0]), int(span[1])
-    if isinstance(span, Mapping) and "start" in span and "end" in span:
-        return int(span["start"]), int(span["end"])
-    return None
-
-
-def _extract_metrics(raw_output: Any) -> dict[str, Any]:
-    """Extract metrics payload from LangExtract output."""
-    if isinstance(raw_output, Mapping):
-        metrics = raw_output.get("metrics")
-        if isinstance(metrics, Mapping):
-            return dict(metrics)
-    return {}
-
-
-def _density_per_1k_chars(text: str, num_items: int) -> float:
-    """Compute extraction density per 1000 characters."""
-    if not text:
-        return 0.0
-    return (num_items / max(len(text), 1)) * 1000
+        return [AnnotatedDocument.from_dataclass(result)]
 
 
 __all__ = ["DocumentExtractor", "ExtractionError"]

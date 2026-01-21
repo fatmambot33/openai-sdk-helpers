@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 from typing import Any
-
+import uuid
 from enum import Enum, IntEnum
-from langextract.core.data import AnnotatedDocument
+from langextract.core.data import (
+    AnnotatedDocument as LXAnnotatedDocument,
+    Document as LXDocument,
+)
+
+from langextract.core import tokenizer as LXtokenizer
 from .base import StructureBase, spec_field
 
 
@@ -28,6 +33,13 @@ class CharInterval(StructureBase):
         description="The ending position of the interval (exclusive).",
         default=0,
     )
+
+    def to_dataclass(self) -> LXtokenizer.CharInterval:
+        """Convert to LangExtract CharInterval dataclass."""
+        return LXtokenizer.CharInterval(
+            start_pos=self.start_pos,
+            end_pos=self.end_pos,
+        )
 
 
 class AlignmentStatus(Enum):
@@ -59,6 +71,13 @@ class TokenInterval:
         description="The index one past the last token in the interval.",
         default=0,
     )
+
+    def to_dataclass(self) -> LXtokenizer.TokenInterval:
+        """Convert to LangExtract TokenInterval dataclass."""
+        return LXtokenizer.TokenInterval(
+            start_index=self.start_index,
+            end_index=self.end_index,
+        )
 
 
 class TokenType(IntEnum):
@@ -113,8 +132,17 @@ class Token(StructureBase):
         default=False,
     )
 
+    def to_dataclass(self) -> LXtokenizer.Token:
+        """Convert to LangExtract Token dataclass."""
+        return LXtokenizer.Token(
+            index=self.index,
+            token_type=LXtokenizer.TokenType(self.token_type),
+            char_interval=self.char_interval.to_dataclass(),
+            first_token_after_newline=self.first_token_after_newline,
+        )
 
-class TokenizedText:
+
+class TokenizedText(StructureBase):
     """Holds the result of tokenizing a text string.
 
     Attributes
@@ -136,8 +164,16 @@ class TokenizedText:
         default_factory=list,
     )
 
+    def to_dataclass(self) -> LXtokenizer.TokenizedText:
+        """Convert to LangExtract TokenizedText dataclass."""
+        lx_tokens = [token.to_dataclass() for token in self.tokens]
+        return LXtokenizer.TokenizedText(
+            text=self.text,
+            tokens=lx_tokens,
+        )
 
-class ExtractionItem(StructureBase):
+
+class AnnotatedDocument(StructureBase):
     """Represent a single extracted item from a document.
 
     Attributes
@@ -200,24 +236,8 @@ class ExtractionItem(StructureBase):
         allow_null=True,
     )
 
-    @classmethod
-    def from_annotated_document(cls, doc: AnnotatedDocument) -> ExtractionItem:
-        """Create an ExtractionItem from a LangExtract AnnotatedDocument.
 
-        Parameters
-        ----------
-        doc : Any
-            AnnotatedDocument instance from LangExtract.
-
-        Returns
-        -------
-        ExtractionItem
-            New instance of ExtractionItem populated from the AnnotatedDocument.
-        """
-        return cls.from_json(doc.__dict__)
-
-
-class ExtractionResult(StructureBase):
+class Document(StructureBase):
     """Store extraction results for a document.
 
     Attributes
@@ -235,45 +255,46 @@ class ExtractionResult(StructureBase):
         This structure relies on ``StructureBase`` methods.
     """
 
+    text: str = spec_field(
+        "text",
+        allow_null=False,
+        description="Raw text representation for the document.",
+    )
     document_id: str | None = spec_field(
         "document_id",
         description="Identifier for the source document.",
+        allow_null=True,
     )
-    items: list[ExtractionItem] = spec_field(
-        "items",
-        allow_null=False,
-        default_factory=list,
-        description="Extracted items for the document.",
+    additional_context: str | None = spec_field(
+        "additional_context",
+        description="Additional context to supplement prompt instructions.",
+        allow_null=True,
     )
-    metrics: dict[str, Any] = spec_field(
-        "metrics",
-        default_factory=dict,
-        description="Metrics and diagnostics for the extraction.",
+    tokenized_text: TokenizedText | None = spec_field(
+        "tokenized_text",
+        description="Tokenized representation of the document text.",
+        allow_null=True,
     )
 
-    @classmethod
-    def from_annotated_document(cls, doc: Any) -> ExtractionResult:
-        """Create an ExtractionResult from a LangExtract AnnotatedDocument.
+    def __post_init__(self) -> None:
+        if self.document_id is None:
+            self._document_id = f"doc_{uuid.uuid4().hex[:8]}"
+        if self.tokenized_text is None:
+            _tokenized_text = LXtokenizer.tokenize(self.text)
+            self.tokenized_text = TokenizedText.from_dataclass(_tokenized_text)
 
-        Parameters
-        ----------
-        doc : Any
-            AnnotatedDocument instance from LangExtract.
+    def to_dataclass(self) -> LXDocument:
+        """Convert to LangExtract Document dataclass."""
 
-        Returns
-        -------
-        ExtractionResult
-            New instance of ExtractionResult populated from the AnnotatedDocument.
-        """
-        items = [
-            ExtractionItem.from_annotated_document(item) for item in doc.extractions
-        ]
-
-        return cls(
-            document_id=doc.document_id,
-            items=items,
-            metrics=getattr(doc, "metrics", {}),
+        lx_doc = LXDocument(
+            text=self.text,
+            document_id=self.document_id,
+            additional_context=self.additional_context,
         )
+        if self.tokenized_text is None:
+            raise ValueError("tokenized_text is None, cannot convert to LXDocument.")
+        lx_doc.tokenized_text = self.tokenized_text.to_dataclass()
+        return lx_doc
 
 
-__all__ = ["ExtractionItem", "ExtractionResult"]
+__all__ = ["AnnotatedDocument", "Document"]
