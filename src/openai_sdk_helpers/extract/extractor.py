@@ -51,6 +51,11 @@ class DocumentExtractor:
         max_workers : int, optional
             Maximum number of workers for concurrent extraction. Default is 1.
         """
+        if not examples:
+            raise ValueError(
+                "Examples are required for reliable extraction. "
+                "Provide at least one ExampleData instance."
+            )
         self.model_id = model_id
         self.prompt = prompt_description
         self.examples = examples
