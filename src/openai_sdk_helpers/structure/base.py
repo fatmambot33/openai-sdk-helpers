@@ -464,6 +464,7 @@ class StructureBase(BaseModelJSONSerializable):
         T
             New instance of the structure populated from the dataclass.
         """
+
         def _filter_private(items: list[tuple[str, Any]]) -> dict[str, Any]:
             return {name: value for name, value in items if not name.startswith("_")}
 
