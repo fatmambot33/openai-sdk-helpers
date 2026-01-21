@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import dataclasses
 import os
 import typing
 import langextract as lx
+from langextract.core.data import AnnotatedDocument as LXAnnotatedDocument
 
 from ..errors import ExtractionError
 from ..structure.extraction import AnnotatedDocument, Document, ExampleData
@@ -34,7 +34,7 @@ class DocumentExtractor:
     def __init__(
         self,
         prompt_description: str,
-        examples: typing.Sequence[ExampleData | typing.Any],
+        examples: typing.Sequence[ExampleData],
         model_id: str,
         max_workers: int = 1,
     ) -> None:
@@ -44,7 +44,7 @@ class DocumentExtractor:
         ----------
         prompt_description : str
             Prompt description used by LangExtract.
-        examples : Sequence[ExampleData | Any]
+        examples : Sequence[ExampleData]
             Example payloads supplied to LangExtract.
         model_id : str
             Model identifier to pass to LangExtract.
@@ -89,21 +89,15 @@ class DocumentExtractor:
             fence_output=True,
             use_schema_constraints=False,
         )
+        def _convert(data: typing.Any) -> AnnotatedDocument:
+            if isinstance(data, LXAnnotatedDocument):
+                return AnnotatedDocument.from_dataclass(data)
+            return AnnotatedDocument.model_validate(data)
+
         if isinstance(result, list):
-            extracted_items = []
-            for doc in result:
-                extraction = self._convert_extraction(doc)
-                extracted_items.append(extraction)
-            return extracted_items
+            return [_convert(doc) for doc in result]
 
-        return [self._convert_extraction(result)]
-
-    @staticmethod
-    def _convert_extraction(data: typing.Any) -> AnnotatedDocument:
-        """Convert a LangExtract payload into an AnnotatedDocument."""
-        if dataclasses.is_dataclass(data):
-            return AnnotatedDocument.from_dataclass(data)
-        return AnnotatedDocument.model_validate(data)
+        return [_convert(result)]
 
 
 __all__ = ["DocumentExtractor", "ExtractionError"]
