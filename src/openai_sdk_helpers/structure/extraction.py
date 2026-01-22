@@ -846,17 +846,49 @@ class DocumentExtractorConfig(StructureBase):
         "prompt_description",
         allow_null=False,
         description="Prompt description used by LangExtract.",
-        examples=["Extract entities from the text."],
+        examples=[
+            "Extract characters, emotions, and relationships in order of appearance. "
+            "Use exact text for extractions. Do not paraphrase or overlap entities. "
+            "Provide meaningful attributes for each entity to add context."
+        ],
     )
     extraction_classes: list[str] = spec_field(
         "extraction_classes",
         description="List of extraction classes to be extracted.",
         default_factory=list,
+        examples=[["character", "emotion", "relationship"]],
     )
     examples: list[ExampleData] = spec_field(
         "examples",
         description="Example payloads supplied to LangExtract.",
         default_factory=list,
+        examples=[
+            [
+                ExampleData(
+                    text=(
+                        "ROMEO. But soft! What light through yonder window breaks? "
+                        "It is the east, and Juliet is the sun."
+                    ),
+                    extractions=[
+                        Extraction(
+                            extraction_class="character",
+                            extraction_text="ROMEO",
+                            attributes={"emotional_state": "wonder"},
+                        ),
+                        Extraction(
+                            extraction_class="emotion",
+                            extraction_text="But soft!",
+                            attributes={"feeling": "gentle awe"},
+                        ),
+                        Extraction(
+                            extraction_class="relationship",
+                            extraction_text="Juliet is the sun",
+                            attributes={"type": "metaphor"},
+                        ),
+                    ],
+                )
+            ]
+        ],
     )
 
 

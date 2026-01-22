@@ -18,6 +18,7 @@ EXTRACTOR_CONFIG_GENERATOR = ResponseConfiguration(
     instructions=(
         "Generate a DocumentExtractorConfig using the provided inputs.\n"
         "Requirements:\n"
+        "- Follow the example approach: examples should be high-quality and match the prompt.\n"
         "- Set the configuration name exactly as provided.\n"
         "- Preserve the provided prompt description and extraction classes.\n"
         "- Include all provided examples without modification.\n"
@@ -37,6 +38,7 @@ PROMPT_OPTIMIZER_AGENT_INSTRUCTIONS = (
 
 EXTRACTOR_CONFIG_AGENT_INSTRUCTIONS = (
     "Generate a DocumentExtractorConfig using the provided details. "
+    "Follow the example approach: examples should be high-quality and match the prompt. "
     "Set the configuration name exactly as provided. "
     "Preserve the prompt description, extraction classes, and examples.\n\n"
     f"{DocumentExtractorConfig.get_prompt()}"
