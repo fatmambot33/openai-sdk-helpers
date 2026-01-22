@@ -212,9 +212,7 @@ class BaseModelJSONSerializable(BaseModel):
         return None
 
     @classmethod
-    def _try_coerce_value(
-        cls, field_name: str, field_type: Any, raw_value: Any
-    ) -> Any:
+    def _try_coerce_value(cls, field_name: str, field_type: Any, raw_value: Any) -> Any:
         """Attempt to coerce a raw value to a specific field type.
 
         Parameters
@@ -235,7 +233,7 @@ class BaseModelJSONSerializable(BaseModel):
         if inspect.isclass(field_type):
             if issubclass(field_type, Enum):
                 enum_value = cls._coerce_enum_value(field_name, field_type, raw_value)
-                return enum_value if enum_value is not None else _SENTINEL
+                return enum_value
             if issubclass(field_type, BaseModelJSONSerializable):
                 if isinstance(raw_value, field_type):
                     return raw_value
@@ -249,10 +247,14 @@ class BaseModelJSONSerializable(BaseModel):
             if not isinstance(raw_value, list):
                 return _SENTINEL
             item_type = args[0]
-            return [
-                cls._coerce_field_value(field_name, item_type, item)
-                for item in raw_value
-            ]
+            enum_cls = cls._extract_enum_class(item_type)
+            converted_items = []
+            for item in raw_value:
+                converted_item = cls._coerce_field_value(field_name, item_type, item)
+                if converted_item is None and enum_cls is not None:
+                    continue
+                converted_items.append(converted_item)
+            return converted_items
         return _SENTINEL
 
     @classmethod

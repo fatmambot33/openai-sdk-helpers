@@ -457,8 +457,7 @@ def _attributes_from_dict(
     if attributes is None:
         return None
     return [
-        AttributeStructure.from_pair(key, value)
-        for key, value in attributes.items()
+        AttributeStructure.from_pair(key, value) for key, value in attributes.items()
     ]
 
 
