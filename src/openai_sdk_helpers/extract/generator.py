@@ -124,7 +124,12 @@ def _format_extractor_config_request(
             "extraction_classes": list(extraction_classes),
             "example_count": example_count,
             "example_files": _load_example_files(example_files),
-            "examples_json": None,
+            "examples_json": "- None provided. You must generate examples.",
+            "example_requirements": [
+                f"Generate {example_count} high-quality examples that align with the prompt.",
+                "Ensure each example includes realistic source text and extractions.",
+                "Cover every extraction class across the examples.",
+            ],
         },
     )
 
@@ -161,9 +166,10 @@ def _format_extractor_config_request_with_examples(
             "name": name,
             "prompt_description": prompt_description,
             "extraction_classes": list(extraction_classes),
-            "examples_json": examples_json,
             "example_count": DEFAULT_EXAMPLE_COUNT,
             "example_files": [],
+            "examples_json": examples_json,
+            "example_requirements": ["Use the provided examples exactly as written."],
         },
     )
 
