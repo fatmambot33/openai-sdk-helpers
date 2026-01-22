@@ -10,6 +10,7 @@ import pytest
 from openai_sdk_helpers.extract import generator
 from openai_sdk_helpers.settings import OpenAISettings
 from openai_sdk_helpers.structure.extraction import (
+    AttributeStructure,
     DocumentExtractorConfig,
     ExampleData,
     Extraction,
@@ -65,7 +66,12 @@ def test_generate_document_extractor_config_uses_generator(
                 Extraction(
                     extraction_class="character",
                     extraction_text="ROMEO",
-                    attributes={"emotional_state": "wonder"},
+                    attributes=[
+                        AttributeStructure(
+                            key="emotional_state",
+                            value="wonder",
+                        )
+                    ],
                 )
             ],
         )
@@ -159,7 +165,12 @@ def test_generate_document_extractor_config_with_agent(
                 Extraction(
                     extraction_class="relationship",
                     extraction_text="Juliet is the sun",
-                    attributes={"type": "metaphor"},
+                    attributes=[
+                        AttributeStructure(
+                            key="type",
+                            value="metaphor",
+                        )
+                    ],
                 )
             ],
         )

@@ -76,7 +76,13 @@ from __future__ import annotations
 
 from .agent_blueprint import AgentBlueprint
 from .base import *
-from .extraction import AnnotatedDocument, Document, ExampleData, Extraction
+from .extraction import (
+    AnnotatedDocument,
+    AttributeStructure,
+    Document,
+    ExampleData,
+    Extraction,
+)
 from .plan import *
 from .prompt import PromptStructure
 from .responses import *
@@ -115,6 +121,7 @@ __all__ = [
     "VectorSearchStructure",
     "ValidationResultStructure",
     "AnnotatedDocument",
+    "AttributeStructure",
     "Document",
     "ExampleData",
     "Extraction",

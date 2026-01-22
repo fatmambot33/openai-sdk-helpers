@@ -25,9 +25,7 @@ EXTRACTOR_CONFIG_GENERATOR_INSTRUCTIONS_TEMPLATE = (
 EXTRACTOR_PROMPT_OPTIMIZER_INSTRUCTIONS_TEMPLATE = (
     "extractor_prompt_optimizer_agent_instructions.jinja"
 )
-EXTRACTOR_PROMPT_OPTIMIZER_REQUEST_TEMPLATE = (
-    "extractor_prompt_optimizer_request.jinja"
-)
+EXTRACTOR_PROMPT_OPTIMIZER_REQUEST_TEMPLATE = "extractor_prompt_optimizer_request.jinja"
 PROMPT_RENDERER = PromptRenderer()
 
 DEFAULT_EXAMPLE_COUNT = 3

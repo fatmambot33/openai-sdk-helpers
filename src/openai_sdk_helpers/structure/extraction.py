@@ -361,6 +361,106 @@ class TokenizedText(StructureBase):
         )
 
 
+class AttributeStructure(StructureBase):
+    """Represent an extraction attribute as a key/value pair.
+
+    Attributes
+    ----------
+    key : str
+        Attribute key.
+    value : str
+        Attribute value.
+
+    Methods
+    -------
+    to_pair()
+        Convert the attribute to a tuple of ``(key, value)``.
+    from_pair(key, value)
+        Build an attribute from a key/value pair.
+    """
+
+    key: str = spec_field(
+        "key",
+        allow_null=False,
+        description="Attribute key.",
+    )
+    value: str = spec_field(
+        "value",
+        allow_null=False,
+        description="Attribute value.",
+    )
+
+    def to_pair(self) -> tuple[str, str]:
+        """Convert the attribute to a key/value pair.
+
+        Returns
+        -------
+        tuple[str, str]
+            Tuple containing the attribute key and value.
+        """
+        return self.key, self.value
+
+    @classmethod
+    def from_pair(cls, key: str, value: Any) -> "AttributeStructure":
+        """Build an attribute from a key/value pair.
+
+        Parameters
+        ----------
+        key : str
+            Attribute key.
+        value : Any
+            Attribute value to store.
+
+        Returns
+        -------
+        AttributeStructure
+            Structured attribute instance.
+        """
+        return cls(key=key, value=str(value))
+
+
+def _attributes_to_dict(
+    attributes: list[AttributeStructure] | None,
+) -> dict[str, Any] | None:
+    """Convert structured attributes to a dictionary.
+
+    Parameters
+    ----------
+    attributes : list[AttributeStructure] or None
+        Structured attributes to convert.
+
+    Returns
+    -------
+    dict[str, Any] or None
+        Mapping of attribute keys to values.
+    """
+    if attributes is None:
+        return None
+    return {attribute.key: attribute.value for attribute in attributes}
+
+
+def _attributes_from_dict(
+    attributes: dict[str, Any] | None,
+) -> list[AttributeStructure] | None:
+    """Convert an attribute dictionary into structured attributes.
+
+    Parameters
+    ----------
+    attributes : dict[str, Any] or None
+        Attributes mapping to convert.
+
+    Returns
+    -------
+    list[AttributeStructure] or None
+        Structured attribute list.
+    """
+    if attributes is None:
+        return None
+    return [
+        AttributeStructure.from_pair(key, value) for key, value in attributes.items()
+    ]
+
+
 class Extraction(StructureBase):
     """Represent a single extraction from a document.
 
@@ -372,8 +472,8 @@ class Extraction(StructureBase):
         Raw text captured for the extracted item.
     description : str | None
         Optional description of the extracted item.
-    attributes : dict[str, Any]
-        Additional attributes attached to the item. Default is an empty dict.
+    attributes : list[AttributeStructure] | None
+        Additional attributes attached to the item.
     char_interval : CharInterval | None
         Character interval in the source text.
     alignment_status : AlignmentStatus | None
@@ -408,7 +508,7 @@ class Extraction(StructureBase):
         allow_null=True,
         description="Optional description of the extracted item.",
     )
-    attributes: dict[str, Any] | None = spec_field(
+    attributes: list[AttributeStructure] | None = spec_field(
         "attributes",
         default=None,
         description="Additional attributes attached to the item.",
@@ -471,7 +571,7 @@ class Extraction(StructureBase):
             extraction_index=self.extraction_index,
             group_index=self.group_index,
             description=self.description,
-            attributes=self.attributes,
+            attributes=_attributes_to_dict(self.attributes),
             token_interval=token_interval,
         )
 
@@ -530,7 +630,7 @@ class Extraction(StructureBase):
             extraction_index=data.extraction_index,
             group_index=data.group_index,
             description=data.description,
-            attributes=data.attributes,
+            attributes=_attributes_from_dict(data.attributes),
             token_interval=token_interval,
         )
 
@@ -873,17 +973,32 @@ class DocumentExtractorConfig(StructureBase):
                         Extraction(
                             extraction_class="character",
                             extraction_text="ROMEO",
-                            attributes={"emotional_state": "wonder"},
+                            attributes=[
+                                AttributeStructure(
+                                    key="emotional_state",
+                                    value="wonder",
+                                )
+                            ],
                         ),
                         Extraction(
                             extraction_class="emotion",
                             extraction_text="But soft!",
-                            attributes={"feeling": "gentle awe"},
+                            attributes=[
+                                AttributeStructure(
+                                    key="feeling",
+                                    value="gentle awe",
+                                )
+                            ],
                         ),
                         Extraction(
                             extraction_class="relationship",
                             extraction_text="Juliet is the sun",
-                            attributes={"type": "metaphor"},
+                            attributes=[
+                                AttributeStructure(
+                                    key="type",
+                                    value="metaphor",
+                                )
+                            ],
                         ),
                     ],
                 )
@@ -894,6 +1009,7 @@ class DocumentExtractorConfig(StructureBase):
 
 __all__ = [
     "AnnotatedDocument",
+    "AttributeStructure",
     "Document",
     "ExampleData",
     "Extraction",

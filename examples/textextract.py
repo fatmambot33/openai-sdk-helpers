@@ -3,7 +3,12 @@
 import textwrap
 from dotenv import load_dotenv
 from openai_sdk_helpers.extract.extractor import DocumentExtractor
-from openai_sdk_helpers.structure.extraction import Document, ExampleData, Extraction
+from openai_sdk_helpers.structure.extraction import (
+    AttributeStructure,
+    Document,
+    ExampleData,
+    Extraction,
+)
 
 load_dotenv()
 
@@ -21,17 +26,32 @@ examples = [
             Extraction(
                 extraction_class="character",
                 extraction_text="ROMEO",
-                attributes={"emotional_state": "wonder"},
+                attributes=[
+                    AttributeStructure(
+                        key="emotional_state",
+                        value="wonder",
+                    )
+                ],
             ),
             Extraction(
                 extraction_class="emotion",
                 extraction_text="But soft!",
-                attributes={"feeling": "gentle awe"},
+                attributes=[
+                    AttributeStructure(
+                        key="feeling",
+                        value="gentle awe",
+                    )
+                ],
             ),
             Extraction(
                 extraction_class="relationship",
                 extraction_text="Juliet is the sun",
-                attributes={"type": "metaphor"},
+                attributes=[
+                    AttributeStructure(
+                        key="type",
+                        value="metaphor",
+                    )
+                ],
             ),
         ],
     )
