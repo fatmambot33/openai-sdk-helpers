@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
@@ -49,9 +50,14 @@ def test_optimize_extractor_prompt_uses_prompter(
 
 def test_generate_document_extractor_config_uses_generator(
     monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     """Ensure config generation uses the response-based generator."""
     openai_settings = OpenAISettings(api_key="test", default_model="gpt-4o-mini")
+    example_dir = tmp_path / "examples"
+    example_dir.mkdir()
+    source_file = example_dir / "invoice.txt"
+    source_file.write_text("Invoice ACME-001 lists Widget A for $10.")
     examples = [
         ExampleData(
             text="ROMEO. But soft!",
@@ -87,7 +93,7 @@ def test_generate_document_extractor_config_uses_generator(
         "character_extractor",
         "Extract names.",
         ["Name"],
-        examples,
+        example_files=[source_file],
     )
 
     assert result == expected
@@ -102,22 +108,14 @@ def test_generate_document_extractor_config_uses_generator(
     assert "Name: character_extractor" in request_text
     assert "Prompt description: optimized prompt" in request_text
     assert "- Name" in request_text
-    assert "ROMEO" in request_text
+    assert "Example requirements:" in request_text
+    assert "Generate 3 high-quality examples" in request_text
+    assert "Attributes guidance:" in request_text
+    assert "Examples (JSON):" in request_text
+    assert "None provided. You must generate examples." in request_text
+    assert str(source_file) in request_text
+    assert "Invoice ACME-001 lists Widget A for $10." in request_text
     mock_response.close.assert_called_once()
-
-
-def test_generate_document_extractor_config_requires_examples() -> None:
-    """Ensure examples are required for config generation."""
-    openai_settings = OpenAISettings(api_key="test", default_model="gpt-4o-mini")
-
-    with pytest.raises(ValueError, match="ExampleData"):
-        generator.generate_document_extractor_config(
-            openai_settings,
-            "character_extractor",
-            "Extract names.",
-            ["Name"],
-            [],
-        )
 
 
 def test_optimize_extractor_prompt_with_agent(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -1,0 +1,37 @@
+Build a DocumentExtractorConfig using the details below:
+Name: {{ name }}
+Prompt description: {{ prompt_description }}
+Extraction classes:
+{% for item in extraction_classes -%}
+- {{ item }}
+{% else -%}
+- None provided
+{% endfor %}
+
+Example requirements:
+{% for requirement in example_requirements -%}
+- {{ requirement }}
+{% endfor %}
+
+Attributes guidance:
+- Every extraction must include an "attributes" object.
+- Use attributes to capture meaningful structured details (e.g., confidence, type, qualifiers).
+- If no attributes apply, provide an empty object {}.
+
+Examples (JSON):
+{{ examples_json }}
+
+Source files for grounding:
+{% if example_files -%}
+{% for file in example_files -%}
+- Path: {{ file.path }}
+  Content:
+{{ file.content }}
+{% endfor %}
+{% else -%}
+- None provided.
+{% endif %}
+
+Grounding requirements:
+- Use source file content to craft example text when available.
+- Prefer quoting or lightly paraphrasing source text over inventing details.
