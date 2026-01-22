@@ -815,8 +815,33 @@ class Document(StructureBase):
 
 
 class DocumentExtractorConfig(StructureBase):
-    """Confoguration settings for the extractor."""
+    """Configuration settings for the extractor.
 
+    Attributes
+    ----------
+    name : str
+        Name used to store and reuse extractor configurations.
+    prompt_description : str
+        Prompt description used by LangExtract.
+    extraction_classes : list[str]
+        List of extraction classes to be extracted.
+    examples : list[ExampleData]
+        Example payloads supplied to LangExtract.
+
+    Methods
+    -------
+    to_json()
+        Return a JSON-compatible dict representation.
+    to_json_file(filepath)
+        Write serialized JSON data to a file path.
+    """
+
+    name: str = spec_field(
+        "name",
+        allow_null=False,
+        description="Name used to store and reuse extractor configurations.",
+        examples=["invoice_entity_extractor"],
+    )
     prompt_description: str = spec_field(
         "prompt_description",
         allow_null=False,
