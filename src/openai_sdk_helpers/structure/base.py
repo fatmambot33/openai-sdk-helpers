@@ -32,6 +32,36 @@ from ..utils import check_filepath, BaseModelJSONSerializable
 T = TypeVar("T", bound="StructureBase")
 
 
+def _add_required_fields(target: dict[str, Any]) -> None:
+    """Ensure every object declares its required properties."""
+    properties = target.get("properties")
+    if isinstance(properties, dict) and properties:
+        target["required"] = sorted(properties.keys())
+    for value in target.values():
+        if isinstance(value, dict):
+            _add_required_fields(value)
+        elif isinstance(value, list):
+            for item in value:
+                if isinstance(item, dict):
+                    _add_required_fields(item)
+
+
+def _enforce_additional_properties(target: Any) -> None:
+    """Ensure every object schema disallows additional properties."""
+    if isinstance(target, dict):
+        schema_type = target.get("type")
+        has_object_type = schema_type == "object" or (
+            isinstance(schema_type, list) and "object" in schema_type
+        )
+        if has_object_type or "properties" in target:
+            target["additionalProperties"] = False
+        for value in target.values():
+            _enforce_additional_properties(value)
+    elif isinstance(target, list):
+        for item in target:
+            _enforce_additional_properties(item)
+
+
 class StructureBase(BaseModelJSONSerializable):
     """Base class for structured output models with schema generation.
 
@@ -346,34 +376,6 @@ class StructureBase(BaseModelJSONSerializable):
 
         cleaned_schema = cast(dict[str, Any], clean_refs(schema))
 
-        def add_required_fields(target: dict[str, Any]) -> None:
-            """Ensure every object declares its required properties."""
-            properties = target.get("properties")
-            if isinstance(properties, dict) and properties:
-                target["required"] = sorted(properties.keys())
-            for value in target.values():
-                if isinstance(value, dict):
-                    add_required_fields(value)
-                elif isinstance(value, list):
-                    for item in value:
-                        if isinstance(item, dict):
-                            add_required_fields(item)
-
-        def enforce_additional_properties(target: Any) -> None:
-            """Ensure every object schema disallows additional properties."""
-            if isinstance(target, dict):
-                schema_type = target.get("type")
-                has_object_type = schema_type == "object" or (
-                    isinstance(schema_type, list) and "object" in schema_type
-                )
-                if has_object_type or "properties" in target:
-                    target["additionalProperties"] = False
-                for value in target.values():
-                    enforce_additional_properties(value)
-            elif isinstance(target, list):
-                for item in target:
-                    enforce_additional_properties(item)
-
         nullable_fields = {
             name
             for name, model_field in getattr(cls, "model_fields", {}).items()
@@ -403,8 +405,8 @@ class StructureBase(BaseModelJSONSerializable):
                         if not has_null:
                             any_of.append({"type": "null"})
 
-        add_required_fields(cleaned_schema)
-        enforce_additional_properties(cleaned_schema)
+        _add_required_fields(cleaned_schema)
+        _enforce_additional_properties(cleaned_schema)
         return cleaned_schema
 
     @classmethod
