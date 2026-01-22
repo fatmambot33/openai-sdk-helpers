@@ -16,7 +16,9 @@ from openai_sdk_helpers.structure.extraction import (
 from openai_sdk_helpers.structure.prompt import PromptStructure
 
 
-def test_optimize_extractor_prompt_uses_prompter(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_optimize_extractor_prompt_uses_prompter(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Ensure prompt optimization uses the prompter response configuration."""
     openai_settings = OpenAISettings(api_key="test", default_model="gpt-4o-mini")
     mock_response = Mock()
