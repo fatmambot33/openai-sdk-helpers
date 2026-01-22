@@ -8,25 +8,56 @@ from typing import Sequence
 
 from ..agent.base import AgentBase
 from ..agent.configuration import AgentConfiguration
+from ..prompt import PromptRenderer
 from ..response.configuration import ResponseConfiguration
 from ..response.prompter import PROMPTER
 from ..settings import OpenAISettings
-from ..prompt import PromptRenderer
 from ..structure.extraction import DocumentExtractorConfig, ExampleData
 from ..structure.prompt import PromptStructure
 
+EXTRACTOR_CONFIG_TEMPLATE_NAME = "extractor_config_generator.jinja"
+EXTRACTOR_CONFIG_AGENT_INSTRUCTIONS_TEMPLATE = (
+    "extractor_config_agent_instructions.jinja"
+)
+EXTRACTOR_CONFIG_GENERATOR_INSTRUCTIONS_TEMPLATE = (
+    "extractor_config_generator_instructions.jinja"
+)
+EXTRACTOR_PROMPT_OPTIMIZER_INSTRUCTIONS_TEMPLATE = (
+    "extractor_prompt_optimizer_agent_instructions.jinja"
+)
+EXTRACTOR_PROMPT_OPTIMIZER_REQUEST_TEMPLATE = (
+    "extractor_prompt_optimizer_request.jinja"
+)
+PROMPT_RENDERER = PromptRenderer()
+
+DEFAULT_EXAMPLE_COUNT = 3
+
+
+def _render_prompt_template(
+    template_name: str,
+    context: dict[str, object] | None = None,
+) -> str:
+    """Render a prompt template from the prompt directory.
+
+    Parameters
+    ----------
+    template_name : str
+        Prompt template file name.
+    context : dict[str, object] or None, default None
+        Context variables for template rendering.
+
+    Returns
+    -------
+    str
+        Rendered prompt content.
+    """
+    return PROMPT_RENDERER.render(template_name, context=context or {})
+
+
 EXTRACTOR_CONFIG_GENERATOR = ResponseConfiguration(
     name="document_extractor_config_generator",
-    instructions=(
-        "Generate a DocumentExtractorConfig using the provided inputs.\n"
-        "Requirements:\n"
-        "- Generate high-quality examples that match the prompt and extraction classes.\n"
-        "- Ensure examples include realistic source text and cover all extraction classes.\n"
-        "- Include meaningful attributes on each extraction when applicable.\n"
-        "- If source files are provided, ground example text in that content.\n"
-        "- Set the configuration name exactly as provided.\n"
-        "- Preserve the provided prompt description and extraction classes.\n"
-        "- Do not add or remove extraction classes."
+    instructions=_render_prompt_template(
+        EXTRACTOR_CONFIG_GENERATOR_INSTRUCTIONS_TEMPLATE
     ),
     tools=None,
     input_structure=None,
@@ -34,25 +65,15 @@ EXTRACTOR_CONFIG_GENERATOR = ResponseConfiguration(
     add_output_instructions=True,
 )
 
-PROMPT_OPTIMIZER_AGENT_INSTRUCTIONS = (
-    "Optimize the extraction prompt for clarity and precision. "
-    "Return the optimized prompt as structured output.\n\n"
-    f"{PromptStructure.get_prompt()}"
+PROMPT_OPTIMIZER_AGENT_INSTRUCTIONS = _render_prompt_template(
+    EXTRACTOR_PROMPT_OPTIMIZER_INSTRUCTIONS_TEMPLATE,
+    context={"prompt_schema": PromptStructure.get_prompt()},
 )
 
-EXTRACTOR_CONFIG_AGENT_INSTRUCTIONS = (
-    "Generate a DocumentExtractorConfig using the provided details. "
-    "Follow the example approach: examples should be high-quality and match the prompt. "
-    "Set the configuration name exactly as provided. "
-    "Preserve the prompt description, extraction classes, and examples. "
-    "Include meaningful attributes when applicable.\n\n"
-    f"{DocumentExtractorConfig.get_prompt()}"
+EXTRACTOR_CONFIG_AGENT_INSTRUCTIONS = _render_prompt_template(
+    EXTRACTOR_CONFIG_AGENT_INSTRUCTIONS_TEMPLATE,
+    context={"config_schema": DocumentExtractorConfig.get_prompt()},
 )
-
-EXTRACTOR_CONFIG_TEMPLATE_NAME = "extractor_config_generator.jinja"
-PROMPT_RENDERER = PromptRenderer()
-
-DEFAULT_EXAMPLE_COUNT = 3
 
 
 def _format_extractor_prompt_request(
@@ -76,16 +97,14 @@ def _format_extractor_prompt_request(
     str
         Formatted prompt optimization request.
     """
-    class_lines = "\n".join(f"- {item}" for item in extraction_classes)
-    request_lines = [
-        "Optimize the extraction prompt using the details below:",
-        f"User prompt: {prompt}",
-        "Extraction classes:",
-        class_lines or "- None provided",
-    ]
-    if additional_context:
-        request_lines.append(f"Additional context: {additional_context}")
-    return "\n".join(request_lines)
+    return _render_prompt_template(
+        EXTRACTOR_PROMPT_OPTIMIZER_REQUEST_TEMPLATE,
+        context={
+            "prompt": prompt,
+            "extraction_classes": list(extraction_classes),
+            "additional_context": additional_context,
+        },
+    )
 
 
 def _format_extractor_config_request(

@@ -1,0 +1,11 @@
+Optimize the extraction prompt using the details below:
+User prompt: {{ prompt }}
+Extraction classes:
+{% for item in extraction_classes -%}
+- {{ item }}
+{% else -%}
+- None provided
+{% endfor %}
+{% if additional_context -%}
+Additional context: {{ additional_context }}
+{% endif %}
