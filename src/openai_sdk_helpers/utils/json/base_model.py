@@ -20,6 +20,7 @@ from ...logging import log
 from .utils import customJSONEncoder
 
 P = TypeVar("P", bound="BaseModelJSONSerializable")
+_SENTINEL = object()
 
 
 class BaseModelJSONSerializable(BaseModel):
@@ -211,6 +212,86 @@ class BaseModelJSONSerializable(BaseModel):
         return None
 
     @classmethod
+    def _try_coerce_value(
+        cls, field_name: str, field_type: Any, raw_value: Any
+    ) -> Any:
+        """Attempt to coerce a raw value to a specific field type.
+
+        Parameters
+        ----------
+        field_name : str
+            Field name being converted.
+        field_type : Any
+            Field type annotation to coerce into.
+        raw_value : Any
+            Value to coerce.
+
+        Returns
+        -------
+        Any
+            Coerced value when conversion is possible, otherwise a sentinel
+            indicating no conversion was applied.
+        """
+        if inspect.isclass(field_type):
+            if issubclass(field_type, Enum):
+                enum_value = cls._coerce_enum_value(field_name, field_type, raw_value)
+                return enum_value if enum_value is not None else _SENTINEL
+            if issubclass(field_type, BaseModelJSONSerializable):
+                if isinstance(raw_value, field_type):
+                    return raw_value
+                if isinstance(raw_value, dict):
+                    return field_type.from_json(raw_value)
+                return _SENTINEL
+
+        origin = get_origin(field_type)
+        args = get_args(field_type)
+        if origin is list and args:
+            if not isinstance(raw_value, list):
+                return _SENTINEL
+            item_type = args[0]
+            return [
+                cls._coerce_field_value(field_name, item_type, item)
+                for item in raw_value
+            ]
+        return _SENTINEL
+
+    @classmethod
+    def _coerce_field_value(
+        cls, field_name: str, field_type: Any, raw_value: Any
+    ) -> Any:
+        """Coerce a raw value based on the field's type annotation.
+
+        Parameters
+        ----------
+        field_name : str
+            Field name being converted.
+        field_type : Any
+            Field type annotation to coerce into.
+        raw_value : Any
+            Value to coerce.
+
+        Returns
+        -------
+        Any
+            Coerced value when conversion is possible, otherwise the original
+            raw value.
+        """
+        origin = get_origin(field_type)
+        args = get_args(field_type)
+
+        if origin is not None and origin is not list:
+            for arg in args:
+                if arg is type(None):
+                    continue
+                converted = cls._try_coerce_value(field_name, arg, raw_value)
+                if converted is not _SENTINEL:
+                    return converted
+            return raw_value
+
+        converted = cls._try_coerce_value(field_name, field_type, raw_value)
+        return raw_value if converted is _SENTINEL else converted
+
+    @classmethod
     def _build_enum_field_mapping(cls) -> dict[str, type[Enum]]:
         """Build a mapping from field names to their Enum classes.
 
@@ -292,30 +373,14 @@ class BaseModelJSONSerializable(BaseModel):
         >>> raw_data = {"title": "Test", "score": 0.95}
         >>> instance = MyStructure.from_json(raw_data)
         """
-        mapping = cls._build_enum_field_mapping()
         clean_data = data.copy()
-
-        for field, enum_cls in mapping.items():
-            raw_value = clean_data.get(field)
-
+        for field_name, model_field in cls.model_fields.items():
+            raw_value = clean_data.get(field_name)
             if raw_value is None:
                 continue
-
-            # List of enum values
-            if isinstance(raw_value, list):
-                converted_values = [
-                    converted
-                    for v in raw_value
-                    if (converted := cls._coerce_enum_value(field, enum_cls, v))
-                    is not None
-                ]
-                clean_data[field] = converted_values
-            else:
-                enum_value = cls._coerce_enum_value(field, enum_cls, raw_value)
-                if enum_value is None:
-                    clean_data[field] = None
-                else:
-                    clean_data[field] = enum_value
+            clean_data[field_name] = cls._coerce_field_value(
+                field_name, model_field.annotation, raw_value
+            )
 
         return cls(**clean_data)
 
