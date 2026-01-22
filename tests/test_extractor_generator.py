@@ -87,7 +87,6 @@ def test_generate_document_extractor_config_uses_generator(
         "character_extractor",
         "Extract names.",
         ["Name"],
-        examples,
     )
 
     assert result == expected
@@ -102,22 +101,9 @@ def test_generate_document_extractor_config_uses_generator(
     assert "Name: character_extractor" in request_text
     assert "Prompt description: optimized prompt" in request_text
     assert "- Name" in request_text
-    assert "ROMEO" in request_text
+    assert "Example requirements:" in request_text
+    assert "Generate 3 high-quality examples" in request_text
     mock_response.close.assert_called_once()
-
-
-def test_generate_document_extractor_config_requires_examples() -> None:
-    """Ensure examples are required for config generation."""
-    openai_settings = OpenAISettings(api_key="test", default_model="gpt-4o-mini")
-
-    with pytest.raises(ValueError, match="ExampleData"):
-        generator.generate_document_extractor_config(
-            openai_settings,
-            "character_extractor",
-            "Extract names.",
-            ["Name"],
-            [],
-        )
 
 
 def test_optimize_extractor_prompt_with_agent(monkeypatch: pytest.MonkeyPatch) -> None:

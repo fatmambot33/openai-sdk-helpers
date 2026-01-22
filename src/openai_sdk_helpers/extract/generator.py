@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from typing import Sequence
 
+from jinja2 import Template
+
 from ..agent.base import AgentBase
 from ..agent.configuration import AgentConfiguration
 from ..response.configuration import ResponseConfiguration
@@ -18,11 +20,11 @@ EXTRACTOR_CONFIG_GENERATOR = ResponseConfiguration(
     instructions=(
         "Generate a DocumentExtractorConfig using the provided inputs.\n"
         "Requirements:\n"
-        "- Follow the example approach: examples should be high-quality and match the prompt.\n"
+        "- Generate high-quality examples that match the prompt and extraction classes.\n"
+        "- Ensure examples include realistic source text and cover all extraction classes.\n"
         "- Set the configuration name exactly as provided.\n"
         "- Preserve the provided prompt description and extraction classes.\n"
-        "- Include all provided examples without modification.\n"
-        "- Do not add or remove extraction classes or examples."
+        "- Do not add or remove extraction classes."
     ),
     tools=None,
     input_structure=None,
@@ -43,6 +45,39 @@ EXTRACTOR_CONFIG_AGENT_INSTRUCTIONS = (
     "Preserve the prompt description, extraction classes, and examples.\n\n"
     f"{DocumentExtractorConfig.get_prompt()}"
 )
+
+EXTRACTOR_CONFIG_REQUEST_TEMPLATE = Template(
+    "\n".join(
+        [
+            "Build a DocumentExtractorConfig using the details below:",
+            "Name: {{ name }}",
+            "Prompt description: {{ prompt_description }}",
+            "Extraction classes:",
+            "{% for item in extraction_classes %}- {{ item }}{% else %}- None provided{% endfor %}",
+            "",
+            "Example requirements:",
+            "- Generate {{ example_count }} high-quality examples that align with the prompt.",
+            "- Ensure each example includes realistic source text and extractions.",
+            "- Cover every extraction class across the examples.",
+        ]
+    )
+)
+
+EXTRACTOR_CONFIG_WITH_EXAMPLES_TEMPLATE = Template(
+    "\n".join(
+        [
+            "Build a DocumentExtractorConfig using the details below:",
+            "Name: {{ name }}",
+            "Prompt description: {{ prompt_description }}",
+            "Extraction classes:",
+            "{% for item in extraction_classes %}- {{ item }}{% else %}- None provided{% endfor %}",
+            "Examples (JSON):",
+            "{{ examples_json }}",
+        ]
+    )
+)
+
+DEFAULT_EXAMPLE_COUNT = 3
 
 
 def _format_extractor_prompt_request(
@@ -82,9 +117,42 @@ def _format_extractor_config_request(
     name: str,
     prompt_description: str,
     extraction_classes: Sequence[str],
-    examples: Sequence[ExampleData],
+    *,
+    example_count: int = DEFAULT_EXAMPLE_COUNT,
 ) -> str:
     """Format the extractor configuration request payload.
+
+    Parameters
+    ----------
+    name : str
+        Name for the extractor configuration.
+    prompt_description : str
+        Optimized prompt description to use.
+    extraction_classes : Sequence[str]
+        Extraction classes to include.
+    example_count : int, default 3
+        Number of examples to generate.
+
+    Returns
+    -------
+    str
+        Formatted configuration request.
+    """
+    return EXTRACTOR_CONFIG_REQUEST_TEMPLATE.render(
+        name=name,
+        prompt_description=prompt_description,
+        extraction_classes=list(extraction_classes),
+        example_count=example_count,
+    )
+
+
+def _format_extractor_config_request_with_examples(
+    name: str,
+    prompt_description: str,
+    extraction_classes: Sequence[str],
+    examples: Sequence[ExampleData],
+) -> str:
+    """Format the extractor configuration request payload with examples.
 
     Parameters
     ----------
@@ -104,17 +172,11 @@ def _format_extractor_config_request(
     """
     serialized_examples = [example.to_json() for example in examples]
     examples_json = json.dumps(serialized_examples, indent=2)
-    class_lines = "\n".join(f"- {item}" for item in extraction_classes)
-    return "\n".join(
-        [
-            "Build a DocumentExtractorConfig using the details below:",
-            f"Name: {name}",
-            f"Prompt description: {prompt_description}",
-            "Extraction classes:",
-            class_lines or "- None provided",
-            "Examples (JSON):",
-            examples_json,
-        ]
+    return EXTRACTOR_CONFIG_WITH_EXAMPLES_TEMPLATE.render(
+        name=name,
+        prompt_description=prompt_description,
+        extraction_classes=list(extraction_classes),
+        examples_json=examples_json,
     )
 
 
@@ -227,7 +289,6 @@ def generate_document_extractor_config(
     name: str,
     prompt: str,
     extraction_classes: Sequence[str],
-    examples: Sequence[ExampleData],
     *,
     additional_context: str | None = None,
 ) -> DocumentExtractorConfig:
@@ -243,8 +304,6 @@ def generate_document_extractor_config(
         User-supplied prompt content.
     extraction_classes : Sequence[str]
         Extraction classes to include in the configuration.
-    examples : Sequence[ExampleData]
-        Example payloads supplied to LangExtract.
     additional_context : str or None, default None
         Optional context that should influence prompt generation.
 
@@ -257,11 +316,7 @@ def generate_document_extractor_config(
     ------
     TypeError
         If the generator response does not return a DocumentExtractorConfig.
-    ValueError
-        If no examples are provided.
     """
-    if not examples:
-        raise ValueError("At least one ExampleData instance is required.")
     prompt_description = optimize_extractor_prompt(
         openai_settings,
         prompt,
@@ -272,7 +327,6 @@ def generate_document_extractor_config(
         name,
         prompt_description,
         extraction_classes,
-        examples,
     )
     response = EXTRACTOR_CONFIG_GENERATOR.gen_response(openai_settings=openai_settings)
     try:
@@ -337,7 +391,7 @@ def generate_document_extractor_config_with_agent(
         extraction_classes,
         additional_context=additional_context,
     )
-    request_text = _format_extractor_config_request(
+    request_text = _format_extractor_config_request_with_examples(
         name,
         prompt_description,
         extraction_classes,
