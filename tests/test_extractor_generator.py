@@ -109,6 +109,8 @@ def test_generate_document_extractor_config_uses_generator(
     assert "Example requirements:" in request_text
     assert "Generate 3 high-quality examples" in request_text
     assert "Attributes guidance:" in request_text
+    assert "Examples (JSON):" in request_text
+    assert "None provided. You must generate examples." in request_text
     assert str(source_file) in request_text
     assert "Invoice ACME-001 lists Widget A for $10." in request_text
     mock_response.close.assert_called_once()

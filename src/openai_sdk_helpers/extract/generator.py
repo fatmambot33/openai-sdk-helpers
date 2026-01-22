@@ -50,9 +50,6 @@ EXTRACTOR_CONFIG_AGENT_INSTRUCTIONS = (
 )
 
 EXTRACTOR_CONFIG_TEMPLATE_NAME = "extractor_config_generator.jinja"
-EXTRACTOR_CONFIG_WITH_EXAMPLES_TEMPLATE_NAME = (
-    "extractor_config_generator_with_examples.jinja"
-)
 PROMPT_RENDERER = PromptRenderer()
 
 DEFAULT_EXAMPLE_COUNT = 3
@@ -127,6 +124,7 @@ def _format_extractor_config_request(
             "extraction_classes": list(extraction_classes),
             "example_count": example_count,
             "example_files": _load_example_files(example_files),
+            "examples_json": None,
         },
     )
 
@@ -158,12 +156,14 @@ def _format_extractor_config_request_with_examples(
     serialized_examples = [example.to_json() for example in examples]
     examples_json = json.dumps(serialized_examples, indent=2)
     return PROMPT_RENDERER.render(
-        EXTRACTOR_CONFIG_WITH_EXAMPLES_TEMPLATE_NAME,
+        EXTRACTOR_CONFIG_TEMPLATE_NAME,
         context={
             "name": name,
             "prompt_description": prompt_description,
             "extraction_classes": list(extraction_classes),
             "examples_json": examples_json,
+            "example_count": DEFAULT_EXAMPLE_COUNT,
+            "example_files": [],
         },
     )
 

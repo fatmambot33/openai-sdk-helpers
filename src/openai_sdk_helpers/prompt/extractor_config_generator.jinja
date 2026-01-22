@@ -9,14 +9,25 @@ Extraction classes:
 {% endfor %}
 
 Example requirements:
+{% if examples_json -%}
+- Use the provided examples exactly as written.
+{% else -%}
 - Generate {{ example_count }} high-quality examples that align with the prompt.
 - Ensure each example includes realistic source text and extractions.
 - Cover every extraction class across the examples.
+{% endif %}
 
 Attributes guidance:
 - Every extraction must include an "attributes" object.
 - Use attributes to capture meaningful structured details (e.g., confidence, type, qualifiers).
 - If no attributes apply, provide an empty object {}.
+
+Examples (JSON):
+{% if examples_json -%}
+{{ examples_json }}
+{% else -%}
+- None provided. You must generate examples.
+{% endif %}
 
 Source files for grounding:
 {% if example_files -%}
