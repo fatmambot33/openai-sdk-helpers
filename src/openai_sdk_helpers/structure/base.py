@@ -359,6 +359,21 @@ class StructureBase(BaseModelJSONSerializable):
                         if isinstance(item, dict):
                             add_required_fields(item)
 
+        def enforce_additional_properties(target: Any) -> None:
+            """Ensure every object schema disallows additional properties."""
+            if isinstance(target, dict):
+                schema_type = target.get("type")
+                has_object_type = schema_type == "object" or (
+                    isinstance(schema_type, list) and "object" in schema_type
+                )
+                if has_object_type or "properties" in target:
+                    target["additionalProperties"] = False
+                for value in target.values():
+                    enforce_additional_properties(value)
+            elif isinstance(target, list):
+                for item in target:
+                    enforce_additional_properties(item)
+
         nullable_fields = {
             name
             for name, model_field in getattr(cls, "model_fields", {}).items()
@@ -389,6 +404,7 @@ class StructureBase(BaseModelJSONSerializable):
                             any_of.append({"type": "null"})
 
         add_required_fields(cleaned_schema)
+        enforce_additional_properties(cleaned_schema)
         return cleaned_schema
 
     @classmethod
