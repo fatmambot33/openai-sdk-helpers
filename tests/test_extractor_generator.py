@@ -54,7 +54,9 @@ def test_generate_document_extractor_config_uses_generator(
 ) -> None:
     """Ensure config generation uses the response-based generator."""
     openai_settings = OpenAISettings(api_key="test", default_model="gpt-4o-mini")
-    source_file = tmp_path.mktemp("examples") / "invoice.txt"
+    example_dir = tmp_path / "examples"
+    example_dir.mkdir()
+    source_file = example_dir / "invoice.txt"
     source_file.write_text("Invoice ACME-001 lists Widget A for $10.")
     examples = [
         ExampleData(
