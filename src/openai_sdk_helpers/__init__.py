@@ -95,6 +95,13 @@ from .utils.output_validation import (
 from .utils.langextract import LangExtractAdapter, build_langextract_adapter
 from .extract import (
     DocumentExtractor,
+    EXTRACTOR_CONFIG_AGENT_INSTRUCTIONS,
+    EXTRACTOR_CONFIG_GENERATOR,
+    PROMPT_OPTIMIZER_AGENT_INSTRUCTIONS,
+    generate_document_extractor_config,
+    generate_document_extractor_config_with_agent,
+    optimize_extractor_prompt,
+    optimize_extractor_prompt_with_agent,
 )
 
 __all__ = [
@@ -187,4 +194,11 @@ __all__ = [
     "build_langextract_adapter",
     # Extraction helpers
     "DocumentExtractor",
+    "EXTRACTOR_CONFIG_AGENT_INSTRUCTIONS",
+    "EXTRACTOR_CONFIG_GENERATOR",
+    "PROMPT_OPTIMIZER_AGENT_INSTRUCTIONS",
+    "generate_document_extractor_config",
+    "generate_document_extractor_config_with_agent",
+    "optimize_extractor_prompt",
+    "optimize_extractor_prompt_with_agent",
 ]

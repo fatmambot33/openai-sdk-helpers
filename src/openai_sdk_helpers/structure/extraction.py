@@ -815,23 +815,80 @@ class Document(StructureBase):
 
 
 class DocumentExtractorConfig(StructureBase):
-    """Confoguration settings for the extractor."""
+    """Configuration settings for the extractor.
 
+    Attributes
+    ----------
+    name : str
+        Name used to store and reuse extractor configurations.
+    prompt_description : str
+        Prompt description used by LangExtract.
+    extraction_classes : list[str]
+        List of extraction classes to be extracted.
+    examples : list[ExampleData]
+        Example payloads supplied to LangExtract.
+
+    Methods
+    -------
+    to_json()
+        Return a JSON-compatible dict representation.
+    to_json_file(filepath)
+        Write serialized JSON data to a file path.
+    """
+
+    name: str = spec_field(
+        "name",
+        allow_null=False,
+        description="Name used to store and reuse extractor configurations.",
+        examples=["invoice_entity_extractor"],
+    )
     prompt_description: str = spec_field(
         "prompt_description",
         allow_null=False,
         description="Prompt description used by LangExtract.",
-        examples=["Extract entities from the text."],
+        examples=[
+            "Extract characters, emotions, and relationships in order of appearance. "
+            "Use exact text for extractions. Do not paraphrase or overlap entities. "
+            "Provide meaningful attributes for each entity to add context."
+        ],
     )
     extraction_classes: list[str] = spec_field(
         "extraction_classes",
         description="List of extraction classes to be extracted.",
         default_factory=list,
+        examples=[["character", "emotion", "relationship"]],
     )
     examples: list[ExampleData] = spec_field(
         "examples",
         description="Example payloads supplied to LangExtract.",
         default_factory=list,
+        examples=[
+            [
+                ExampleData(
+                    text=(
+                        "ROMEO. But soft! What light through yonder window breaks? "
+                        "It is the east, and Juliet is the sun."
+                    ),
+                    extractions=[
+                        Extraction(
+                            extraction_class="character",
+                            extraction_text="ROMEO",
+                            attributes={"emotional_state": "wonder"},
+                        ),
+                        Extraction(
+                            extraction_class="emotion",
+                            extraction_text="But soft!",
+                            attributes={"feeling": "gentle awe"},
+                        ),
+                        Extraction(
+                            extraction_class="relationship",
+                            extraction_text="Juliet is the sun",
+                            attributes={"type": "metaphor"},
+                        ),
+                    ],
+                )
+            ]
+        ],
     )
 
 
