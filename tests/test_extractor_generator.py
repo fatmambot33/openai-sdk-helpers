@@ -25,7 +25,9 @@ def test_optimize_extractor_prompt_uses_prompter(
     mock_response.run_sync.return_value = PromptStructure(prompt="optimized prompt")
 
     monkeypatch.setattr(
-        generator.PROMPTER, "gen_response", Mock(return_value=mock_response)
+        generator,
+        "PROMPTER",
+        Mock(gen_response=Mock(return_value=mock_response)),
     )
 
     result = generator.optimize_extractor_prompt(
@@ -75,9 +77,9 @@ def test_generate_document_extractor_config_uses_generator(
     mock_response = Mock()
     mock_response.run_sync.return_value = expected
     monkeypatch.setattr(
-        generator.EXTRACTOR_CONFIG_GENERATOR,
-        "gen_response",
-        Mock(return_value=mock_response),
+        generator,
+        "EXTRACTOR_CONFIG_GENERATOR",
+        Mock(gen_response=Mock(return_value=mock_response)),
     )
 
     result = generator.generate_document_extractor_config(
@@ -91,7 +93,6 @@ def test_generate_document_extractor_config_uses_generator(
     assert result == expected
     generator.optimize_extractor_prompt.assert_called_once_with(
         openai_settings,
-        "character_extractor",
         "Extract names.",
         ["Name"],
         additional_context=None,
