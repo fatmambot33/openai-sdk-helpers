@@ -55,6 +55,17 @@ def _enforce_additional_properties(target: Any) -> None:
         )
         if has_object_type or "properties" in target:
             target["additionalProperties"] = False
+        any_of = target.get("anyOf")
+        if isinstance(any_of, list):
+            for entry in any_of:
+                if not isinstance(entry, dict):
+                    continue
+                entry_type = entry.get("type")
+                entry_has_object_type = entry_type == "object" or (
+                    isinstance(entry_type, list) and "object" in entry_type
+                )
+                if entry_has_object_type or "properties" in entry:
+                    entry["additionalProperties"] = False
         for value in target.values():
             _enforce_additional_properties(value)
     elif isinstance(target, list):

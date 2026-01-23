@@ -7,7 +7,12 @@ import pytest
 from pydantic import Field
 from pydantic.fields import FieldInfo
 
-from openai_sdk_helpers.structure.base import StructureBase, SchemaOptions, spec_field
+from openai_sdk_helpers.structure.base import (
+    StructureBase,
+    SchemaOptions,
+    _enforce_additional_properties,
+    spec_field,
+)
 from openai_sdk_helpers.structure.responses import (
     assistant_format,
     assistant_tool_definition,
@@ -160,6 +165,30 @@ def test_schema_options():
     """Test the SchemaOptions class."""
     options = SchemaOptions(force_required=True)
     assert options.to_kwargs() == {"force_required": True}
+
+
+def test_any_of_object_enforces_additional_properties():
+    """Ensure anyOf object entries disallow additional properties."""
+    schema = {
+        "anyOf": [
+            {
+                "type": "object",
+                "properties": {"name": {"type": "string"}},
+                "additionalProperties": True,
+            },
+            {"type": "null"},
+        ]
+    }
+
+    _enforce_additional_properties(schema)
+
+    any_of = schema["anyOf"]
+    object_entry = next(
+        entry
+        for entry in any_of
+        if isinstance(entry, dict) and entry.get("type") == "object"
+    )
+    assert object_entry["additionalProperties"] is False
 
 
 def test_spec_field():
