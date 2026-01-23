@@ -489,8 +489,12 @@ class ExtractionStructure(StructureBase):
     -------
     to_dataclass()
         Convert to a LangExtract ``Extraction`` dataclass.
+    to_dataclass_list(data)
+        Convert structured extractions to LangExtract dataclasses.
     from_dataclass(data)
         Create an extraction from a LangExtract dataclass.
+    from_dataclass_list(data)
+        Create structured extractions from LangExtract dataclasses.
     """
 
     extraction_class: str = spec_field(
