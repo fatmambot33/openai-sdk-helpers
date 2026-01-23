@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import typing
 
@@ -140,7 +141,7 @@ def _sanitize_extraction_value(
         return False, None
     if isinstance(value, (str, int, float)):
         return True, value
-    return True, str(value)
+    return True, json.dumps(value, ensure_ascii=False)
 
 
 class _SanitizingFormatHandler(lx_format_handler.FormatHandler):

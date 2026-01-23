@@ -23,8 +23,8 @@ def test_sanitizing_format_handler_drops_nulls_and_coerces_values() -> None:
     assert items == [
         {
             "person": "Ada Lovelace",
-            "notes": "['first', 'programmer']",
-            "extra": "{'source': 'bio'}",
+            "notes": '["first", "programmer"]',
+            "extra": '{"source": "bio"}',
             "person_attributes": {"source": "resume"},
         }
     ]
