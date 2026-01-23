@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Sequence
 import uuid
 from enum import Enum, IntEnum
+from langextract.core import format_handler as lx_format_handler
 from langextract.core.data import (
     AlignmentStatus as LXAlignmentStatus,
     AnnotatedDocument as LXAnnotatedDocument,
@@ -486,7 +487,7 @@ class AttributeStructure(StructureBase):
     ----------
     key : str
         Attribute key.
-    value : str
+    value : str | int | float | dict | list | None
         Attribute value.
 
     Methods
@@ -502,31 +503,33 @@ class AttributeStructure(StructureBase):
         allow_null=False,
         description="Attribute key.",
     )
-    value: str = spec_field(
+    value: lx_format_handler.ExtractionValueType = spec_field(
         "value",
-        allow_null=False,
+        allow_null=True,
         description="Attribute value.",
     )
 
-    def to_pair(self) -> tuple[str, str]:
+    def to_pair(self) -> tuple[str, lx_format_handler.ExtractionValueType]:
         """Convert the attribute to a key/value pair.
 
         Returns
         -------
-        tuple[str, str]
+        tuple[str, str | int | float | dict | list | None]
             Tuple containing the attribute key and value.
         """
         return self.key, self.value
 
     @classmethod
-    def from_pair(cls, key: str, value: Any) -> "AttributeStructure":
+    def from_pair(
+        cls, key: str, value: lx_format_handler.ExtractionValueType
+    ) -> "AttributeStructure":
         """Build an attribute from a key/value pair.
 
         Parameters
         ----------
         key : str
             Attribute key.
-        value : Any
+        value : str | int | float | dict | list | None
             Attribute value to store.
 
         Returns
@@ -534,7 +537,7 @@ class AttributeStructure(StructureBase):
         AttributeStructure
             Structured attribute instance.
         """
-        return cls(key=key, value=str(value))
+        return cls(key=key, value=value)
 
 
 def _attributes_to_dict(

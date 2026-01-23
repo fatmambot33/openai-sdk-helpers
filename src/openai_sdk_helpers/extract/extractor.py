@@ -119,9 +119,7 @@ def _sanitize_extraction_items(
     for item in items:
         updated: dict[str, lx_format_handler.ExtractionValueType] = {}
         for key, value in item.items():
-            keep, cleaned = _sanitize_extraction_value(
-                key, value, attribute_suffix
-            )
+            keep, cleaned = _sanitize_extraction_value(key, value, attribute_suffix)
             if not keep:
                 continue
             updated[key] = cleaned
