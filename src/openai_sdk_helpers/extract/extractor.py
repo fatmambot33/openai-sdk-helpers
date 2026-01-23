@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import os
 import typing
+
 import langextract as lx
+from langextract.core import format_handler as lx_format_handler
 from langextract.core.data import AnnotatedDocument as LXAnnotatedDocument
 
 from ..errors import ExtractionError
@@ -86,6 +88,7 @@ class DocumentExtractor:
             input_documents = input_text
         documents = DocumentStructure.to_dataclass_list(input_documents)
         examples = ExampleDataStructure.to_dataclass_list(self.examples)
+        resolver_params = {"format_handler": _SanitizingFormatHandler()}
         result = lx.extract(
             text_or_documents=documents,
             prompt_description=self.prompt,
@@ -94,6 +97,7 @@ class DocumentExtractor:
             api_key=os.environ.get("OPENAI_API_KEY"),
             fence_output=True,
             use_schema_constraints=False,
+            resolver_params=resolver_params,
         )
 
         def _convert(data: typing.Any) -> AnnotatedDocumentStructure:
@@ -105,6 +109,50 @@ class DocumentExtractor:
             return [_convert(doc) for doc in result]
 
         return [_convert(result)]
+
+
+def _sanitize_extraction_items(
+    items: typing.Sequence[typing.Mapping[str, lx_format_handler.ExtractionValueType]],
+    attribute_suffix: str,
+) -> list[dict[str, lx_format_handler.ExtractionValueType]]:
+    sanitized: list[dict[str, lx_format_handler.ExtractionValueType]] = []
+    for item in items:
+        updated: dict[str, lx_format_handler.ExtractionValueType] = {}
+        for key, value in item.items():
+            keep, cleaned = _sanitize_extraction_value(
+                key, value, attribute_suffix
+            )
+            if not keep:
+                continue
+            updated[key] = cleaned
+        sanitized.append(updated)
+    return sanitized
+
+
+def _sanitize_extraction_value(
+    key: str,
+    value: lx_format_handler.ExtractionValueType,
+    attribute_suffix: str,
+) -> tuple[bool, lx_format_handler.ExtractionValueType]:
+    if value is None:
+        return False, None
+    if key.endswith(attribute_suffix):
+        if isinstance(value, dict):
+            return True, value
+        return False, None
+    if isinstance(value, (str, int, float)):
+        return True, value
+    return True, str(value)
+
+
+class _SanitizingFormatHandler(lx_format_handler.FormatHandler):
+    """Sanitize LangExtract output before the resolver validates types."""
+
+    def parse_output(
+        self, text: str, *, strict: bool | None = None
+    ) -> typing.Sequence[typing.Mapping[str, lx_format_handler.ExtractionValueType]]:
+        items = super().parse_output(text, strict=strict)
+        return _sanitize_extraction_items(items, self.attribute_suffix)
 
 
 __all__ = ["DocumentExtractor", "ExtractionError"]
