@@ -81,7 +81,7 @@ def _build_any_value_schema(depth: int = 0) -> dict[str, Any]:
 
     schema: dict[str, Any] = {"type": value_types}
     if "object" in value_types:
-        schema["additionalProperties"] = True
+        schema["additionalProperties"] = False
     if "array" in value_types:
         schema["items"] = _build_any_value_schema(depth + 1)
     return schema
