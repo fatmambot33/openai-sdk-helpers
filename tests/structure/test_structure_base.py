@@ -52,7 +52,6 @@ def test_get_schema():
     """Test the get_schema method."""
     schema = DummyStructure.get_schema()
     assert schema["title"] == "StructureBase"
-    assert "$defs" not in schema
     properties = schema["properties"]
     assert "name" in properties
     assert "age" in properties
