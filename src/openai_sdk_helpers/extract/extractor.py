@@ -84,8 +84,8 @@ class DocumentExtractor:
             input_documents = [input_text]
         else:
             input_documents = input_text
-        documents = [doc.to_dataclass() for doc in input_documents]
-        examples = [example.to_dataclass() for example in self.examples]
+        documents = DocumentStructure.to_dataclass_list(input_documents)
+        examples = ExampleDataStructure.to_dataclass_list(self.examples)
         result = lx.extract(
             text_or_documents=documents,
             prompt_description=self.prompt,
