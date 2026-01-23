@@ -80,8 +80,8 @@ from .extraction import (
     AnnotatedDocumentStructure,
     AttributeStructure,
     DocumentStructure,
-    ExampleData,
-    Extraction,
+    ExampleDataStructure,
+    ExtractionStructure,
 )
 from .plan import *
 from .prompt import PromptStructure
@@ -123,8 +123,8 @@ __all__ = [
     "AnnotatedDocumentStructure",
     "AttributeStructure",
     "DocumentStructure",
-    "ExampleData",
-    "Extraction",
+    "ExampleDataStructure",
+    "ExtractionStructure",
     "assistant_tool_definition",
     "assistant_format",
     "response_tool_definition",

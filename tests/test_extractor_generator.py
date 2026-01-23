@@ -12,8 +12,8 @@ from openai_sdk_helpers.settings import OpenAISettings
 from openai_sdk_helpers.structure.extraction import (
     AttributeStructure,
     DocumentExtractorConfig,
-    ExampleData,
-    Extraction,
+    ExampleDataStructure,
+    ExtractionStructure,
 )
 from openai_sdk_helpers.structure.prompt import PromptStructure
 
@@ -60,10 +60,10 @@ def test_generate_document_extractor_config_uses_generator(
     source_file = example_dir / "invoice.txt"
     source_file.write_text("Invoice ACME-001 lists Widget A for $10.")
     examples = [
-        ExampleData(
+        ExampleDataStructure(
             text="ROMEO. But soft!",
             extractions=[
-                Extraction(
+                ExtractionStructure(
                     extraction_class="character",
                     extraction_text="ROMEO",
                     attributes=[
@@ -159,10 +159,10 @@ def test_generate_document_extractor_config_with_agent(
     """Ensure agent-driven config generation uses AgentBase."""
     openai_settings = OpenAISettings(api_key="test", default_model="gpt-4o-mini")
     examples = [
-        ExampleData(
+        ExampleDataStructure(
             text="Juliet is the sun.",
             extractions=[
-                Extraction(
+                ExtractionStructure(
                     extraction_class="relationship",
                     extraction_text="Juliet is the sun",
                     attributes=[

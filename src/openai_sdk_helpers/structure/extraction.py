@@ -461,7 +461,7 @@ def _attributes_from_dict(
     ]
 
 
-class Extraction(StructureBase):
+class ExtractionStructure(StructureBase):
     """Represent a single extraction from a document.
 
     Attributes
@@ -577,13 +577,13 @@ class Extraction(StructureBase):
 
     @staticmethod
     def to_dataclass_list(
-        data: list[Extraction],
+        data: list["ExtractionStructure"],
     ) -> list[LXExtraction]:
         """Convert a list of Extractions to LangExtract Extraction dataclasses.
 
         Parameters
         ----------
-        data : list[Extraction]
+        data : list[ExtractionStructure]
             List of structured extraction models.
 
         Returns
@@ -594,7 +594,7 @@ class Extraction(StructureBase):
         return [item.to_dataclass() for item in data]
 
     @classmethod
-    def from_dataclass(cls, data: LXExtraction) -> "Extraction":
+    def from_dataclass(cls, data: LXExtraction) -> "ExtractionStructure":
         """Create an extraction from a LangExtract dataclass.
 
         Parameters
@@ -604,7 +604,7 @@ class Extraction(StructureBase):
 
         Returns
         -------
-        Extraction
+        ExtractionStructure
             Structured extraction model.
         """
         char_interval = (
@@ -637,7 +637,7 @@ class Extraction(StructureBase):
     @staticmethod
     def from_dataclass_list(
         data: list[LXExtraction] | None,
-    ) -> list["Extraction"]:
+    ) -> list["ExtractionStructure"]:
         """Create a list of extractions from a list of LangExtract dataclasses.
 
         Parameters
@@ -647,22 +647,22 @@ class Extraction(StructureBase):
 
         Returns
         -------
-        list[Extraction]
+        list[ExtractionStructure]
             List of structured extraction models.
         """
         if data is None:
             return []
-        return [Extraction.from_dataclass(item) for item in data]
+        return [ExtractionStructure.from_dataclass(item) for item in data]
 
 
-class ExampleData(StructureBase):
+class ExampleDataStructure(StructureBase):
     """Represent example data for structured prompting.
 
     Attributes
     ----------
     text : str
         Raw text for the example.
-    extractions : list[Extraction]
+    extractions : list[ExtractionStructure]
         Extractions associated with the text. Default is an empty list.
 
     Methods
@@ -676,7 +676,7 @@ class ExampleData(StructureBase):
         allow_null=False,
         description="Raw text for the example.",
     )
-    extractions: list[Extraction] = spec_field(
+    extractions: list[ExtractionStructure] = spec_field(
         "extractions",
         description="Extractions associated with the text.",
         default_factory=list,
@@ -692,11 +692,11 @@ class ExampleData(StructureBase):
         """
         return LXExampleData(
             text=self.text,
-            extractions=Extraction.to_dataclass_list(self.extractions),
+            extractions=ExtractionStructure.to_dataclass_list(self.extractions),
         )
 
     @classmethod
-    def from_dataclass(cls, data: LXExampleData) -> "ExampleData":
+    def from_dataclass(cls, data: LXExampleData) -> "ExampleDataStructure":
         """Create example data from a LangExtract dataclass.
 
         Parameters
@@ -706,10 +706,10 @@ class ExampleData(StructureBase):
 
         Returns
         -------
-        ExampleData
+        ExampleDataStructure
             Structured example data model.
         """
-        extractions = Extraction.from_dataclass_list(data.extractions)
+        extractions = ExtractionStructure.from_dataclass_list(data.extractions)
         return cls(text=data.text, extractions=extractions)
 
 
@@ -720,7 +720,7 @@ class AnnotatedDocumentStructure(StructureBase):
     ----------
     document_id : str | None
         Identifier for the document.
-    extractions : list[Extraction] | None
+    extractions : list[ExtractionStructure] | None
         Extractions associated with the document.
     text : str | None
         Raw text representation of the document.
@@ -740,7 +740,7 @@ class AnnotatedDocumentStructure(StructureBase):
         description="Identifier for the document.",
         allow_null=True,
     )
-    extractions: list[Extraction] | None = spec_field(
+    extractions: list[ExtractionStructure] | None = spec_field(
         "extractions",
         description="Extractions associated with the document.",
         allow_null=True,
@@ -774,7 +774,7 @@ class AnnotatedDocumentStructure(StructureBase):
             LangExtract annotated document dataclass instance.
         """
         lx_extractions = (
-            Extraction.to_dataclass_list(self.extractions)
+            ExtractionStructure.to_dataclass_list(self.extractions)
             if self.extractions is not None
             else None
         )
@@ -802,7 +802,7 @@ class AnnotatedDocumentStructure(StructureBase):
             Structured annotated document model.
         """
         extractions = (
-            Extraction.from_dataclass_list(data.extractions)
+            ExtractionStructure.from_dataclass_list(data.extractions)
             if data.extractions is not None
             else None
         )
@@ -925,7 +925,7 @@ class DocumentExtractorConfig(StructureBase):
         Prompt description used by LangExtract.
     extraction_classes : list[str]
         List of extraction classes to be extracted.
-    examples : list[ExampleData]
+    examples : list[ExampleDataStructure]
         Example payloads supplied to LangExtract.
 
     Methods
@@ -958,19 +958,19 @@ class DocumentExtractorConfig(StructureBase):
         default_factory=list,
         examples=[["character", "emotion", "relationship"]],
     )
-    examples: list[ExampleData] = spec_field(
+    examples: list[ExampleDataStructure] = spec_field(
         "examples",
         description="Example payloads supplied to LangExtract.",
         default_factory=list,
         examples=[
             [
-                ExampleData(
+                ExampleDataStructure(
                     text=(
                         "ROMEO. But soft! What light through yonder window breaks? "
                         "It is the east, and Juliet is the sun."
                     ),
                     extractions=[
-                        Extraction(
+                        ExtractionStructure(
                             extraction_class="character",
                             extraction_text="ROMEO",
                             attributes=[
@@ -980,7 +980,7 @@ class DocumentExtractorConfig(StructureBase):
                                 )
                             ],
                         ),
-                        Extraction(
+                        ExtractionStructure(
                             extraction_class="emotion",
                             extraction_text="But soft!",
                             attributes=[
@@ -990,7 +990,7 @@ class DocumentExtractorConfig(StructureBase):
                                 )
                             ],
                         ),
-                        Extraction(
+                        ExtractionStructure(
                             extraction_class="relationship",
                             extraction_text="Juliet is the sun",
                             attributes=[
@@ -1011,7 +1011,7 @@ __all__ = [
     "AnnotatedDocumentStructure",
     "AttributeStructure",
     "DocumentStructure",
-    "ExampleData",
-    "Extraction",
+    "ExampleDataStructure",
+    "ExtractionStructure",
     "DocumentExtractorConfig",
 ]

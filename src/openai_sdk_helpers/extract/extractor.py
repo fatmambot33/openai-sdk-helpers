@@ -11,7 +11,7 @@ from ..errors import ExtractionError
 from ..structure.extraction import (
     AnnotatedDocumentStructure,
     DocumentStructure,
-    ExampleData as ExampleDataStructure,
+    ExampleDataStructure,
 )
 
 
@@ -58,7 +58,7 @@ class DocumentExtractor:
         if not examples:
             raise ValueError(
                 "Examples are required for reliable extraction. "
-                "Provide at least one ExampleData instance."
+                "Provide at least one ExampleDataStructure instance."
             )
         self.model_id = model_id
         self.prompt = prompt_description
