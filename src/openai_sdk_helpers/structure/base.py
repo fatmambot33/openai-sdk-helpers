@@ -361,20 +361,36 @@ class StructureBase(BaseModelJSONSerializable):
         """
         schema = cls.model_json_schema()
 
-        def clean_refs(obj: Any) -> Any:
+        def _resolve_ref(ref: str, root: dict[str, Any]) -> dict[str, Any]:
+            if not ref.startswith("#/"):
+                return {"$ref": ref}
+
+            current: Any = root
+            for part in ref.lstrip("#/").split("/"):
+                part = part.replace("~1", "/").replace("~0", "~")
+                if isinstance(current, dict) and part in current:
+                    current = current[part]
+                else:
+                    return {"$ref": ref}
+            if isinstance(current, dict):
+                return cast(dict[str, Any], json.loads(json.dumps(current)))
+            return {"$ref": ref}
+
+        def _inline_refs(obj: Any, root: dict[str, Any]) -> Any:
             if isinstance(obj, dict):
                 if "$ref" in obj:
-                    for key in list(obj.keys()):
-                        if key != "$ref":
-                            obj.pop(key, None)
-                for v in obj.values():
-                    clean_refs(v)
-            elif isinstance(obj, list):
-                for item in obj:
-                    clean_refs(item)
+                    resolved = _resolve_ref(obj["$ref"], root)
+                    extras = {k: v for k, v in obj.items() if k != "$ref"}
+                    if extras:
+                        resolved = {**resolved, **_inline_refs(extras, root)}
+                    return _inline_refs(resolved, root)
+                return {k: _inline_refs(v, root) for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [_inline_refs(item, root) for item in obj]
             return obj
 
-        cleaned_schema = cast(dict[str, Any], clean_refs(schema))
+        cleaned_schema = cast(dict[str, Any], _inline_refs(schema, schema))
+        cleaned_schema.pop("$defs", None)
 
         nullable_fields = {
             name
