@@ -1,7 +1,7 @@
 """Tests for the StructureBase class."""
 
 from enum import Enum
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import pytest
 from pydantic import Field
@@ -29,6 +29,12 @@ class DummyStructure(StructureBase):
     age: Optional[int] = Field(None, description="The age of the item.")
     color: Optional[Color] = Field(None, description="The color of the item.")
     tags: Optional[List[str]] = Field(None, description="A list of tags.")
+
+
+class AnyListStructure(StructureBase):
+    """A structure with a list of untyped values."""
+
+    values: List[Any] = Field(default_factory=list, description="Untyped values.")
 
 
 def test_get_prompt():
@@ -84,6 +90,14 @@ def test_get_schema_force_required():
     assert "name" in schema["required"]
     assert "age" in schema["required"]
     assert "color" in schema["required"]
+
+
+def test_any_list_schema_items_have_types():
+    """Ensure list[Any] schemas define item types."""
+    schema = AnyListStructure.get_schema()
+    items_schema = schema["properties"]["values"]["items"]
+    assert isinstance(items_schema, dict)
+    assert "type" in items_schema or "anyOf" in items_schema
 
 
 class NullOptInStructure(StructureBase):

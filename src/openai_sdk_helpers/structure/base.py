@@ -54,12 +54,58 @@ def _enforce_additional_properties(target: Any) -> None:
             isinstance(schema_type, list) and "object" in schema_type
         )
         if has_object_type or "properties" in target:
-            target["additionalProperties"] = False
+            target.setdefault("additionalProperties", False)
         for value in target.values():
             _enforce_additional_properties(value)
     elif isinstance(target, list):
         for item in target:
             _enforce_additional_properties(item)
+
+
+def _build_any_value_schema(depth: int = 0) -> dict[str, Any]:
+    """Return a JSON schema fragment describing a permissive JSON value.
+
+    Parameters
+    ----------
+    depth : int, optional
+        Current recursion depth for nested arrays. Defaults to 0.
+
+    Returns
+    -------
+    dict[str, Any]
+        JSON schema fragment describing a permissive value.
+    """
+    any_of: list[dict[str, Any]] = [
+        {"type": "string"},
+        {"type": "integer"},
+        {"type": "number"},
+        {"type": "object", "additionalProperties": True},
+        {"type": "null"},
+    ]
+    if depth < 1:
+        any_of.insert(
+            4,
+            {
+                "type": "array",
+                "items": _build_any_value_schema(depth + 1),
+            },
+        )
+    return {"anyOf": any_of}
+
+
+def _ensure_items_have_schema(target: Any) -> None:
+    """Ensure array item schemas include type information."""
+    if isinstance(target, dict):
+        items = target.get("items")
+        if isinstance(items, dict):
+            has_type = "type" in items or "anyOf" in items or "$ref" in items
+            if not items or not has_type:
+                target["items"] = _build_any_value_schema()
+        for value in target.values():
+            _ensure_items_have_schema(value)
+    elif isinstance(target, list):
+        for item in target:
+            _ensure_items_have_schema(item)
 
 
 class StructureBase(BaseModelJSONSerializable):
@@ -429,6 +475,7 @@ class StructureBase(BaseModelJSONSerializable):
         cleaned_schema = cast(
             dict[str, Any], _inline_anyof_refs(cleaned_schema, schema, set())
         )
+        _ensure_items_have_schema(cleaned_schema)
 
         nullable_fields = {
             name
