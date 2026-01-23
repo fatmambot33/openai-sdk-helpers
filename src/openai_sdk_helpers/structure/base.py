@@ -53,7 +53,8 @@ def _enforce_additional_properties(target: Any) -> None:
         has_object_type = schema_type == "object" or (
             isinstance(schema_type, list) and "object" in schema_type
         )
-        if has_object_type or "properties" in target:
+        if (has_object_type or "properties" in target) and "$ref" not in target:
+            target.setdefault("properties", {})
             target["additionalProperties"] = False
         any_of = target.get("anyOf")
         if isinstance(any_of, list):
@@ -64,7 +65,11 @@ def _enforce_additional_properties(target: Any) -> None:
                 entry_has_object_type = entry_type == "object" or (
                     isinstance(entry_type, list) and "object" in entry_type
                 )
-                if entry_has_object_type or "properties" in entry:
+                if (
+                    (entry_has_object_type or "properties" in entry)
+                    and "$ref" not in entry
+                ):
+                    entry.setdefault("properties", {})
                     entry["additionalProperties"] = False
         for value in target.values():
             _enforce_additional_properties(value)

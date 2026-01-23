@@ -173,7 +173,6 @@ def test_any_of_object_enforces_additional_properties():
         "anyOf": [
             {
                 "type": "object",
-                "properties": {"name": {"type": "string"}},
                 "additionalProperties": True,
             },
             {"type": "null"},
@@ -189,6 +188,7 @@ def test_any_of_object_enforces_additional_properties():
         if isinstance(entry, dict) and entry.get("type") == "object"
     )
     assert object_entry["additionalProperties"] is False
+    assert object_entry["properties"] == {}
 
 
 def test_spec_field():
