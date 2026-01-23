@@ -54,7 +54,7 @@ def _enforce_additional_properties(target: Any) -> None:
             isinstance(schema_type, list) and "object" in schema_type
         )
         if has_object_type or "properties" in target:
-            target.setdefault("additionalProperties", False)
+            target["additionalProperties"] = False
         for value in target.values():
             _enforce_additional_properties(value)
     elif isinstance(target, list):
