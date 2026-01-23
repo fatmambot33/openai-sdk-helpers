@@ -75,22 +75,16 @@ def _build_any_value_schema(depth: int = 0) -> dict[str, Any]:
     dict[str, Any]
         JSON schema fragment describing a permissive value.
     """
-    any_of: list[dict[str, Any]] = [
-        {"type": "string"},
-        {"type": "integer"},
-        {"type": "number"},
-        {"type": "object", "additionalProperties": True},
-        {"type": "null"},
-    ]
+    value_types = ["string", "integer", "number", "object", "null"]
     if depth < 1:
-        any_of.insert(
-            4,
-            {
-                "type": "array",
-                "items": _build_any_value_schema(depth + 1),
-            },
-        )
-    return {"anyOf": any_of}
+        value_types.insert(4, "array")
+
+    schema: dict[str, Any] = {"type": value_types}
+    if "object" in value_types:
+        schema["additionalProperties"] = True
+    if "array" in value_types:
+        schema["items"] = _build_any_value_schema(depth + 1)
+    return schema
 
 
 def _ensure_items_have_schema(target: Any) -> None:
@@ -98,14 +92,44 @@ def _ensure_items_have_schema(target: Any) -> None:
     if isinstance(target, dict):
         items = target.get("items")
         if isinstance(items, dict):
-            has_type = "type" in items or "anyOf" in items or "$ref" in items
-            if not items or not has_type:
+            if not items:
                 target["items"] = _build_any_value_schema()
+            else:
+                _ensure_schema_has_type(items)
         for value in target.values():
             _ensure_items_have_schema(value)
     elif isinstance(target, list):
         for item in target:
             _ensure_items_have_schema(item)
+
+
+def _ensure_schema_has_type(schema: dict[str, Any]) -> None:
+    """Ensure a schema dictionary includes a type entry when possible."""
+    if "type" in schema or "$ref" in schema:
+        return
+    any_of = schema.get("anyOf")
+    if isinstance(any_of, list):
+        inferred_types: set[str] = set()
+        for entry in any_of:
+            if not isinstance(entry, dict):
+                continue
+            entry_type = entry.get("type")
+            if isinstance(entry_type, str):
+                inferred_types.add(entry_type)
+            elif isinstance(entry_type, list):
+                inferred_types.update(
+                    element for element in entry_type if isinstance(element, str)
+                )
+        if inferred_types:
+            schema["type"] = sorted(inferred_types)
+            return
+    if "properties" in schema:
+        schema["type"] = "object"
+        return
+    if "items" in schema:
+        schema["type"] = "array"
+        return
+    schema.update(_build_any_value_schema())
 
 
 class StructureBase(BaseModelJSONSerializable):
