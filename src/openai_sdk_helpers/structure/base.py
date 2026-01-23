@@ -50,11 +50,31 @@ def _enforce_additional_properties(target: Any) -> None:
     """Ensure every object schema disallows additional properties."""
     if isinstance(target, dict):
         schema_type = target.get("type")
-        has_object_type = schema_type == "object" or (
-            isinstance(schema_type, list) and "object" in schema_type
+        allows_object_type = schema_type == "object" or (
+            isinstance(schema_type, list)
+            and "object" in schema_type
+            and set(schema_type).issubset({"object", "null"})
         )
-        if has_object_type or "properties" in target:
+        if (allows_object_type or "properties" in target) and "$ref" not in target:
+            target.setdefault("properties", {})
             target["additionalProperties"] = False
+        any_of = target.get("anyOf")
+        if isinstance(any_of, list):
+            for entry in any_of:
+                if not isinstance(entry, dict):
+                    continue
+                entry_type = entry.get("type")
+                entry_allows_object_type = entry_type == "object" or (
+                    isinstance(entry_type, list)
+                    and "object" in entry_type
+                    and set(entry_type).issubset({"object", "null"})
+                )
+                if (
+                    (entry_allows_object_type or "properties" in entry)
+                    and "$ref" not in entry
+                ):
+                    entry.setdefault("properties", {})
+                    entry["additionalProperties"] = False
         for value in target.values():
             _enforce_additional_properties(value)
     elif isinstance(target, list):
@@ -75,16 +95,25 @@ def _build_any_value_schema(depth: int = 0) -> dict[str, Any]:
     dict[str, Any]
         JSON schema fragment describing a permissive value.
     """
-    value_types = ["string", "integer", "number", "object", "null"]
-    if depth < 1:
-        value_types.insert(4, "array")
+    value_types = ["string", "integer", "number", "null"]
+    any_of: list[dict[str, Any]] = [{"type": value_type} for value_type in value_types]
 
-    schema: dict[str, Any] = {"type": value_types}
-    if "object" in value_types:
-        schema["additionalProperties"] = False
-    if "array" in value_types:
-        schema["items"] = _build_any_value_schema(depth + 1)
-    return schema
+    any_of.append(
+        {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": False,
+        }
+    )
+    if depth < 1:
+        any_of.append(
+            {
+                "type": "array",
+                "items": _build_any_value_schema(depth + 1),
+            }
+        )
+
+    return {"anyOf": any_of}
 
 
 def _ensure_items_have_schema(target: Any) -> None:
