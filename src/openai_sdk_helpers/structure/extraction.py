@@ -713,7 +713,7 @@ class ExampleData(StructureBase):
         return cls(text=data.text, extractions=extractions)
 
 
-class AnnotatedDocument(StructureBase):
+class AnnotatedDocumentStructure(StructureBase):
     """Represent a document annotated with extractions.
 
     Attributes
@@ -788,7 +788,7 @@ class AnnotatedDocument(StructureBase):
         return lx_doc
 
     @classmethod
-    def from_dataclass(cls, data: LXAnnotatedDocument) -> "AnnotatedDocument":
+    def from_dataclass(cls, data: LXAnnotatedDocument) -> "AnnotatedDocumentStructure":
         """Create an annotated document from a LangExtract dataclass.
 
         Parameters
@@ -798,7 +798,7 @@ class AnnotatedDocument(StructureBase):
 
         Returns
         -------
-        AnnotatedDocument
+        AnnotatedDocumentStructure
             Structured annotated document model.
         """
         extractions = (
@@ -819,7 +819,7 @@ class AnnotatedDocument(StructureBase):
         )
 
 
-class Document(StructureBase):
+class DocumentStructure(StructureBase):
     """Store extraction results for a document.
 
     Attributes
@@ -888,7 +888,7 @@ class Document(StructureBase):
         return lx_doc
 
     @classmethod
-    def from_dataclass(cls, data: LXDocument) -> "Document":
+    def from_dataclass(cls, data: LXDocument) -> "DocumentStructure":
         """Create a document from a LangExtract dataclass.
 
         Parameters
@@ -898,7 +898,7 @@ class Document(StructureBase):
 
         Returns
         -------
-        Document
+        DocumentStructure
             Structured document model.
         """
         tokenized_text = (
@@ -1008,9 +1008,9 @@ class DocumentExtractorConfig(StructureBase):
 
 
 __all__ = [
-    "AnnotatedDocument",
+    "AnnotatedDocumentStructure",
     "AttributeStructure",
-    "Document",
+    "DocumentStructure",
     "ExampleData",
     "Extraction",
     "DocumentExtractorConfig",

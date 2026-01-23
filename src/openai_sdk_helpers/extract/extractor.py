@@ -9,8 +9,8 @@ from langextract.core.data import AnnotatedDocument as LXAnnotatedDocument
 
 from ..errors import ExtractionError
 from ..structure.extraction import (
-    AnnotatedDocument as AnnotatedDocumentStructure,
-    Document as DocumentStructure,
+    AnnotatedDocumentStructure,
+    DocumentStructure,
     ExampleData as ExampleDataStructure,
 )
 
