@@ -68,7 +68,12 @@ def test_get_schema():
     # Check optional enum schema
     color_schema = properties["color"]
     assert "anyOf" in color_schema
-    assert {"$ref": "#/$defs/Color"} in color_schema["anyOf"]
+    assert any(
+        isinstance(item, dict)
+        and item.get("type") == "string"
+        and item.get("enum") == ["red", "green", "blue"]
+        for item in color_schema["anyOf"]
+    )
     assert {"type": "null"} in color_schema["anyOf"]
 
 

@@ -376,6 +376,60 @@ class StructureBase(BaseModelJSONSerializable):
 
         cleaned_schema = cast(dict[str, Any], clean_refs(schema))
 
+        def _resolve_ref(
+            ref: str,
+            root: dict[str, Any],
+            seen: set[str],
+        ) -> dict[str, Any] | None:
+            if not ref.startswith("#/"):
+                return None
+            if ref in seen:
+                return None
+            seen.add(ref)
+
+            current: Any = root
+            for part in ref.lstrip("#/").split("/"):
+                part = part.replace("~1", "/").replace("~0", "~")
+                if isinstance(current, dict) and part in current:
+                    current = current[part]
+                else:
+                    seen.discard(ref)
+                    return None
+            if isinstance(current, dict):
+                resolved = cast(dict[str, Any], json.loads(json.dumps(current)))
+            else:
+                resolved = None
+            seen.discard(ref)
+            return resolved
+
+        def _inline_anyof_refs(obj: Any, root: dict[str, Any], seen: set[str]) -> Any:
+            if isinstance(obj, dict):
+                updated: dict[str, Any] = {}
+                for key, value in obj.items():
+                    if key == "anyOf" and isinstance(value, list):
+                        updated_items = []
+                        for item in value:
+                            if (
+                                isinstance(item, dict)
+                                and "$ref" in item
+                                and "type" not in item
+                            ):
+                                resolved = _resolve_ref(item["$ref"], root, seen)
+                                if resolved is not None:
+                                    item = resolved
+                            updated_items.append(_inline_anyof_refs(item, root, seen))
+                        updated[key] = updated_items
+                    else:
+                        updated[key] = _inline_anyof_refs(value, root, seen)
+                return updated
+            if isinstance(obj, list):
+                return [_inline_anyof_refs(item, root, seen) for item in obj]
+            return obj
+
+        cleaned_schema = cast(
+            dict[str, Any], _inline_anyof_refs(cleaned_schema, schema, set())
+        )
+
         nullable_fields = {
             name
             for name, model_field in getattr(cls, "model_fields", {}).items()
