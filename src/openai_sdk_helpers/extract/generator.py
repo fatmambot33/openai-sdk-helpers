@@ -12,7 +12,7 @@ from ..prompt import PromptRenderer
 from ..response.configuration import ResponseConfiguration
 from ..response.prompter import PROMPTER
 from ..settings import OpenAISettings
-from ..structure.extraction import DocumentExtractorConfig, ExampleData
+from ..structure.extraction import DocumentExtractorConfig, ExampleDataStructure
 from ..structure.prompt import PromptStructure
 
 EXTRACTOR_CONFIG_TEMPLATE_NAME = "extractor_config_generator.jinja"
@@ -155,7 +155,7 @@ def _format_extractor_config_request_with_examples(
     name: str,
     prompt_description: str,
     extraction_classes: Sequence[str],
-    examples: Sequence[ExampleData],
+    examples: Sequence[ExampleDataStructure],
 ) -> str:
     """Format the extractor configuration request payload with examples.
 
@@ -167,7 +167,7 @@ def _format_extractor_config_request_with_examples(
         Optimized prompt description to use.
     extraction_classes : Sequence[str]
         Extraction classes to include.
-    examples : Sequence[ExampleData]
+    examples : Sequence[ExampleDataStructure]
         Example payloads to include.
 
     Returns
@@ -397,7 +397,7 @@ def generate_document_extractor_config_with_agent(
     name: str,
     prompt: str,
     extraction_classes: Sequence[str],
-    examples: Sequence[ExampleData],
+    examples: Sequence[ExampleDataStructure],
     *,
     additional_context: str | None = None,
 ) -> DocumentExtractorConfig:
@@ -413,7 +413,7 @@ def generate_document_extractor_config_with_agent(
         User-supplied prompt content.
     extraction_classes : Sequence[str]
         Extraction classes to include in the configuration.
-    examples : Sequence[ExampleData]
+    examples : Sequence[ExampleDataStructure]
         Example payloads supplied to LangExtract.
     additional_context : str or None, default None
         Optional context that should influence prompt generation.
@@ -431,7 +431,7 @@ def generate_document_extractor_config_with_agent(
         If no examples are provided.
     """
     if not examples:
-        raise ValueError("At least one ExampleData instance is required.")
+        raise ValueError("At least one ExampleDataStructure instance is required.")
     if not openai_settings.default_model:
         raise ValueError("OpenAISettings.default_model is required for agent runs.")
     prompt_description = optimize_extractor_prompt_with_agent(

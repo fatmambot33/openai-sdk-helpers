@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Sequence
 import uuid
 from enum import Enum, IntEnum
 from langextract.core.data import (
@@ -30,6 +30,8 @@ class CharInterval(StructureBase):
     -------
     to_dataclass()
         Convert to a LangExtract ``CharInterval`` dataclass.
+    from_dataclass(data)
+        Create a CharInterval from a LangExtract dataclass.
     """
 
     start_pos: int | None = spec_field(
@@ -42,7 +44,13 @@ class CharInterval(StructureBase):
     )
 
     def to_dataclass(self) -> LXCharInterval:
-        """Convert to LangExtract CharInterval dataclass."""
+        """Convert to LangExtract CharInterval dataclass.
+
+        Returns
+        -------
+        LXCharInterval
+            LangExtract character interval dataclass instance.
+        """
         return LXCharInterval(
             start_pos=self.start_pos,
             end_pos=self.end_pos,
@@ -56,6 +64,11 @@ class CharInterval(StructureBase):
         ----------
         data : LXCharInterval
             LangExtract CharInterval dataclass instance.
+
+        Returns
+        -------
+        CharInterval
+            Structured character interval model.
         """
         return cls(
             start_pos=data.start_pos,
@@ -64,13 +77,29 @@ class CharInterval(StructureBase):
 
 
 class AlignmentStatus(Enum):
+    """Represent alignment status values for extracted items.
+
+    Methods
+    -------
+    to_dataclass()
+        Convert to a LangExtract ``AlignmentStatus`` dataclass.
+    from_dataclass(data)
+        Create an AlignmentStatus from a LangExtract dataclass.
+    """
+
     MATCH_EXACT = "match_exact"
     MATCH_GREATER = "match_greater"
     MATCH_LESSER = "match_lesser"
     MATCH_FUZZY = "match_fuzzy"
 
     def to_dataclass(self) -> LXAlignmentStatus:
-        """Convert to LangExtract AlignmentStatus dataclass."""
+        """Convert to LangExtract AlignmentStatus dataclass.
+
+        Returns
+        -------
+        LXAlignmentStatus
+            LangExtract alignment status dataclass instance.
+        """
         return LXAlignmentStatus(self.value)
 
     @classmethod
@@ -81,6 +110,11 @@ class AlignmentStatus(Enum):
         ----------
         data : LXAlignmentStatus
             LangExtract alignment status dataclass instance.
+
+        Returns
+        -------
+        AlignmentStatus
+            Structured alignment status value.
         """
         return cls(data.value)
 
@@ -100,6 +134,8 @@ class TokenCharInterval(StructureBase):
     -------
     to_dataclass()
         Convert to a LangExtract ``CharInterval`` dataclass.
+    from_dataclass(data)
+        Create a TokenCharInterval from a LangExtract dataclass.
     """
 
     start_pos: int = spec_field(
@@ -114,7 +150,13 @@ class TokenCharInterval(StructureBase):
     )
 
     def to_dataclass(self) -> LXtokenizer.CharInterval:
-        """Convert to LangExtract CharInterval dataclass."""
+        """Convert to LangExtract CharInterval dataclass.
+
+        Returns
+        -------
+        LXtokenizer.CharInterval
+            LangExtract character interval dataclass instance.
+        """
         return LXtokenizer.CharInterval(
             start_pos=self.start_pos,
             end_pos=self.end_pos,
@@ -128,6 +170,11 @@ class TokenCharInterval(StructureBase):
         ----------
         data : LXtokenizer.CharInterval
             LangExtract CharInterval dataclass instance.
+
+        Returns
+        -------
+        TokenCharInterval
+            Structured token character interval model.
         """
         return cls(
             start_pos=data.start_pos,
@@ -150,6 +197,8 @@ class TokenInterval(StructureBase):
     -------
     to_dataclass()
         Convert to a LangExtract ``TokenInterval`` dataclass.
+    from_dataclass(data)
+        Create a TokenInterval from a LangExtract dataclass.
     """
 
     start_index: int = spec_field(
@@ -164,7 +213,13 @@ class TokenInterval(StructureBase):
     )
 
     def to_dataclass(self) -> LXtokenizer.TokenInterval:
-        """Convert to LangExtract TokenInterval dataclass."""
+        """Convert to LangExtract TokenInterval dataclass.
+
+        Returns
+        -------
+        LXtokenizer.TokenInterval
+            LangExtract token interval dataclass instance.
+        """
         return LXtokenizer.TokenInterval(
             start_index=self.start_index,
             end_index=self.end_index,
@@ -178,6 +233,11 @@ class TokenInterval(StructureBase):
         ----------
         data : LXtokenizer.TokenInterval
             LangExtract TokenInterval dataclass instance.
+
+        Returns
+        -------
+        TokenInterval
+            Structured token interval model.
         """
         return cls(
             start_index=data.start_index,
@@ -193,6 +253,13 @@ class TokenType(IntEnum):
       WORD: Represents an alphabetical word token.
       NUMBER: Represents a numeric token.
       PUNCTUATION: Represents punctuation characters.
+
+    Methods
+    -------
+    to_dataclass()
+        Convert to a LangExtract ``TokenType`` dataclass.
+    from_dataclass(data)
+        Create a TokenType from a LangExtract dataclass.
     """
 
     WORD = 0
@@ -200,7 +267,13 @@ class TokenType(IntEnum):
     PUNCTUATION = 2
 
     def to_dataclass(self) -> LXtokenizer.TokenType:
-        """Convert to LangExtract TokenType dataclass."""
+        """Convert to LangExtract TokenType dataclass.
+
+        Returns
+        -------
+        LXtokenizer.TokenType
+            LangExtract token type dataclass instance.
+        """
         return LXtokenizer.TokenType(self.value)
 
     @classmethod
@@ -211,6 +284,11 @@ class TokenType(IntEnum):
         ----------
         data : LXtokenizer.TokenType
             LangExtract token type dataclass instance.
+
+        Returns
+        -------
+        TokenType
+            Structured token type value.
         """
         return cls(data.value)
 
@@ -231,6 +309,17 @@ class Token(StructureBase):
         token spans.
       first_token_after_newline: True if the token immediately follows a newline
         or carriage return.
+
+    Methods
+    -------
+    to_dataclass()
+        Convert to a LangExtract ``Token`` dataclass.
+    from_dataclass(data)
+        Create a Token from a LangExtract dataclass.
+    from_dataclass_list(data)
+        Create structured tokens from LangExtract dataclasses.
+    to_dataclass_list(data)
+        Convert structured tokens to LangExtract dataclasses.
     """
 
     index: int = spec_field(
@@ -253,7 +342,13 @@ class Token(StructureBase):
     )
 
     def to_dataclass(self) -> LXtokenizer.Token:
-        """Convert to LangExtract Token dataclass."""
+        """Convert to LangExtract Token dataclass.
+
+        Returns
+        -------
+        LXtokenizer.Token
+            LangExtract token dataclass instance.
+        """
         token = LXtokenizer.Token(
             index=self.index,
             token_type=LXtokenizer.TokenType(self.token_type),
@@ -271,6 +366,11 @@ class Token(StructureBase):
         ----------
         data : LXtokenizer.Token
             LangExtract token dataclass instance.
+
+        Returns
+        -------
+        Token
+            Structured token model.
         """
         char_interval = (
             TokenCharInterval.from_dataclass(data.char_interval)
@@ -325,6 +425,13 @@ class TokenizedText(StructureBase):
       text: The text that was tokenized. For UnicodeTokenizer, this is
         NOT normalized to NFC (to preserve indices).
       tokens: A list of Token objects extracted from the text.
+
+    Methods
+    -------
+    to_dataclass()
+        Convert to a LangExtract ``TokenizedText`` dataclass.
+    from_dataclass(data)
+        Create a TokenizedText from a LangExtract dataclass.
     """
 
     text: str = spec_field(
@@ -340,7 +447,13 @@ class TokenizedText(StructureBase):
     )
 
     def to_dataclass(self) -> LXtokenizer.TokenizedText:
-        """Convert to LangExtract TokenizedText dataclass."""
+        """Convert to LangExtract TokenizedText dataclass.
+
+        Returns
+        -------
+        LXtokenizer.TokenizedText
+            LangExtract tokenized text dataclass instance.
+        """
         return LXtokenizer.TokenizedText(
             text=self.text,
             tokens=Token.to_dataclass_list(self.tokens),
@@ -354,6 +467,11 @@ class TokenizedText(StructureBase):
         ----------
         data : LXtokenizer.TokenizedText
             LangExtract TokenizedText dataclass instance.
+
+        Returns
+        -------
+        TokenizedText
+            Structured tokenized text model.
         """
         return cls(
             text=data.text,
@@ -461,7 +579,7 @@ def _attributes_from_dict(
     ]
 
 
-class Extraction(StructureBase):
+class ExtractionStructure(StructureBase):
     """Represent a single extraction from a document.
 
     Attributes
@@ -489,8 +607,12 @@ class Extraction(StructureBase):
     -------
     to_dataclass()
         Convert to a LangExtract ``Extraction`` dataclass.
+    to_dataclass_list(data)
+        Convert structured extractions to LangExtract dataclasses.
     from_dataclass(data)
         Create an extraction from a LangExtract dataclass.
+    from_dataclass_list(data)
+        Create structured extractions from LangExtract dataclasses.
     """
 
     extraction_class: str = spec_field(
@@ -577,13 +699,13 @@ class Extraction(StructureBase):
 
     @staticmethod
     def to_dataclass_list(
-        data: list[Extraction],
+        data: Sequence["ExtractionStructure"],
     ) -> list[LXExtraction]:
         """Convert a list of Extractions to LangExtract Extraction dataclasses.
 
         Parameters
         ----------
-        data : list[Extraction]
+        data : Sequence[ExtractionStructure]
             List of structured extraction models.
 
         Returns
@@ -594,7 +716,7 @@ class Extraction(StructureBase):
         return [item.to_dataclass() for item in data]
 
     @classmethod
-    def from_dataclass(cls, data: LXExtraction) -> "Extraction":
+    def from_dataclass(cls, data: LXExtraction) -> "ExtractionStructure":
         """Create an extraction from a LangExtract dataclass.
 
         Parameters
@@ -604,7 +726,7 @@ class Extraction(StructureBase):
 
         Returns
         -------
-        Extraction
+        ExtractionStructure
             Structured extraction model.
         """
         char_interval = (
@@ -637,7 +759,7 @@ class Extraction(StructureBase):
     @staticmethod
     def from_dataclass_list(
         data: list[LXExtraction] | None,
-    ) -> list["Extraction"]:
+    ) -> list["ExtractionStructure"]:
         """Create a list of extractions from a list of LangExtract dataclasses.
 
         Parameters
@@ -647,28 +769,34 @@ class Extraction(StructureBase):
 
         Returns
         -------
-        list[Extraction]
+        list[ExtractionStructure]
             List of structured extraction models.
         """
         if data is None:
             return []
-        return [Extraction.from_dataclass(item) for item in data]
+        return [ExtractionStructure.from_dataclass(item) for item in data]
 
 
-class ExampleData(StructureBase):
+class ExampleDataStructure(StructureBase):
     """Represent example data for structured prompting.
 
     Attributes
     ----------
     text : str
         Raw text for the example.
-    extractions : list[Extraction]
+    extractions : list[ExtractionStructure]
         Extractions associated with the text. Default is an empty list.
 
     Methods
     -------
     to_dataclass()
         Convert to a LangExtract ``ExampleData`` dataclass.
+    to_dataclass_list(data)
+        Convert structured example data to LangExtract dataclasses.
+    from_dataclass(data)
+        Create example data from a LangExtract dataclass.
+    from_dataclass_list(data)
+        Create structured examples from LangExtract dataclasses.
     """
 
     text: str = spec_field(
@@ -676,7 +804,7 @@ class ExampleData(StructureBase):
         allow_null=False,
         description="Raw text for the example.",
     )
-    extractions: list[Extraction] = spec_field(
+    extractions: list[ExtractionStructure] = spec_field(
         "extractions",
         description="Extractions associated with the text.",
         default_factory=list,
@@ -692,11 +820,29 @@ class ExampleData(StructureBase):
         """
         return LXExampleData(
             text=self.text,
-            extractions=Extraction.to_dataclass_list(self.extractions),
+            extractions=ExtractionStructure.to_dataclass_list(self.extractions),
         )
 
+    @staticmethod
+    def to_dataclass_list(
+        data: Sequence["ExampleDataStructure"],
+    ) -> list[LXExampleData]:
+        """Convert structured examples to LangExtract dataclasses.
+
+        Parameters
+        ----------
+        data : Sequence[ExampleDataStructure]
+            List of structured example data models.
+
+        Returns
+        -------
+        list[LXExampleData]
+            List of LangExtract example dataclass instances.
+        """
+        return [item.to_dataclass() for item in data]
+
     @classmethod
-    def from_dataclass(cls, data: LXExampleData) -> "ExampleData":
+    def from_dataclass(cls, data: LXExampleData) -> "ExampleDataStructure":
         """Create example data from a LangExtract dataclass.
 
         Parameters
@@ -706,21 +852,41 @@ class ExampleData(StructureBase):
 
         Returns
         -------
-        ExampleData
+        ExampleDataStructure
             Structured example data model.
         """
-        extractions = Extraction.from_dataclass_list(data.extractions)
+        extractions = ExtractionStructure.from_dataclass_list(data.extractions)
         return cls(text=data.text, extractions=extractions)
 
+    @staticmethod
+    def from_dataclass_list(
+        data: list[LXExampleData] | None,
+    ) -> list["ExampleDataStructure"]:
+        """Create structured examples from LangExtract dataclasses.
 
-class AnnotatedDocument(StructureBase):
+        Parameters
+        ----------
+        data : list[LXExampleData] or None
+            List of LangExtract example dataclass instances.
+
+        Returns
+        -------
+        list[ExampleDataStructure]
+            List of structured example data models.
+        """
+        if data is None:
+            return []
+        return [ExampleDataStructure.from_dataclass(item) for item in data]
+
+
+class AnnotatedDocumentStructure(StructureBase):
     """Represent a document annotated with extractions.
 
     Attributes
     ----------
     document_id : str | None
         Identifier for the document.
-    extractions : list[Extraction] | None
+    extractions : list[ExtractionStructure] | None
         Extractions associated with the document.
     text : str | None
         Raw text representation of the document.
@@ -740,7 +906,7 @@ class AnnotatedDocument(StructureBase):
         description="Identifier for the document.",
         allow_null=True,
     )
-    extractions: list[Extraction] | None = spec_field(
+    extractions: list[ExtractionStructure] | None = spec_field(
         "extractions",
         description="Extractions associated with the document.",
         allow_null=True,
@@ -774,7 +940,7 @@ class AnnotatedDocument(StructureBase):
             LangExtract annotated document dataclass instance.
         """
         lx_extractions = (
-            Extraction.to_dataclass_list(self.extractions)
+            ExtractionStructure.to_dataclass_list(self.extractions)
             if self.extractions is not None
             else None
         )
@@ -788,7 +954,7 @@ class AnnotatedDocument(StructureBase):
         return lx_doc
 
     @classmethod
-    def from_dataclass(cls, data: LXAnnotatedDocument) -> "AnnotatedDocument":
+    def from_dataclass(cls, data: LXAnnotatedDocument) -> "AnnotatedDocumentStructure":
         """Create an annotated document from a LangExtract dataclass.
 
         Parameters
@@ -798,11 +964,11 @@ class AnnotatedDocument(StructureBase):
 
         Returns
         -------
-        AnnotatedDocument
+        AnnotatedDocumentStructure
             Structured annotated document model.
         """
         extractions = (
-            Extraction.from_dataclass_list(data.extractions)
+            ExtractionStructure.from_dataclass_list(data.extractions)
             if data.extractions is not None
             else None
         )
@@ -819,7 +985,7 @@ class AnnotatedDocument(StructureBase):
         )
 
 
-class Document(StructureBase):
+class DocumentStructure(StructureBase):
     """Store extraction results for a document.
 
     Attributes
@@ -837,8 +1003,12 @@ class Document(StructureBase):
     -------
     to_dataclass()
         Convert to a LangExtract ``Document`` dataclass.
+    to_dataclass_list(data)
+        Convert structured documents to LangExtract dataclasses.
     from_dataclass(data)
         Create a document from a LangExtract dataclass.
+    from_dataclass_list(data)
+        Create structured documents from LangExtract dataclasses.
     """
 
     text: str = spec_field(
@@ -887,8 +1057,26 @@ class Document(StructureBase):
             lx_doc.tokenized_text = self.tokenized_text.to_dataclass()
         return lx_doc
 
+    @staticmethod
+    def to_dataclass_list(
+        data: Sequence["DocumentStructure"],
+    ) -> list[LXDocument]:
+        """Convert structured documents to LangExtract dataclasses.
+
+        Parameters
+        ----------
+        data : Sequence[DocumentStructure]
+            List of structured document models.
+
+        Returns
+        -------
+        list[LXDocument]
+            List of LangExtract document dataclass instances.
+        """
+        return [item.to_dataclass() for item in data]
+
     @classmethod
-    def from_dataclass(cls, data: LXDocument) -> "Document":
+    def from_dataclass(cls, data: LXDocument) -> "DocumentStructure":
         """Create a document from a LangExtract dataclass.
 
         Parameters
@@ -898,7 +1086,7 @@ class Document(StructureBase):
 
         Returns
         -------
-        Document
+        DocumentStructure
             Structured document model.
         """
         tokenized_text = (
@@ -913,6 +1101,26 @@ class Document(StructureBase):
             tokenized_text=tokenized_text,
         )
 
+    @staticmethod
+    def from_dataclass_list(
+        data: list[LXDocument] | None,
+    ) -> list["DocumentStructure"]:
+        """Create structured documents from LangExtract dataclasses.
+
+        Parameters
+        ----------
+        data : list[LXDocument] or None
+            List of LangExtract document dataclass instances.
+
+        Returns
+        -------
+        list[DocumentStructure]
+            List of structured document models.
+        """
+        if data is None:
+            return []
+        return [DocumentStructure.from_dataclass(item) for item in data]
+
 
 class DocumentExtractorConfig(StructureBase):
     """Configuration settings for the extractor.
@@ -925,7 +1133,7 @@ class DocumentExtractorConfig(StructureBase):
         Prompt description used by LangExtract.
     extraction_classes : list[str]
         List of extraction classes to be extracted.
-    examples : list[ExampleData]
+    examples : list[ExampleDataStructure]
         Example payloads supplied to LangExtract.
 
     Methods
@@ -958,19 +1166,19 @@ class DocumentExtractorConfig(StructureBase):
         default_factory=list,
         examples=[["character", "emotion", "relationship"]],
     )
-    examples: list[ExampleData] = spec_field(
+    examples: list[ExampleDataStructure] = spec_field(
         "examples",
         description="Example payloads supplied to LangExtract.",
         default_factory=list,
         examples=[
             [
-                ExampleData(
+                ExampleDataStructure(
                     text=(
                         "ROMEO. But soft! What light through yonder window breaks? "
                         "It is the east, and Juliet is the sun."
                     ),
                     extractions=[
-                        Extraction(
+                        ExtractionStructure(
                             extraction_class="character",
                             extraction_text="ROMEO",
                             attributes=[
@@ -980,7 +1188,7 @@ class DocumentExtractorConfig(StructureBase):
                                 )
                             ],
                         ),
-                        Extraction(
+                        ExtractionStructure(
                             extraction_class="emotion",
                             extraction_text="But soft!",
                             attributes=[
@@ -990,7 +1198,7 @@ class DocumentExtractorConfig(StructureBase):
                                 )
                             ],
                         ),
-                        Extraction(
+                        ExtractionStructure(
                             extraction_class="relationship",
                             extraction_text="Juliet is the sun",
                             attributes=[
@@ -1008,10 +1216,10 @@ class DocumentExtractorConfig(StructureBase):
 
 
 __all__ = [
-    "AnnotatedDocument",
+    "AnnotatedDocumentStructure",
     "AttributeStructure",
-    "Document",
-    "ExampleData",
-    "Extraction",
+    "DocumentStructure",
+    "ExampleDataStructure",
+    "ExtractionStructure",
     "DocumentExtractorConfig",
 ]

@@ -8,7 +8,11 @@ import langextract as lx
 from langextract.core.data import AnnotatedDocument as LXAnnotatedDocument
 
 from ..errors import ExtractionError
-from ..structure.extraction import AnnotatedDocument, Document, ExampleData
+from ..structure.extraction import (
+    AnnotatedDocumentStructure,
+    DocumentStructure,
+    ExampleDataStructure,
+)
 
 
 class DocumentExtractor:
@@ -18,7 +22,7 @@ class DocumentExtractor:
     ----------
     prompt_description : str
         Prompt description used by LangExtract.
-    examples : Sequence[Any]
+    examples : Sequence[ExampleDataStructure]
         Example payloads supplied to LangExtract.
     model_id : str
         Model identifier to pass to LangExtract.
@@ -34,7 +38,7 @@ class DocumentExtractor:
     def __init__(
         self,
         prompt_description: str,
-        examples: typing.Sequence[ExampleData],
+        examples: typing.Sequence[ExampleDataStructure],
         model_id: str,
         max_workers: int = 1,
     ) -> None:
@@ -44,7 +48,7 @@ class DocumentExtractor:
         ----------
         prompt_description : str
             Prompt description used by LangExtract.
-        examples : Sequence[ExampleData]
+        examples : Sequence[ExampleDataStructure]
             Example payloads supplied to LangExtract.
         model_id : str
             Model identifier to pass to LangExtract.
@@ -54,34 +58,36 @@ class DocumentExtractor:
         if not examples:
             raise ValueError(
                 "Examples are required for reliable extraction. "
-                "Provide at least one ExampleData instance."
+                "Provide at least one ExampleDataStructure instance."
             )
         self.model_id = model_id
         self.prompt = prompt_description
         self.examples = examples
         self.max_workers = max_workers
 
-    def extract(self, input_text: Document | list[Document]) -> list[AnnotatedDocument]:
+    def extract(
+        self, input_text: DocumentStructure | list[DocumentStructure]
+    ) -> list[AnnotatedDocumentStructure]:
         """Run the extraction.
 
         Parameters
         ----------
-        input_text : Document | list[Document]
+        input_text : DocumentStructure | list[DocumentStructure]
             Document or list of documents to extract data from.
 
         Returns
         -------
-        list[AnnotatedDocument]
+        list[AnnotatedDocumentStructure]
             Extracted items for the provided documents.
         """
-        if isinstance(input_text, Document):
-            input_text = [input_text]
-        examples = [
-            example.to_dataclass() if isinstance(example, ExampleData) else example
-            for example in self.examples
-        ]
+        if isinstance(input_text, DocumentStructure):
+            input_documents = [input_text]
+        else:
+            input_documents = input_text
+        documents = DocumentStructure.to_dataclass_list(input_documents)
+        examples = ExampleDataStructure.to_dataclass_list(self.examples)
         result = lx.extract(
-            text_or_documents=input_text,
+            text_or_documents=documents,
             prompt_description=self.prompt,
             examples=examples,
             model_id=self.model_id,  # Automatically selects OpenAI provider
@@ -90,10 +96,10 @@ class DocumentExtractor:
             use_schema_constraints=False,
         )
 
-        def _convert(data: typing.Any) -> AnnotatedDocument:
+        def _convert(data: typing.Any) -> AnnotatedDocumentStructure:
             if isinstance(data, LXAnnotatedDocument):
-                return AnnotatedDocument.from_dataclass(data)
-            return AnnotatedDocument.model_validate(data)
+                return AnnotatedDocumentStructure.from_dataclass(data)
+            return AnnotatedDocumentStructure.model_validate(data)
 
         if isinstance(result, list):
             return [_convert(doc) for doc in result]
