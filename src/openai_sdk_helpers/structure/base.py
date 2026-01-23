@@ -125,6 +125,7 @@ def _ensure_schema_has_type(schema: dict[str, Any]) -> None:
             return
     if "properties" in schema:
         schema["type"] = "object"
+        schema.setdefault("additionalProperties", False)
         return
     if "items" in schema:
         schema["type"] = "array"
