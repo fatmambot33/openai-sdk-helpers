@@ -32,20 +32,12 @@ from openai_sdk_helpers.utils import (
 
 # Supported file extensions for OpenAI Assistants file search and vision
 SUPPORTED_FILE_EXTENSIONS = (
-    ".csv",
-    ".docx",
     ".gif",
-    ".html",
-    ".json",
     ".jpeg",
     ".jpg",
-    ".md",
     ".pdf",
     ".png",
-    ".pptx",
-    ".txt",
     ".webp",
-    ".xlsx",
 )
 
 
