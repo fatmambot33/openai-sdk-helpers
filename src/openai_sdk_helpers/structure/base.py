@@ -8,6 +8,7 @@ generation, validation, and serialization.
 from __future__ import annotations
 
 # Standard library imports
+import copy
 import dataclasses
 import inspect
 import json
@@ -238,6 +239,7 @@ class StructureBase(BaseModelJSONSerializable):
     model_config = ConfigDict(
         title=__qualname__, use_enum_values=False, strict=True, extra="forbid"
     )
+    _schema_cache: ClassVar[dict[type["StructureBase"], dict[str, Any]]] = {}
 
     @classmethod
     def get_prompt(cls, add_enum_values: bool = True) -> str:
@@ -453,12 +455,17 @@ class StructureBase(BaseModelJSONSerializable):
         - Adds null type for fields with None default
         - Cleans up $ref entries for better compatibility
         - Recursively processes nested structures
+        - Caches the computed schema per class
 
         Examples
         --------
         >>> schema = MyStructure.get_schema()
         >>> print(json.dumps(schema, indent=2))
         """
+        cached_schema = cls._schema_cache.get(cls)
+        if cached_schema is not None:
+            return copy.deepcopy(cached_schema)
+
         schema = cls.model_json_schema()
 
         def clean_refs(obj: Any) -> Any:
@@ -562,7 +569,8 @@ class StructureBase(BaseModelJSONSerializable):
 
         _add_required_fields(cleaned_schema)
         _enforce_additional_properties(cleaned_schema)
-        return cleaned_schema
+        cls._schema_cache[cls] = cleaned_schema
+        return copy.deepcopy(cleaned_schema)
 
     @classmethod
     def save_schema_to_file(cls, file_path: Path) -> Path:
