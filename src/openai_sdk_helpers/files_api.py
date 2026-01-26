@@ -374,6 +374,7 @@ class FilesAPIManager:
                 log(
                     f"Error deleting tracked file {file_id}: {exc}",
                     level=logging.WARNING,
+                    exc=exc,
                 )
                 results[file_id] = False
 

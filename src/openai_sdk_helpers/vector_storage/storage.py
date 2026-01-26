@@ -208,7 +208,11 @@ class VectorStorage:
                         self._existing_files[file_name] = f.id
 
             except Exception as exc:
-                log(f"Failed to load existing files: {exc}", level=logging.ERROR)
+                log(
+                    f"Failed to load existing files: {exc}",
+                    level=logging.ERROR,
+                    exc=exc,
+                )
                 self._existing_files = {}
         return self._existing_files
 
@@ -231,7 +235,11 @@ class VectorStorage:
                     result[file_name] = f.id
             return result
         except Exception as exc:
-            log(f"Failed to load existing files: {exc}", level=logging.ERROR)
+            log(
+                f"Failed to load existing files: {exc}",
+                level=logging.ERROR,
+                exc=exc,
+            )
             return {}
 
     def upload_file(
@@ -328,7 +336,11 @@ class VectorStorage:
 
             return VectorStorageFileInfo(name=file_name, id=file.id, status="success")
         except Exception as exc:
-            log(f"Error uploading {file_name}: {str(exc)}", level=logging.ERROR)
+            log(
+                f"Error uploading {file_name}: {str(exc)}",
+                level=logging.ERROR,
+                exc=exc,
+            )
             return VectorStorageFileInfo(
                 name=file_name, id="", status="error", error=str(exc)
             )
@@ -447,6 +459,7 @@ class VectorStorage:
                 log(
                     f"Warning: Could not delete file {file_id} from Files API: {file_delete_exc}",
                     level=logging.WARNING,
+                    exc=file_delete_exc,
                 )
 
             to_remove = [k for k, v in self.existing_files.items() if v == file_id]
@@ -457,7 +470,11 @@ class VectorStorage:
                 name=to_remove[0] if to_remove else "", id=file_id, status="success"
             )
         except Exception as exc:
-            log(f"Error deleting file {file_id}: {str(exc)}", level=logging.ERROR)
+            log(
+                f"Error deleting file {file_id}: {str(exc)}",
+                level=logging.ERROR,
+                exc=exc,
+            )
             return VectorStorageFileInfo(
                 name="", id=file_id, status="failed", error=str(exc)
             )
@@ -524,6 +541,7 @@ class VectorStorage:
             log(
                 f"Error deleting vector store '{self._vector_storage.name}': {str(exc)}",
                 level=logging.ERROR,
+                exc=exc,
             )
 
     def download_files(self, output_dir: str) -> VectorStorageFileStats:
@@ -551,7 +569,11 @@ class VectorStorage:
             )
             store_files = list(getattr(files, "data", files))
         except Exception as exc:
-            log(f"Failed to list files for download: {exc}", level=logging.ERROR)
+            log(
+                f"Failed to list files for download: {exc}",
+                level=logging.ERROR,
+                exc=exc,
+            )
             return VectorStorageFileStats(
                 total=0,
                 fail=1,
@@ -582,7 +604,11 @@ class VectorStorage:
                     handle.write(data)
                 stats.success += 1
             except Exception as exc:
-                log(f"Failed to download {file_id}: {exc}", level=logging.ERROR)
+                log(
+                    f"Failed to download {file_id}: {exc}",
+                    level=logging.ERROR,
+                    exc=exc,
+                )
                 stats.fail += 1
                 stats.errors.append(
                     VectorStorageFileInfo(
@@ -621,7 +647,11 @@ class VectorStorage:
             )
             return response
         except Exception as exc:
-            log(f"Error searching vector store: {str(exc)}", level=logging.ERROR)
+            log(
+                f"Error searching vector store: {str(exc)}",
+                level=logging.ERROR,
+                exc=exc,
+            )
             return None
 
     def summarize(self, query: str, *, top_k: int = 15) -> str | None:

@@ -73,10 +73,11 @@ def _delete_all_vector_stores() -> None:
                     log(
                         f"Failed to delete orphaned file {file.id}: {exc}",
                         level=logging.WARNING,
+                        exc=exc,
                     )
 
     except Exception as exc:
-        log(f"Error during cleanup: {exc}", level=logging.ERROR)
+        log(f"Error during cleanup: {exc}", level=logging.ERROR, exc=exc)
 
 
 def _delete_all_files() -> None:
@@ -100,4 +101,8 @@ def _delete_all_files() -> None:
             log(f"Deleting file {file.id}")
             client.files.delete(file_id=file.id)
         except Exception as exc:
-            log(f"Failed to delete file {file.id}: {exc}", level=logging.WARNING)
+            log(
+                f"Failed to delete file {file.id}: {exc}",
+                level=logging.WARNING,
+                exc=exc,
+            )

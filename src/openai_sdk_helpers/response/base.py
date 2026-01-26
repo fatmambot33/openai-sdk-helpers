@@ -13,6 +13,7 @@ import inspect
 import json
 import logging
 import threading
+import traceback
 import uuid
 from pathlib import Path
 from typing import (
@@ -137,6 +138,8 @@ class ResponseBase(Generic[T]):
         Construct a StreamlitAppConfig using this class as the builder.
     save(filepath=None)
         Serialize the message history to a JSON file.
+    save_error(exc)
+        Persist error details to a file named with the response UUID.
     close()
         Clean up remote resources including vector stores.
 
@@ -555,96 +558,117 @@ class ResponseBase(Generic[T]):
         log(f"{self.__class__.__name__}::run_response")
         parsed_result: T | None = None
 
-        self._build_input(
-            content=content,
-            files=(ensure_list(files) if files else None),
-            use_vector_store=use_vector_store,
-        )
+        try:
+            self._build_input(
+                content=content,
+                files=(ensure_list(files) if files else None),
+                use_vector_store=use_vector_store,
+            )
 
-        kwargs = {
-            "input": self.messages.to_openai_payload(),
-            "model": self._model,
-        }
-        if not self._tools and self._output_structure is not None:
-            kwargs["text"] = self._output_structure.response_format()
+            kwargs = {
+                "input": self.messages.to_openai_payload(),
+                "model": self._model,
+            }
+            if not self._tools and self._output_structure is not None:
+                kwargs["text"] = self._output_structure.response_format()
 
-        if self._tools:
-            kwargs["tools"] = self._tools
-            kwargs["tool_choice"] = "auto"
-        response = self._client.responses.create(**kwargs)
+            if self._tools:
+                kwargs["tools"] = self._tools
+                kwargs["tool_choice"] = "auto"
+            response = self._client.responses.create(**kwargs)
 
-        if not response.output:
-            log("No output returned from OpenAI.", level=logging.ERROR)
-            raise RuntimeError("No output returned from OpenAI.")
+            if not response.output:
+                log("No output returned from OpenAI.", level=logging.ERROR)
+                raise RuntimeError("No output returned from OpenAI.")
 
-        for response_output in response.output:
-            if isinstance(response_output, ResponseFunctionToolCall):
-                log(
-                    f"Tool call detected. Executing {response_output.name}.",
-                    level=logging.INFO,
-                )
-
-                tool_name = response_output.name
-                registration = self._tool_handlers.get(tool_name)
-
-                if registration is None:
+            for response_output in response.output:
+                if isinstance(response_output, ResponseFunctionToolCall):
                     log(
-                        f"No handler found for tool '{tool_name}'",
-                        level=logging.ERROR,
+                        f"Tool call detected. Executing {response_output.name}.",
+                        level=logging.INFO,
                     )
-                    raise ValueError(f"No handler for tool: {tool_name}")
 
-                handler = registration.handler
-                tool_spec = registration.tool_spec
+                    tool_name = response_output.name
+                    registration = self._tool_handlers.get(tool_name)
 
-                try:
-                    if inspect.iscoroutinefunction(handler):
-                        tool_result_json = await handler(response_output)
+                    if registration is None:
+                        log(
+                            f"No handler found for tool '{tool_name}'",
+                            level=logging.ERROR,
+                        )
+                        raise ValueError(f"No handler for tool: {tool_name}")
+
+                    handler = registration.handler
+                    tool_spec = registration.tool_spec
+
+                    try:
+                        if inspect.iscoroutinefunction(handler):
+                            tool_result_json = await handler(response_output)
+                        else:
+                            tool_result_json = handler(response_output)
+                        if isinstance(tool_result_json, str):
+                            tool_result = json.loads(tool_result_json)
+                            tool_output = tool_result_json
+                        else:
+                            tool_result = coerce_jsonable(tool_result_json)
+                            tool_output = json.dumps(tool_result, cls=customJSONEncoder)
+                        self.messages.add_tool_message(
+                            content=response_output, output=tool_output
+                        )
+                        self.save()
+                    except Exception as exc:
+                        log(
+                            f"Error executing tool handler '{tool_name}': {exc}",
+                            level=logging.ERROR,
+                            exc=exc,
+                        )
+                        raise RuntimeError(
+                            f"Error in tool handler '{tool_name}': {exc}"
+                        )
+
+                    if tool_spec is not None:
+                        output_dict = tool_spec.output_structure.from_json(tool_result)
+                        parsed_result = cast(T, output_dict)
+                    elif self._output_structure:
+                        output_dict = self._output_structure.from_json(tool_result)
+                        parsed_result = output_dict
                     else:
-                        tool_result_json = handler(response_output)
-                    if isinstance(tool_result_json, str):
-                        tool_result = json.loads(tool_result_json)
-                        tool_output = tool_result_json
-                    else:
-                        tool_result = coerce_jsonable(tool_result_json)
-                        tool_output = json.dumps(tool_result, cls=customJSONEncoder)
-                    self.messages.add_tool_message(
-                        content=response_output, output=tool_output
+                        print(tool_result)
+                        parsed_result = cast(T, tool_result)
+
+                if isinstance(response_output, ResponseOutputMessage):
+                    self.messages.add_assistant_message(
+                        response_output, metadata=kwargs
                     )
                     self.save()
-                except Exception as exc:
-                    log(
-                        f"Error executing tool handler '{tool_name}': {exc}",
-                        level=logging.ERROR,
-                    )
-                    raise RuntimeError(f"Error in tool handler '{tool_name}': {exc}")
-
-                if tool_spec is not None:
-                    output_dict = tool_spec.output_structure.from_json(tool_result)
-                    parsed_result = cast(T, output_dict)
-                elif self._output_structure:
-                    output_dict = self._output_structure.from_json(tool_result)
-                    parsed_result = output_dict
-                else:
-                    print(tool_result)
-                    parsed_result = cast(T, tool_result)
-
-            if isinstance(response_output, ResponseOutputMessage):
-                self.messages.add_assistant_message(response_output, metadata=kwargs)
-                self.save()
-                if hasattr(response, "output_text") and response.output_text:
-                    raw_text = response.output_text
-                    log("No tool call. Parsing output_text.")
-                    try:
-                        output_dict = json.loads(raw_text)
-                        if self._output_structure:
-                            return self._output_structure.from_json(output_dict)
-                        return output_dict
-                    except Exception:
-                        print(raw_text)
-        if parsed_result is not None:
-            return parsed_result
-        return response.output_text
+                    if hasattr(response, "output_text") and response.output_text:
+                        raw_text = response.output_text
+                        log("No tool call. Parsing output_text.")
+                        try:
+                            output_dict = json.loads(raw_text)
+                            if self._output_structure:
+                                return self._output_structure.from_json(output_dict)
+                            return output_dict
+                        except Exception:
+                            print(raw_text)
+            if parsed_result is not None:
+                return parsed_result
+            return response.output_text
+        except Exception as exc:
+            try:
+                self.save_error(exc)
+            except Exception as save_exc:
+                log(
+                    f"Failed to save error details for response {self.uuid}: {save_exc}",
+                    level=logging.ERROR,
+                    exc=save_exc,
+                )
+            log(
+                f"Error running response '{self._name}': {exc}",
+                level=logging.ERROR,
+                exc=exc,
+            )
+            raise
 
     def run_sync(
         self,
@@ -865,6 +889,36 @@ class ResponseBase(Generic[T]):
         self.messages.to_json_file(str(checked))
         log(f"Saved messages to {target}")
 
+    def save_error(self, exc: BaseException) -> Path:
+        """Persist error details to a file named with the response UUID.
+
+        Parameters
+        ----------
+        exc : BaseException
+            Exception instance to serialize.
+
+        Returns
+        -------
+        Path
+            Path to the error file written to disk.
+
+        Examples
+        --------
+        >>> try:
+        ...     response.run_sync("trigger error")
+        ... except Exception as exc:
+        ...     response.save_error(exc)
+        """
+        error_text = "".join(
+            traceback.format_exception(type(exc), exc, exc.__traceback__)
+        )
+        filename = f"{str(self.uuid).lower()}_error.txt"
+        target = self._data_path / self._name / filename
+        checked = check_filepath(filepath=target)
+        checked.write_text(error_text, encoding="utf-8")
+        log(f"Saved error details to {checked}")
+        return checked
+
     def __repr__(self) -> str:
         """Return a detailed string representation of the response session.
 
@@ -936,7 +990,19 @@ class ResponseBase(Generic[T]):
                         f"Files API cleanup: {successful}/{len(cleanup_results)} files deleted"
                     )
         except Exception as exc:
-            log(f"Error cleaning up Files API uploads: {exc}", level=logging.WARNING)
+            try:
+                self.save_error(exc)
+            except Exception as save_exc:
+                log(
+                    f"Failed to save error details for response {self.uuid}: {save_exc}",
+                    level=logging.ERROR,
+                    exc=save_exc,
+                )
+            log(
+                f"Error cleaning up Files API uploads: {exc}",
+                level=logging.WARNING,
+                exc=exc,
+            )
 
         # Always clean user vector storage if it exists
         try:
@@ -944,6 +1010,18 @@ class ResponseBase(Generic[T]):
                 self._user_vector_storage.delete()
                 log("User vector store deleted.")
         except Exception as exc:
-            log(f"Error deleting user vector store: {exc}", level=logging.WARNING)
+            try:
+                self.save_error(exc)
+            except Exception as save_exc:
+                log(
+                    f"Failed to save error details for response {self.uuid}: {save_exc}",
+                    level=logging.ERROR,
+                    exc=save_exc,
+                )
+            log(
+                f"Error deleting user vector store: {exc}",
+                level=logging.WARNING,
+                exc=exc,
+            )
         # System vector store cleanup is now handled via tool configuration
         log(f"Session {self.uuid} closed.")
