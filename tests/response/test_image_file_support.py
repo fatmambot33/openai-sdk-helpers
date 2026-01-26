@@ -74,7 +74,7 @@ def test_build_input_with_file_data(response_base, tmp_path):
 def test_build_input_with_base64_attachments(response_base, tmp_path):
     """Test _build_input without vector store flag (default is inline base64)."""
     # Create a temporary file
-    file_path = tmp_path / "test_file.txt"
+    file_path = tmp_path / "test_file.pdf"
     file_content = b"test content"
     file_path.write_bytes(file_content)
 

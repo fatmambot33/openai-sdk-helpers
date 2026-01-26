@@ -66,6 +66,12 @@ def process_files(
         2. Base64-encoded file content (ResponseInputFileContentParam)
         3. Base64-encoded image content (ResponseInputImageContentParam)
 
+    Notes
+    -----
+    Inline ``input_file`` attachments only support PDF documents. For other
+    document formats, use ``use_vector_store=True`` or convert to PDF before
+    calling this helper.
+
     Examples
     --------
     >>> from openai_sdk_helpers.response import process_files
@@ -93,6 +99,9 @@ def process_files(
         else:
             document_files.append(file_path)
 
+    if document_files and not use_vector_store:
+        _validate_inline_document_files(document_files)
+
     # Handle document files (vector store or base64)
     vector_file_refs: list[ResponseInputFileParam] = []
     base64_files: list[ResponseInputFileContentParam] = []
@@ -111,6 +120,34 @@ def process_files(
     image_contents = _encode_images_base64_batch(image_files, batch_size, max_workers)
 
     return vector_file_refs, base64_files, image_contents
+
+
+def _validate_inline_document_files(document_files: list[str]) -> None:
+    """Validate document files for inline ``input_file`` usage.
+
+    Parameters
+    ----------
+    document_files : list[str]
+        Document file paths that will be sent as inline ``input_file``
+        attachments.
+
+    Raises
+    ------
+    ValueError
+        If any document file is not a PDF.
+    """
+    unsupported_files = [
+        file_path
+        for file_path in document_files
+        if Path(file_path).suffix.lower() != ".pdf"
+    ]
+    if unsupported_files:
+        filenames = ", ".join(Path(path).name for path in unsupported_files)
+        raise ValueError(
+            "Inline input_file attachments support PDFs only. "
+            f"Unsupported files: {filenames}. "
+            "Convert to PDF or set use_vector_store=True."
+        )
 
 
 def _upload_to_vector_store(
