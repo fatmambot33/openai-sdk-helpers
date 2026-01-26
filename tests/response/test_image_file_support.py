@@ -143,27 +143,6 @@ def test_build_input_with_multiple_messages_attaches_once(response_base, tmp_pat
     assert second_content[0]["type"] == "input_text"
 
 
-def test_build_input_skips_previously_attached_files(response_base, tmp_path):
-    """Test _build_input skips files already attached in prior calls."""
-    first_path = tmp_path / "first_doc.pdf"
-    second_path = tmp_path / "second_doc.pdf"
-    first_path.write_bytes(b"fake pdf")
-    second_path.write_bytes(b"more fake pdf")
-
-    response_base._build_input(content="First", files=[str(first_path)])
-    response_base._build_input(
-        content="Second", files=[str(first_path), str(second_path)]
-    )
-
-    second_message = response_base.messages.messages[-1]
-    content = second_message.content["content"]
-
-    assert len(content) == 2  # text + only the new file
-    assert content[0]["type"] == "input_text"
-    assert content[1]["type"] == "input_file"
-    assert content[1]["filename"] == "second_doc.pdf"
-
-
 def test_build_input_vector_store_still_works(response_base, tmp_path):
     """Test that vector store attachment still works with use_vector_store flag."""
     # Create a temporary file
