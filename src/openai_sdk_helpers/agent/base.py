@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import logging
+import traceback
+import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, Optional, Protocol, cast
-import uuid
 
 from agents import Agent, Handoff, InputGuardrail, OutputGuardrail, Session
 from agents.model_settings import ModelSettings
@@ -13,7 +15,6 @@ from agents.tool import Tool
 from jinja2 import Template
 
 from ..environment import get_data_path
-
 from ..utils.json.data_class import DataclassJSONSerializable
 from ..structure.base import StructureBase
 from ..tools import (
@@ -183,6 +184,8 @@ class AgentBase(DataclassJSONSerializable):
         Return response tool handler and definition for Responses API use.
     build_response(openai_settings, data_path=None, tool_handlers=None, system_vector_store=None)
         Build a ResponseBase instance based on this agent.
+    save_error(exc)
+        Persist error details to a file named with the agent UUID.
     close()
         Clean up agent resources (can be overridden by subclasses).
     """
@@ -237,8 +240,6 @@ class AgentBase(DataclassJSONSerializable):
             else:
                 self._data_path = data_path_obj / class_name
         else:
-            from ..environment import get_data_path
-
             self._data_path = get_data_path(self.__class__.__name__)
 
         self._input_structure = configuration.input_structure
@@ -487,13 +488,29 @@ class AgentBase(DataclassJSONSerializable):
             output_structure = self._output_structure
         # Use session from parameter, fall back to configuration session
         session_to_use = session if session is not None else self._session
-        return await run_async(
-            agent=self.get_agent(),
-            input=input,
-            context=context,
-            output_structure=output_structure,
-            session=session_to_use,
-        )
+        try:
+            return await run_async(
+                agent=self.get_agent(),
+                input=input,
+                context=context,
+                output_structure=output_structure,
+                session=session_to_use,
+            )
+        except Exception as exc:
+            try:
+                self.save_error(exc)
+            except Exception as save_exc:
+                log(
+                    f"Failed to save error details for agent {self.uuid}: {save_exc}",
+                    level=logging.ERROR,
+                    exc=save_exc,
+                )
+            log(
+                f"Error running agent '{self.name}': {exc}",
+                level=logging.ERROR,
+                exc=exc,
+            )
+            raise
 
     def run_sync(
         self,
@@ -526,13 +543,29 @@ class AgentBase(DataclassJSONSerializable):
             output_structure = self._output_structure
         # Use session from parameter, fall back to configuration session
         session_to_use = session if session is not None else self._session
-        return run_sync(
-            agent=self.get_agent(),
-            input=input,
-            context=context,
-            output_structure=output_structure,
-            session=session_to_use,
-        )
+        try:
+            return run_sync(
+                agent=self.get_agent(),
+                input=input,
+                context=context,
+                output_structure=output_structure,
+                session=session_to_use,
+            )
+        except Exception as exc:
+            try:
+                self.save_error(exc)
+            except Exception as save_exc:
+                log(
+                    f"Failed to save error details for agent {self.uuid}: {save_exc}",
+                    level=logging.ERROR,
+                    exc=save_exc,
+                )
+            log(
+                f"Error running agent '{self.name}': {exc}",
+                level=logging.ERROR,
+                exc=exc,
+            )
+            raise
 
     def as_tool(self) -> Tool:
         """Return the agent as a callable tool.
@@ -730,6 +763,36 @@ class AgentBase(DataclassJSONSerializable):
         checked = check_filepath(filepath=target)
         self.to_json_file(filepath=checked)
         log(f"Saved messages to {target}")
+
+    def save_error(self, exc: BaseException) -> Path:
+        """Persist error details to a file named with the agent UUID.
+
+        Parameters
+        ----------
+        exc : BaseException
+            Exception instance to serialize.
+
+        Returns
+        -------
+        Path
+            Path to the error file written to disk.
+
+        Examples
+        --------
+        >>> try:
+        ...     agent.run_sync("trigger error")
+        ... except Exception as exc:
+        ...     agent.save_error(exc)
+        """
+        error_text = "".join(
+            traceback.format_exception(type(exc), exc, exc.__traceback__)
+        )
+        filename = f"{str(self.uuid).lower()}_error.txt"
+        target = self._data_path / self.name / filename
+        checked = check_filepath(filepath=target)
+        checked.write_text(error_text, encoding="utf-8")
+        log(f"Saved error details to {checked}")
+        return checked
 
 
 __all__ = ["AgentConfigurationProtocol", "AgentBase"]

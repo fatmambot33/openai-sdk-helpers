@@ -283,7 +283,7 @@ def _encode_documents_base64_batch(
                     base64_files.append(result)
                 except Exception as exc:
                     file_path = future_to_file[future]
-                    log(f"Error encoding document {file_path}: {exc}")
+                    log(f"Error encoding document {file_path}: {exc}", exc=exc)
                     raise
 
     return base64_files
@@ -385,7 +385,7 @@ def _encode_images_base64_batch(
                     image_contents.append(result)
                 except Exception as exc:
                     image_path = future_to_file[future]
-                    log(f"Error encoding image {image_path}: {exc}")
+                    log(f"Error encoding image {image_path}: {exc}", exc=exc)
                     raise
 
     return image_contents
