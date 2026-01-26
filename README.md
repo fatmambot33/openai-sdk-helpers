@@ -292,7 +292,7 @@ with ResponseBase(
 ) as response:
     # Automatic type detection - single files parameter
     # Images are sent as base64-encoded images
-    # Documents are sent as base64-encoded file data
+    # PDF documents are sent as base64-encoded file data
     result = response.run_sync(
         "Analyze these files",
         files=["photo.jpg", "document.pdf"]
@@ -318,7 +318,8 @@ with ResponseBase(
 **How It Works:**
 
 - **Images** (jpg, png, gif, etc.) are automatically sent as base64-encoded images
-- **Documents** (pdf, txt, xlsx, etc.) are sent as base64-encoded file data by default
+- **Documents** are sent as base64-encoded file data by default for PDFs only
+- **Non-PDF documents** should use `use_vector_store=True` (or be converted to PDF)
 - **Vector Stores** can optionally be used for documents when `use_vector_store=True`
 - **Batch Processing** is automatically used for multiple files (>3) for efficient encoding
 
