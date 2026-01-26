@@ -282,6 +282,7 @@ class ResponseBase(Generic[T]):
         from ..files_api import FilesAPIManager
 
         self._files_manager = FilesAPIManager(self._client, auto_track=True)
+        self._attached_file_paths: set[str] = set()
 
         # New logic: system_vector_store is a list of vector store names to attach
         if system_vector_store:
@@ -450,6 +451,12 @@ class ResponseBase(Generic[T]):
         When use_vector_store is True, this method automatically creates
         a vector store and adds a file_search tool for document retrieval.
         Images are always base64-encoded regardless of this setting.
+        When multiple content strings are provided, file attachments are
+        included only with the first message to avoid duplicating input
+        files across messages.
+        Files that have already been attached in previous calls are skipped
+        to keep the message history lightweight. Pass only new file paths
+        to attach additional files in later calls.
 
         Examples
         --------
@@ -467,14 +474,28 @@ class ResponseBase(Generic[T]):
 
         contents = ensure_list(content)
         all_files = files or []
+        new_files: list[str] = []
+        for file_path in all_files:
+            normalized = str(Path(file_path).resolve())
+            if normalized not in self._attached_file_paths:
+                new_files.append(file_path)
 
         # Process files using the dedicated files module
         vector_file_refs, base64_files, image_contents = process_files(
-            self, all_files, use_vector_store
+            self, new_files, use_vector_store
         )
 
-        # Add each content as a separate message with the same attachments
-        for raw_content in contents:
+        attachments: list[
+            ResponseInputFileParam
+            | ResponseInputFileContentParam
+            | ResponseInputImageContentParam
+        ] = []
+        attachments.extend(vector_file_refs)
+        attachments.extend(base64_files)
+        attachments.extend(image_contents)
+
+        # Add each content as a separate message.
+        for index, raw_content in enumerate(contents):
             processed_text = raw_content.strip()
             input_content: list[
                 ResponseInputTextParam
@@ -483,20 +504,17 @@ class ResponseBase(Generic[T]):
                 | ResponseInputImageContentParam
             ] = [ResponseInputTextParam(type="input_text", text=processed_text)]
 
-            # Add vector store file references
-            input_content.extend(vector_file_refs)
-
-            # Add base64 files
-            input_content.extend(base64_files)
-
-            # Add images
-            input_content.extend(image_contents)
+            if index == 0:
+                input_content.extend(attachments)
 
             message = cast(
                 ResponseInputItemParam,
                 {"role": "user", "content": input_content},
             )
             self.messages.add_user_message(message)
+
+        for file_path in new_files:
+            self._attached_file_paths.add(str(Path(file_path).resolve()))
 
     async def run_async(
         self,
