@@ -71,9 +71,8 @@ def _enforce_additional_properties(target: Any) -> None:
                     and set(entry_type).issubset({"object", "null"})
                 )
                 if (
-                    (entry_allows_object_type or "properties" in entry)
-                    and "$ref" not in entry
-                ):
+                    entry_allows_object_type or "properties" in entry
+                ) and "$ref" not in entry:
                     entry.setdefault("properties", {})
                     entry["additionalProperties"] = False
         for value in target.values():
