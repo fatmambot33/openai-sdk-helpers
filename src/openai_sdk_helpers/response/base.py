@@ -450,6 +450,9 @@ class ResponseBase(Generic[T]):
         When use_vector_store is True, this method automatically creates
         a vector store and adds a file_search tool for document retrieval.
         Images are always base64-encoded regardless of this setting.
+        When multiple content strings are provided, file attachments are
+        included only with the first message to avoid duplicating input
+        files across messages.
 
         Examples
         --------
@@ -473,8 +476,17 @@ class ResponseBase(Generic[T]):
             self, all_files, use_vector_store
         )
 
-        # Add each content as a separate message with the same attachments
-        for raw_content in contents:
+        attachments: list[
+            ResponseInputFileParam
+            | ResponseInputFileContentParam
+            | ResponseInputImageContentParam
+        ] = []
+        attachments.extend(vector_file_refs)
+        attachments.extend(base64_files)
+        attachments.extend(image_contents)
+
+        # Add each content as a separate message.
+        for index, raw_content in enumerate(contents):
             processed_text = raw_content.strip()
             input_content: list[
                 ResponseInputTextParam
@@ -483,14 +495,8 @@ class ResponseBase(Generic[T]):
                 | ResponseInputImageContentParam
             ] = [ResponseInputTextParam(type="input_text", text=processed_text)]
 
-            # Add vector store file references
-            input_content.extend(vector_file_refs)
-
-            # Add base64 files
-            input_content.extend(base64_files)
-
-            # Add images
-            input_content.extend(image_contents)
+            if index == 0:
+                input_content.extend(attachments)
 
             message = cast(
                 ResponseInputItemParam,
