@@ -19,6 +19,8 @@ class TaxonomyNode(StructureBase):
         Human-readable label for the taxonomy node.
     description : str or None
         Optional description of the node.
+    path : list[str]
+        Path segments identifying the node location in the taxonomy.
     children : list[TaxonomyNode]
         Child nodes in the taxonomy.
 
@@ -38,6 +40,11 @@ class TaxonomyNode(StructureBase):
         "description",
         description="Optional description of the taxonomy node.",
         default=None,
+    )
+    path: list[str] = spec_field(
+        "path",
+        description="Path segments identifying the node location in the taxonomy.",
+        default_factory=list,
     )
     children: list["TaxonomyNode"] = spec_field(
         "children",
