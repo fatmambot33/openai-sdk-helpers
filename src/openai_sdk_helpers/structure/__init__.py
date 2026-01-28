@@ -76,6 +76,13 @@ from __future__ import annotations
 
 from .agent_blueprint import AgentBlueprint
 from .base import *
+from .classification import (
+    ClassificationResult,
+    ClassificationStep,
+    ClassificationStopReason,
+    TaxonomyNode,
+    flatten_taxonomy,
+)
 from .extraction import (
     AnnotatedDocumentStructure,
     AttributeStructure,
@@ -98,6 +105,11 @@ __all__ = [
     "spec_field",
     "AgentBlueprint",
     "AgentEnum",
+    "ClassificationResult",
+    "ClassificationStep",
+    "ClassificationStopReason",
+    "TaxonomyNode",
+    "flatten_taxonomy",
     "TaskStructure",
     "PlanStructure",
     "create_plan",

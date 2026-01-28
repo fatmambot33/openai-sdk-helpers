@@ -7,6 +7,7 @@ from ..structure.plan.enum import AgentEnum
 from .coordinator import CoordinatorAgent
 from .runner import run_sync, run_async
 from .search.base import SearchPlanner, SearchToolAgent, SearchWriter
+from .classifier import TaxonomyClassifierAgent
 from .summarizer import SummarizerAgent
 from .translator import TranslatorAgent
 from .validator import ValidatorAgent
@@ -27,6 +28,7 @@ __all__ = [
     "SearchPlanner",
     "SearchToolAgent",
     "SearchWriter",
+    "TaxonomyClassifierAgent",
     "SummarizerAgent",
     "TranslatorAgent",
     "ValidatorAgent",
