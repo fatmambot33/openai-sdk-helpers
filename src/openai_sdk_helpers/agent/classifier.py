@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional, Sequence
 
@@ -87,6 +88,8 @@ class TaxonomyClassifierAgent(AgentBase):
         *,
         context: Optional[Dict[str, Any]] = None,
         max_depth: Optional[int] = None,
+        confidence_threshold: float | None = None,
+        single_class: bool = False,
     ) -> ClassificationResult:
         """Classify ``text`` by iterating over taxonomy levels.
 
@@ -98,6 +101,10 @@ class TaxonomyClassifierAgent(AgentBase):
             Additional context values to merge into the prompt.
         max_depth : int or None, default=None
             Maximum depth to traverse before stopping.
+        confidence_threshold : float or None, default=None
+            Minimum confidence required to accept a classification step.
+        single_class : bool, default=False
+            Whether to keep only the highest-priority selection per step.
 
         Returns
         -------
@@ -121,14 +128,24 @@ class TaxonomyClassifierAgent(AgentBase):
         True
         """
         path: list[ClassificationStep] = []
-        depth = 0
+        path_nodes: list[TaxonomyNode] = []
+        best_confidence: float | None = None
         stop_reason = ClassificationStopReason.NO_MATCH
-        current_nodes = list(self._root_nodes)
+        saw_max_depth = False
+        saw_no_children = False
+        saw_terminal_stop = False
+        branch_queue = [_BranchState(nodes=list(self._root_nodes), depth=0)]
+        final_nodes: list[TaxonomyNode] = []
 
-        while current_nodes:
+        while branch_queue:
+            branch = branch_queue.pop(0)
+            current_nodes = branch.nodes
+            depth = branch.depth
             if max_depth is not None and depth >= max_depth:
-                stop_reason = ClassificationStopReason.MAX_DEPTH
-                break
+                saw_max_depth = True
+                continue
+            if not current_nodes:
+                continue
 
             template_context = _build_context(
                 current_nodes=current_nodes,
@@ -142,31 +159,60 @@ class TaxonomyClassifierAgent(AgentBase):
                 output_structure=ClassificationStep,
             )
             path.append(step)
-            stop_reason = step.stop_reason
+
+            if (
+                confidence_threshold is not None
+                and step.confidence is not None
+                and step.confidence < confidence_threshold
+            ):
+                continue
+
+            resolved_nodes = _resolve_nodes(current_nodes, step)
+            if resolved_nodes:
+                if single_class:
+                    resolved_nodes = resolved_nodes[:1]
+                path_nodes.extend(resolved_nodes)
 
             if step.stop_reason.is_terminal:
-                break
+                if resolved_nodes:
+                    final_nodes.extend(resolved_nodes)
+                    best_confidence = _max_confidence(best_confidence, step.confidence)
+                    saw_terminal_stop = True
+                continue
 
-            selected_node = _resolve_node(current_nodes, step)
-            if selected_node is None:
+            if not resolved_nodes:
                 stop_reason = ClassificationStopReason.NO_MATCH
-                break
-            if not selected_node.children:
-                stop_reason = ClassificationStopReason.NO_CHILDREN
-                break
+                continue
 
-            current_nodes = list(selected_node.children)
-            depth += 1
+            for node in resolved_nodes:
+                if node.children:
+                    branch_queue.append(
+                        _BranchState(nodes=list(node.children), depth=depth + 1)
+                    )
+                else:
+                    saw_no_children = True
+                    final_nodes.append(node)
+                    best_confidence = _max_confidence(best_confidence, step.confidence)
 
-        final_id, final_label, confidence, final_ids, final_labels = _final_values(path)
+        final_nodes_value = final_nodes or None
+        final_node = final_nodes[0] if final_nodes else None
+        if saw_terminal_stop:
+            stop_reason = ClassificationStopReason.STOP
+        elif final_nodes and saw_no_children:
+            stop_reason = ClassificationStopReason.NO_CHILDREN
+        elif final_nodes:
+            stop_reason = ClassificationStopReason.STOP
+        elif saw_max_depth:
+            stop_reason = ClassificationStopReason.MAX_DEPTH
+        elif saw_no_children:
+            stop_reason = ClassificationStopReason.NO_CHILDREN
         return ClassificationResult(
-            final_id=final_id,
-            final_ids=final_ids,
-            final_label=final_label,
-            final_labels=final_labels,
-            confidence=confidence,
+            final_node=final_node,
+            final_nodes=final_nodes_value,
+            confidence=best_confidence,
             stop_reason=stop_reason,
             path=path,
+            path_nodes=path_nodes,
         )
 
     @property
@@ -190,6 +236,12 @@ class TaxonomyClassifierAgent(AgentBase):
             List of root taxonomy nodes.
         """
         return self._root_nodes
+
+
+@dataclass(frozen=True)
+class _BranchState:
+    nodes: list[TaxonomyNode]
+    depth: int
 
 
 def _normalize_roots(
@@ -258,11 +310,11 @@ def _build_context(
     return template_context
 
 
-def _resolve_node(
+def _resolve_nodes(
     nodes: Sequence[TaxonomyNode],
     step: ClassificationStep,
-) -> Optional[TaxonomyNode]:
-    """Resolve the selected node for a classification step.
+) -> list[TaxonomyNode]:
+    """Resolve selected taxonomy nodes for a classification step.
 
     Parameters
     ----------
@@ -273,57 +325,24 @@ def _resolve_node(
 
     Returns
     -------
-    TaxonomyNode or None
-        Matching taxonomy node if found.
+    list[TaxonomyNode]
+        Matching taxonomy nodes in priority order.
     """
+    resolved: list[TaxonomyNode] = []
     selected_ids = _selected_ids(step)
-    for selected_id in selected_ids:
-        for node in nodes:
-            if node.id == selected_id:
-                return node
+    if selected_ids:
+        for selected_id in selected_ids:
+            for node in nodes:
+                if node.id == selected_id:
+                    resolved.append(node)
+        if resolved:
+            return resolved
     selected_labels = _selected_labels(step)
     for selected_label in selected_labels:
         for node in nodes:
             if node.label == selected_label:
-                return node
-    return None
-
-
-def _final_values(
-    path: Sequence[ClassificationStep],
-) -> tuple[
-    Optional[str],
-    Optional[str],
-    Optional[float],
-    list[str] | None,
-    list[str] | None,
-]:
-    """Return the final selection values from the path.
-
-    Parameters
-    ----------
-    path : Sequence[ClassificationStep]
-        Recorded classification steps.
-
-    Returns
-    -------
-    tuple[str or None, str or None, float or None, list[str] or None, list[str] or None]
-        Final identifier, label, confidence, and multi-class selections.
-    """
-    if not path:
-        return None, None, None, None, None
-    last_step = path[-1]
-    selected_ids = _selected_ids(last_step) or None
-    selected_labels = _selected_labels(last_step) or None
-    final_id = selected_ids[0] if selected_ids else last_step.selected_id
-    final_label = selected_labels[0] if selected_labels else last_step.selected_label
-    return (
-        final_id,
-        final_label,
-        last_step.confidence,
-        selected_ids,
-        selected_labels,
-    )
+                resolved.append(node)
+    return resolved
 
 
 def _selected_ids(step: ClassificationStep) -> list[str]:
@@ -366,6 +385,31 @@ def _selected_labels(step: ClassificationStep) -> list[str]:
         if selected_labels:
             return selected_labels
     return [step.selected_label] if step.selected_label else []
+
+
+def _max_confidence(
+    current: float | None,
+    candidate: float | None,
+) -> float | None:
+    """Return the higher confidence value.
+
+    Parameters
+    ----------
+    current : float or None
+        Current best confidence value.
+    candidate : float or None
+        Candidate confidence value to compare.
+
+    Returns
+    -------
+    float or None
+        Highest confidence value available.
+    """
+    if current is None:
+        return candidate
+    if candidate is None:
+        return current
+    return max(current, candidate)
 
 
 __all__ = ["TaxonomyClassifierAgent"]

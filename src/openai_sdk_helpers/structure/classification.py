@@ -242,20 +242,18 @@ class ClassificationResult(StructureBase):
 
     Attributes
     ----------
-    final_id : str or None
-        Identifier of the final taxonomy node selection.
-    final_ids : list[str] or None
-        Identifiers of final taxonomy node selections.
-    final_label : str or None
-        Label of the final taxonomy node selection.
-    final_labels : list[str] or None
-        Labels of final taxonomy node selections.
+    final_node : TaxonomyNode or None
+        Resolved taxonomy node for the final selection.
+    final_nodes : list[TaxonomyNode] or None
+        Resolved taxonomy nodes for the final selections across branches.
     confidence : float or None
         Confidence score for the final selection.
     stop_reason : ClassificationStopReason
         Reason the traversal ended.
     path : list[ClassificationStep]
         Ordered list of classification steps.
+    path_nodes : list[TaxonomyNode]
+        Resolved taxonomy nodes selected across the path.
 
     Methods
     -------
@@ -268,36 +266,25 @@ class ClassificationResult(StructureBase):
     --------
     Summarize single and multi-class output:
 
+    >>> node = TaxonomyNode(id="tax", label="Tax")
     >>> result = ClassificationResult(
-    ...     final_id="tax",
-    ...     final_ids=["tax", "compliance"],
-    ...     final_label="Tax",
-    ...     final_labels=["Tax", "Compliance"],
+    ...     final_node=node,
+    ...     final_nodes=[node],
     ...     confidence=0.91,
     ...     stop_reason=ClassificationStopReason.STOP,
     ... )
-    >>> result.final_labels
-    ['Tax', 'Compliance']
+    >>> result.final_nodes
+    [TaxonomyNode(id='tax', label='Tax', description=None, children=[])]
     """
 
-    final_id: Optional[str] = spec_field(
-        "final_id",
-        description="Identifier of the final taxonomy node selection.",
+    final_node: TaxonomyNode | None = spec_field(
+        "final_node",
+        description="Resolved taxonomy node for the final selection.",
         default=None,
     )
-    final_ids: list[str] | None = spec_field(
-        "final_ids",
-        description="Identifiers of final taxonomy node selections.",
-        default=None,
-    )
-    final_label: Optional[str] = spec_field(
-        "final_label",
-        description="Label of the final taxonomy node selection.",
-        default=None,
-    )
-    final_labels: list[str] | None = spec_field(
-        "final_labels",
-        description="Labels of final taxonomy node selections.",
+    final_nodes: list[TaxonomyNode] | None = spec_field(
+        "final_nodes",
+        description="Resolved taxonomy nodes for the final selections.",
         default=None,
     )
     confidence: Optional[float] = spec_field(
@@ -313,6 +300,11 @@ class ClassificationResult(StructureBase):
     path: list[ClassificationStep] = spec_field(
         "path",
         description="Ordered list of classification steps.",
+        default_factory=list,
+    )
+    path_nodes: list[TaxonomyNode] = spec_field(
+        "path_nodes",
+        description="Resolved taxonomy nodes selected across the path.",
         default_factory=list,
     )
 
