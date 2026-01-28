@@ -55,11 +55,12 @@ class TaxonomyClassifierAgent(AgentBase):
         --------
         >>> classifier = TaxonomyClassifierAgent(model="gpt-4o-mini")
         """
+        resolved_template_path = template_path or _default_template_path()
         configuration = AgentConfiguration(
             name="taxonomy_classifier",
             instructions="Agent instructions",
             description="Classify text by traversing taxonomy levels.",
-            template_path=template_path,
+            template_path=resolved_template_path,
             output_structure=ClassificationStep,
             model=model,
         )
@@ -147,6 +148,7 @@ class TaxonomyClassifierAgent(AgentBase):
             path=path,
         )
 
+
 def _normalize_roots(
     taxonomy: TaxonomyNode | Sequence[TaxonomyNode],
 ) -> list[TaxonomyNode]:
@@ -165,6 +167,17 @@ def _normalize_roots(
     if isinstance(taxonomy, TaxonomyNode):
         return [taxonomy]
     return [node for node in taxonomy if node is not None]
+
+
+def _default_template_path() -> Path:
+    """Return the built-in classifier prompt template path.
+
+    Returns
+    -------
+    Path
+        Path to the bundled classifier Jinja template.
+    """
+    return Path(__file__).resolve().parents[1] / "prompt" / "classifier.jinja"
 
 
 def _build_context(

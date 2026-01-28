@@ -13,6 +13,15 @@ from openai_sdk_helpers.structure import (
 )
 
 
+def test_classifier_default_prompt_template():
+    """Classifier should use the bundled classifier prompt by default."""
+
+    agent = TaxonomyClassifierAgent(model="gpt-4o-mini")
+
+    prompt = agent._build_prompt_from_jinja()
+    assert "taxonomy classification assistant" in prompt
+
+
 @pytest.mark.anyio
 async def test_classifier_traverses_taxonomy_levels():
     """Classifier should walk the taxonomy until a terminal step."""
