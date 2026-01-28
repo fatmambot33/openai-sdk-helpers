@@ -129,8 +129,11 @@ class TaxonomyClassifierAgent(AgentBase):
         """
         path: list[ClassificationStep] = []
         path_nodes: list[TaxonomyNode] = []
+        best_confidence: float | None = None
         stop_reason = ClassificationStopReason.NO_MATCH
-        confidence = None
+        saw_max_depth = False
+        saw_no_children = False
+        saw_terminal_stop = False
         branch_queue = [_BranchState(nodes=list(self._root_nodes), depth=0)]
         final_nodes: list[TaxonomyNode] = []
 
@@ -139,7 +142,7 @@ class TaxonomyClassifierAgent(AgentBase):
             current_nodes = branch.nodes
             depth = branch.depth
             if max_depth is not None and depth >= max_depth:
-                stop_reason = ClassificationStopReason.MAX_DEPTH
+                saw_max_depth = True
                 continue
             if not current_nodes:
                 continue
@@ -156,15 +159,12 @@ class TaxonomyClassifierAgent(AgentBase):
                 output_structure=ClassificationStep,
             )
             path.append(step)
-            stop_reason = step.stop_reason
-            confidence = step.confidence
 
             if (
                 confidence_threshold is not None
                 and step.confidence is not None
                 and step.confidence < confidence_threshold
             ):
-                stop_reason = ClassificationStopReason.NO_MATCH
                 continue
 
             resolved_nodes = _resolve_nodes(current_nodes, step)
@@ -176,6 +176,8 @@ class TaxonomyClassifierAgent(AgentBase):
             if step.stop_reason.is_terminal:
                 if resolved_nodes:
                     final_nodes.extend(resolved_nodes)
+                    best_confidence = _max_confidence(best_confidence, step.confidence)
+                    saw_terminal_stop = True
                 continue
 
             if not resolved_nodes:
@@ -188,15 +190,26 @@ class TaxonomyClassifierAgent(AgentBase):
                         _BranchState(nodes=list(node.children), depth=depth + 1)
                     )
                 else:
-                    stop_reason = ClassificationStopReason.NO_CHILDREN
+                    saw_no_children = True
                     final_nodes.append(node)
+                    best_confidence = _max_confidence(best_confidence, step.confidence)
 
         final_nodes_value = final_nodes or None
         final_node = final_nodes[0] if final_nodes else None
+        if saw_terminal_stop:
+            stop_reason = ClassificationStopReason.STOP
+        elif final_nodes and saw_no_children:
+            stop_reason = ClassificationStopReason.NO_CHILDREN
+        elif final_nodes:
+            stop_reason = ClassificationStopReason.STOP
+        elif saw_max_depth:
+            stop_reason = ClassificationStopReason.MAX_DEPTH
+        elif saw_no_children:
+            stop_reason = ClassificationStopReason.NO_CHILDREN
         return ClassificationResult(
             final_node=final_node,
             final_nodes=final_nodes_value,
-            confidence=confidence,
+            confidence=best_confidence,
             stop_reason=stop_reason,
             path=path,
             path_nodes=path_nodes,
@@ -372,6 +385,31 @@ def _selected_labels(step: ClassificationStep) -> list[str]:
         if selected_labels:
             return selected_labels
     return [step.selected_label] if step.selected_label else []
+
+
+def _max_confidence(
+    current: float | None,
+    candidate: float | None,
+) -> float | None:
+    """Return the higher confidence value.
+
+    Parameters
+    ----------
+    current : float or None
+        Current best confidence value.
+    candidate : float or None
+        Candidate confidence value to compare.
+
+    Returns
+    -------
+    float or None
+        Highest confidence value available.
+    """
+    if current is None:
+        return candidate
+    if candidate is None:
+        return current
+    return max(current, candidate)
 
 
 __all__ = ["TaxonomyClassifierAgent"]
