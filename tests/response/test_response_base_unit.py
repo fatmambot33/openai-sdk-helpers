@@ -70,6 +70,15 @@ def test_save(response_base, tmp_path):
         mock_to_json_file.assert_called_once_with(str(expected_path))
 
 
+def test_save_uses_existing_name_directory(response_base, tmp_path):
+    """Avoid nesting the response name twice when saving."""
+    response_base._data_path = tmp_path / response_base.name
+    expected_path = response_base._data_path / f"{str(response_base.uuid).lower()}.json"
+    with patch.object(response_base.messages, "to_json_file") as mock_to_json_file:
+        response_base.save()
+        mock_to_json_file.assert_called_once_with(str(expected_path))
+
+
 def test_attach_vector_store_adds_file_search(response_base):
     """Attach a new vector store when no file_search tool exists."""
 

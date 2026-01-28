@@ -509,6 +509,7 @@ class ResponseBase(Generic[T]):
         content: str | list[str],
         files: str | list[str] | None = None,
         use_vector_store: bool = False,
+        save_messages: bool = True,
     ) -> T | str:
         """Generate a response asynchronously from the OpenAI API.
 
@@ -531,6 +532,9 @@ class ResponseBase(Generic[T]):
         use_vector_store : bool, default False
             If True, non-image files are uploaded to a vector store
             for RAG-enabled search instead of inline base64 encoding.
+        save_messages : bool, default True
+            When True, persist the message history after each response or
+            tool call.
 
         Returns
         -------
@@ -621,7 +625,8 @@ class ResponseBase(Generic[T]):
                         self.messages.add_tool_message(
                             content=response_output, output=tool_output
                         )
-                        self.save()
+                        if save_messages:
+                            self.save()
                     except Exception as exc:
                         log(
                             f"Error executing tool handler '{tool_name}': {exc}",
@@ -646,7 +651,8 @@ class ResponseBase(Generic[T]):
                     self.messages.add_assistant_message(
                         response_output, metadata=kwargs
                     )
-                    self.save()
+                    if save_messages:
+                        self.save()
                     if hasattr(response, "output_text") and response.output_text:
                         raw_text = response.output_text
                         log("No tool call. Parsing output_text.")
@@ -682,6 +688,7 @@ class ResponseBase(Generic[T]):
         *,
         files: str | list[str] | None = None,
         use_vector_store: bool = False,
+        save_messages: bool = True,
     ) -> T | str:
         """Execute run_async synchronously with proper event loop handling.
 
@@ -704,6 +711,9 @@ class ResponseBase(Generic[T]):
         use_vector_store : bool, default False
             If True, non-image files are uploaded to a vector store
             for RAG-enabled search instead of inline base64 encoding.
+        save_messages : bool, default True
+            When True, persist the message history after each response or
+            tool call.
 
         Returns
         -------
@@ -739,6 +749,7 @@ class ResponseBase(Generic[T]):
                 content=content,
                 files=files,
                 use_vector_store=use_vector_store,
+                save_messages=save_messages,
             )
 
         try:
@@ -871,9 +882,11 @@ class ResponseBase(Generic[T]):
 
         Notes
         -----
-        If no filepath is provided, the save operation always writes to
-        the session data path (data_path / name / uuid.json). The data path
-        is configured during initialization and defaults to get_data_path().
+        If no filepath is provided, the save operation writes to the
+        session data path. If the configured data path already ends with
+        the response name, it writes to data_path / uuid.json. Otherwise,
+        it writes to data_path / name / uuid.json. The data path is
+        configured during initialization and defaults to get_data_path().
 
         Raises
         ------
@@ -889,7 +902,7 @@ class ResponseBase(Generic[T]):
             target = Path(filepath)
         else:
             filename = f"{str(self.uuid).lower()}.json"
-            target = self._data_path / self._name / filename
+            target = self._session_path(filename)
 
         checked = check_filepath(filepath=target)
         self.messages.to_json_file(str(checked))
@@ -919,11 +932,17 @@ class ResponseBase(Generic[T]):
             traceback.format_exception(type(exc), exc, exc.__traceback__)
         )
         filename = f"{str(self.uuid).lower()}_error.txt"
-        target = self._data_path / self._name / filename
+        target = self._session_path(filename)
         checked = check_filepath(filepath=target)
         checked.write_text(error_text, encoding="utf-8")
         log(f"Saved error details to {checked}")
         return checked
+
+    def _session_path(self, filename: str) -> Path:
+        """Return the resolved session filepath for a given filename."""
+        if self._data_path.name == self._name:
+            return self._data_path / filename
+        return self._data_path / self._name / filename
 
     def __repr__(self) -> str:
         """Return a detailed string representation of the response session.
