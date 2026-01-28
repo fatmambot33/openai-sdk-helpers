@@ -339,8 +339,10 @@ def _selected_ids(step: ClassificationStep) -> list[str]:
     list[str]
         Selected identifiers in priority order.
     """
-    if step.selected_ids:
-        return [selected_id for selected_id in step.selected_ids if selected_id]
+    if step.selected_ids is not None:
+        selected_ids = [selected_id for selected_id in step.selected_ids if selected_id]
+        if selected_ids:
+            return selected_ids
     return [step.selected_id] if step.selected_id else []
 
 
@@ -357,10 +359,12 @@ def _selected_labels(step: ClassificationStep) -> list[str]:
     list[str]
         Selected labels in priority order.
     """
-    if step.selected_labels:
-        return [
+    if step.selected_labels is not None:
+        selected_labels = [
             selected_label for selected_label in step.selected_labels if selected_label
         ]
+        if selected_labels:
+            return selected_labels
     return [step.selected_label] if step.selected_label else []
 
 
