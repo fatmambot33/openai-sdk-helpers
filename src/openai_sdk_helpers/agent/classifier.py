@@ -29,6 +29,16 @@ class TaxonomyClassifierAgent(AgentBase):
     -------
     run_agent(text, taxonomy, context, max_depth)
         Classify text by walking the taxonomy tree.
+
+    Examples
+    --------
+    Create a classifier with a flat taxonomy:
+
+    >>> taxonomy = [
+    ...     TaxonomyNode(id="billing", label="Billing"),
+    ...     TaxonomyNode(id="support", label="Support"),
+    ... ]
+    >>> agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=taxonomy)
     """
 
     def __init__(
@@ -98,6 +108,17 @@ class TaxonomyClassifierAgent(AgentBase):
         ------
         ValueError
             If the taxonomy is empty.
+
+        Examples
+        --------
+        >>> taxonomy = TaxonomyNode(
+        ...     id="finance",
+        ...     label="Finance",
+        ...     children=[TaxonomyNode(id="tax", label="Tax")],
+        ... )
+        >>> agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=taxonomy)
+        >>> isinstance(agent.root_nodes, list)
+        True
         """
         path: list[ClassificationStep] = []
         depth = 0

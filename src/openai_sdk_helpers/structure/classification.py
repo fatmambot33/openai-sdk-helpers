@@ -162,6 +162,19 @@ class ClassificationStep(StructureBase):
     -------
     as_summary()
         Return a dictionary summary of the classification step.
+
+    Examples
+    --------
+    Create a multi-class step and summarize the selections:
+
+    >>> step = ClassificationStep(
+    ...     selected_ids=["billing", "invoicing"],
+    ...     selected_labels=["Billing", "Invoicing"],
+    ...     confidence=0.82,
+    ...     stop_reason=ClassificationStopReason.STOP,
+    ... )
+    >>> step.as_summary()["selected_ids"]
+    ['billing', 'invoicing']
     """
 
     selected_id: Optional[str] = spec_field(
@@ -207,6 +220,12 @@ class ClassificationStep(StructureBase):
         -------
         dict[str, Any]
             Summary data for logging or inspection.
+
+        Examples
+        --------
+        >>> step = ClassificationStep(selected_id="root", selected_label="Root")
+        >>> step.as_summary()["selected_id"]
+        'root'
         """
         return {
             "selected_id": self.selected_id,
@@ -244,6 +263,21 @@ class ClassificationResult(StructureBase):
         Return the number of classification steps recorded.
     path_labels
         Return the labels selected at each step.
+
+    Examples
+    --------
+    Summarize single and multi-class output:
+
+    >>> result = ClassificationResult(
+    ...     final_id="tax",
+    ...     final_ids=["tax", "compliance"],
+    ...     final_label="Tax",
+    ...     final_labels=["Tax", "Compliance"],
+    ...     confidence=0.91,
+    ...     stop_reason=ClassificationStopReason.STOP,
+    ... )
+    >>> result.final_labels
+    ['Tax', 'Compliance']
     """
 
     final_id: Optional[str] = spec_field(
@@ -301,6 +335,18 @@ class ClassificationResult(StructureBase):
         -------
         list[str]
             Labels selected at each classification step.
+
+        Examples
+        --------
+        >>> steps = [
+        ...     ClassificationStep(selected_label="Root"),
+        ...     ClassificationStep(selected_labels=["Leaf", "Branch"]),
+        ... ]
+        >>> ClassificationResult(
+        ...     stop_reason=ClassificationStopReason.STOP,
+        ...     path=steps,
+        ... ).path_labels
+        ['Root', 'Leaf', 'Branch']
         """
         labels: list[str] = []
         for step in self.path:
