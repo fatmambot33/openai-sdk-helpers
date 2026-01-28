@@ -21,6 +21,10 @@ def test_taxonomy_node_build_path():
 def test_classification_result_properties():
     """ClassificationResult should expose computed properties."""
 
+    root_node = TaxonomyNode(id="root", label="Root")
+    leaf_node = TaxonomyNode(id="leaf", label="Leaf")
+    branch_node = TaxonomyNode(id="branch", label="Branch")
+
     steps = [
         ClassificationStep(
             selected_id="root",
@@ -41,17 +45,19 @@ def test_classification_result_properties():
     ]
 
     result = ClassificationResult(
-        final_id="leaf",
-        final_ids=["leaf", "branch"],
-        final_label="Leaf",
-        final_labels=["Leaf", "Branch"],
+        final_node=leaf_node,
+        final_nodes=[leaf_node, branch_node],
         confidence=0.9,
         stop_reason=ClassificationStopReason.STOP,
         path=steps,
+        path_nodes=[root_node, leaf_node, branch_node],
     )
 
     assert result.depth == 2
     assert result.path_labels == ["Root", "Leaf", "Branch"]
+    assert result.final_node == leaf_node
+    assert result.final_nodes == [leaf_node, branch_node]
+    assert [node.id for node in result.path_nodes] == ["root", "leaf", "branch"]
 
 
 def test_stop_reason_is_terminal_property():
