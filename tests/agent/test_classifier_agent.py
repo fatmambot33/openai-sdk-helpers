@@ -16,7 +16,9 @@ from openai_sdk_helpers.structure import (
 def test_classifier_default_prompt_template():
     """Classifier should use the bundled classifier prompt by default."""
 
-    agent = TaxonomyClassifierAgent(model="gpt-4o-mini")
+    agent = TaxonomyClassifierAgent(
+        model="gpt-4o-mini", taxonomy=TaxonomyNode(id="root", label="Root")
+    )
 
     prompt = agent._build_prompt_from_jinja()
     assert "taxonomy classification assistant" in prompt
@@ -25,14 +27,14 @@ def test_classifier_default_prompt_template():
 @pytest.mark.anyio
 async def test_classifier_traverses_taxonomy_levels():
     """Classifier should walk the taxonomy until a terminal step."""
-
-    agent = TaxonomyClassifierAgent(model="gpt-4o-mini")
     root = TaxonomyNode(
         id="finance",
         label="Finance",
         children=[TaxonomyNode(id="tax", label="Tax")],
     )
     alternate = TaxonomyNode(id="health", label="Health")
+    agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[root, alternate])
+
     steps = [
         ClassificationStep(
             selected_id="finance",
@@ -53,7 +55,7 @@ async def test_classifier_traverses_taxonomy_levels():
         patch.object(agent, "run_async", new_callable=AsyncMock) as mock_run,
     ):
         mock_run.side_effect = steps
-        result = await agent.run_agent("Tax update", taxonomy=[root, alternate])
+        result = await agent.run_agent("Tax update")
 
     assert isinstance(result, ClassificationResult)
     assert result.final_id == "tax"
@@ -66,8 +68,9 @@ async def test_classifier_traverses_taxonomy_levels():
 async def test_classifier_stops_when_no_children():
     """Classifier should stop when a selected node has no children."""
 
-    agent = TaxonomyClassifierAgent(model="gpt-4o-mini")
     root = TaxonomyNode(id="root", label="Root")
+    agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[root])
+
     step = ClassificationStep(
         selected_id="root",
         selected_label="Root",
@@ -80,7 +83,7 @@ async def test_classifier_stops_when_no_children():
         patch.object(agent, "run_async", new_callable=AsyncMock) as mock_run,
     ):
         mock_run.return_value = step
-        result = await agent.run_agent("Root only", taxonomy=[root])
+        result = await agent.run_agent("Root only")
 
     assert result.stop_reason is ClassificationStopReason.NO_CHILDREN
     assert result.final_id == "root"
@@ -90,7 +93,7 @@ async def test_classifier_stops_when_no_children():
 async def test_classifier_requires_taxonomy_nodes():
     """Classifier should reject empty taxonomy definitions."""
 
-    agent = TaxonomyClassifierAgent(model="gpt-4o-mini")
+    agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[])
 
     with pytest.raises(ValueError, match="taxonomy must include at least one node"):
-        await agent.run_agent("Text", taxonomy=[])
+        await agent.run_agent("Text")

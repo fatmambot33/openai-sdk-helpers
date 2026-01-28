@@ -5,9 +5,9 @@ from dotenv import load_dotenv
 from openai_sdk_helpers.extract.extractor import DocumentExtractor
 from openai_sdk_helpers.structure.extraction import (
     AttributeStructure,
-    Document,
-    ExampleData,
-    Extraction,
+    ExtractionStructure,
+    ExampleDataStructure,
+    DocumentStructure,
 )
 
 load_dotenv()
@@ -20,10 +20,10 @@ prompt = textwrap.dedent(
 # 2. Provide a high-quality example to guide the model
 
 examples = [
-    ExampleData(
+    ExampleDataStructure(
         text="ROMEO. But soft! What light through yonder window breaks? It is the east, and Juliet is the sun.",
         extractions=[
-            Extraction(
+            ExtractionStructure(
                 extraction_class="character",
                 extraction_text="ROMEO",
                 attributes=[
@@ -33,7 +33,7 @@ examples = [
                     )
                 ],
             ),
-            Extraction(
+            ExtractionStructure(
                 extraction_class="emotion",
                 extraction_text="But soft!",
                 attributes=[
@@ -43,7 +43,7 @@ examples = [
                     )
                 ],
             ),
-            Extraction(
+            ExtractionStructure(
                 extraction_class="relationship",
                 extraction_text="Juliet is the sun",
                 attributes=[
@@ -58,7 +58,7 @@ examples = [
 ]
 # The input text to be processed
 input_text = "Lady Juliet gazed longingly at the stars, her heart aching for Romeo"
-doc = Document(text=input_text)
+doc = DocumentStructure(text=input_text)
 
 # 3. Initialize the DocumentExtractor with the prompt and examples
 extractor = DocumentExtractor(
@@ -72,5 +72,8 @@ annotated_documents = extractor.extract(doc)
 # 5. Display the results
 for doc in annotated_documents:
     print("Extracted Entities:")
-    for extraction in doc:
-        print(doc)
+    if not doc.extractions:
+        print("No extractions found.")
+    else:
+        for extraction in doc.extractions:
+            print(extraction)

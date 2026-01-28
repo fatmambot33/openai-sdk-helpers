@@ -47,6 +47,11 @@
         "marimo/_lsp/**",
         "__marimo__/**",
         "scratch/**",
-        "data/**"
+        "data/**",
+        ".git/**",
+        ".github/**",
+        ".gitlab/**",
+        ".hg/**",
+        ".svn/**"
     ]
 }

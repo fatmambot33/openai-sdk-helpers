@@ -36,6 +36,7 @@ class TaxonomyClassifierAgent(AgentBase):
         *,
         template_path: Path | str | None = None,
         model: str | None = None,
+        taxonomy: TaxonomyNode | Sequence[TaxonomyNode],
     ) -> None:
         """Initialize the taxonomy classifier agent configuration.
 
@@ -55,6 +56,10 @@ class TaxonomyClassifierAgent(AgentBase):
         --------
         >>> classifier = TaxonomyClassifierAgent(model="gpt-4o-mini")
         """
+        self._taxonomy = taxonomy
+        self._root_nodes = _normalize_roots(taxonomy)
+        if not self._root_nodes:
+            raise ValueError("taxonomy must include at least one node")
         resolved_template_path = template_path or _default_template_path()
         configuration = AgentConfiguration(
             name="taxonomy_classifier",
@@ -69,7 +74,6 @@ class TaxonomyClassifierAgent(AgentBase):
     async def run_agent(
         self,
         text: str,
-        taxonomy: TaxonomyNode | Sequence[TaxonomyNode],
         *,
         context: Optional[Dict[str, Any]] = None,
         max_depth: Optional[int] = None,
@@ -80,8 +84,6 @@ class TaxonomyClassifierAgent(AgentBase):
         ----------
         text : str
             Source text to classify.
-        taxonomy : TaxonomyNode or Sequence[TaxonomyNode]
-            Root taxonomy node or list of root nodes to traverse.
         context : dict or None, default=None
             Additional context values to merge into the prompt.
         max_depth : int or None, default=None
@@ -95,16 +97,12 @@ class TaxonomyClassifierAgent(AgentBase):
         Raises
         ------
         ValueError
-            If ``taxonomy`` is empty.
+            If the taxonomy is empty.
         """
-        roots = _normalize_roots(taxonomy)
-        if not roots:
-            raise ValueError("taxonomy must include at least one node")
-
         path: list[ClassificationStep] = []
         depth = 0
         stop_reason = ClassificationStopReason.NO_MATCH
-        current_nodes = list(roots)
+        current_nodes = list(self._root_nodes)
 
         while current_nodes:
             if max_depth is not None and depth >= max_depth:
@@ -148,6 +146,28 @@ class TaxonomyClassifierAgent(AgentBase):
             path=path,
         )
 
+    @property
+    def taxonomy(self) -> TaxonomyNode | Sequence[TaxonomyNode]:
+        """Return the root taxonomy node(s).
+
+        Returns
+        -------
+        TaxonomyNode or Sequence[TaxonomyNode]
+            Root taxonomy node or list of root nodes.
+        """
+        return self._taxonomy
+
+    @property
+    def root_nodes(self) -> list[TaxonomyNode]:
+        """Return the list of root taxonomy nodes.
+
+        Returns
+        -------
+        list[TaxonomyNode]
+            List of root taxonomy nodes.
+        """
+        return self._root_nodes
+
 
 def _normalize_roots(
     taxonomy: TaxonomyNode | Sequence[TaxonomyNode],
@@ -156,7 +176,7 @@ def _normalize_roots(
 
     Parameters
     ----------
-    taxonomy : TaxonomyNode or Sequence[TaxonomyNode]
+    taxonomy : TaxonomyNode | Sequence[TaxonomyNode]
         Root taxonomy node or list of root nodes.
 
     Returns

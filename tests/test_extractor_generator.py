@@ -83,8 +83,9 @@ def test_generate_document_extractor_config_uses_generator(
         examples=examples,
     )
 
+    optimize_extractor_prompt_mock = Mock(return_value="optimized prompt")
     monkeypatch.setattr(
-        generator, "optimize_extractor_prompt", Mock(return_value="optimized prompt")
+        generator, "optimize_extractor_prompt", optimize_extractor_prompt_mock
     )
     mock_response = Mock()
     mock_response.run_sync.return_value = expected
@@ -103,7 +104,7 @@ def test_generate_document_extractor_config_uses_generator(
     )
 
     assert result == expected
-    generator.optimize_extractor_prompt.assert_called_once_with(
+    optimize_extractor_prompt_mock.assert_called_once_with(
         openai_settings,
         "Extract names.",
         ["Name"],
@@ -150,7 +151,7 @@ def test_optimize_extractor_prompt_with_agent(monkeypatch: pytest.MonkeyPatch) -
     configuration = captured["configuration"]
     assert isinstance(configuration, generator.AgentConfiguration)
     assert configuration.model == openai_settings.default_model
-    assert "Extract vendors." in captured["input"]
+    assert "Extract vendors." in str(captured["input"])
 
 
 def test_generate_document_extractor_config_with_agent(
@@ -210,5 +211,5 @@ def test_generate_document_extractor_config_with_agent(
     configuration = captured["configuration"]
     assert isinstance(configuration, generator.AgentConfiguration)
     assert configuration.model == openai_settings.default_model
-    assert "Name: vendor_extractor" in captured["input"]
-    assert "Prompt description: agent prompt" in captured["input"]
+    assert "Name: vendor_extractor" in str(captured["input"])
+    assert "Prompt description: agent prompt" in str(captured["input"])

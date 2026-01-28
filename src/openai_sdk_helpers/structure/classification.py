@@ -17,7 +17,7 @@ class TaxonomyNode(StructureBase):
         Unique identifier for the taxonomy node.
     label : str
         Human-readable label for the taxonomy node.
-    description : str or None
+    description : str | None
         Optional description of the node.
     children : list[TaxonomyNode]
         Child nodes in the taxonomy.
@@ -38,7 +38,7 @@ class TaxonomyNode(StructureBase):
     label: str = spec_field(
         "label", description="Human-readable label for the taxonomy node."
     )
-    description: Optional[str] = spec_field(
+    description: str | None = spec_field(
         "description",
         description="Optional description of the taxonomy node.",
         default=None,
