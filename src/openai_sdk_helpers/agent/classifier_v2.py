@@ -1,9 +1,9 @@
-"""Agent for taxonomy-driven text classification."""
+"""Recursive agent for taxonomy-driven text classification."""
 
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional, Sequence, cast
@@ -20,8 +20,8 @@ from .base import AgentBase
 from .configuration import AgentConfiguration
 
 
-class TaxonomyClassifierAgent(AgentBase):
-    """Classify text by traversing a taxonomy level by level.
+class TaxonomyClassifierAgentV2(AgentBase):
+    """Classify text by recursively traversing a taxonomy.
 
     Parameters
     ----------
@@ -33,7 +33,7 @@ class TaxonomyClassifierAgent(AgentBase):
     Methods
     -------
     run_agent(text, taxonomy, context, max_depth)
-        Classify text by walking the taxonomy tree.
+        Classify text by recursively walking the taxonomy tree.
 
     Examples
     --------
@@ -43,7 +43,7 @@ class TaxonomyClassifierAgent(AgentBase):
     ...     TaxonomyNode(id="billing", label="Billing"),
     ...     TaxonomyNode(id="support", label="Support"),
     ... ]
-    >>> agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=taxonomy)
+    >>> agent = TaxonomyClassifierAgentV2(model="gpt-4o-mini", taxonomy=taxonomy)
     """
 
     def __init__(
@@ -61,15 +61,17 @@ class TaxonomyClassifierAgent(AgentBase):
             Optional template file path for prompt rendering.
         model : str | None, default=None
             Model identifier to use for classification.
+        taxonomy : TaxonomyNode | Sequence[TaxonomyNode]
+            Root taxonomy node or list of root nodes.
 
         Raises
         ------
         ValueError
-            If the model is not provided.
+            If the taxonomy is empty.
 
         Examples
         --------
-        >>> classifier = TaxonomyClassifierAgent(model="gpt-4o-mini")
+        >>> classifier = TaxonomyClassifierAgentV2(model="gpt-4o-mini", taxonomy=[])
         """
         self._taxonomy = taxonomy
         self._root_nodes = _normalize_roots(taxonomy)
@@ -77,9 +79,9 @@ class TaxonomyClassifierAgent(AgentBase):
             raise ValueError("taxonomy must include at least one node")
         resolved_template_path = template_path or _default_template_path()
         configuration = AgentConfiguration(
-            name="taxonomy_classifier",
+            name="taxonomy_classifier_v2",
             instructions="Agent instructions",
-            description="Classify text by traversing taxonomy levels.",
+            description="Classify text by traversing taxonomy levels recursively.",
             template_path=resolved_template_path,
             output_structure=ClassificationStep,
             model=model,
@@ -95,7 +97,7 @@ class TaxonomyClassifierAgent(AgentBase):
         confidence_threshold: float | None = None,
         single_class: bool = False,
     ) -> ClassificationResult:
-        """Classify ``text`` by iterating over taxonomy levels.
+        """Classify ``text`` by recursively walking taxonomy levels.
 
         Parameters
         ----------
@@ -115,111 +117,134 @@ class TaxonomyClassifierAgent(AgentBase):
         ClassificationResult
             Structured classification result describing the traversal.
 
-        Raises
-        ------
-        ValueError
-            If the taxonomy is empty.
-
         Examples
         --------
-        >>> taxonomy = TaxonomyNode(
-        ...     id="finance",
-        ...     label="Finance",
-        ...     children=[TaxonomyNode(id="tax", label="Tax")],
-        ... )
-        >>> agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=taxonomy)
+        >>> taxonomy = TaxonomyNode(id="finance", label="Finance")
+        >>> agent = TaxonomyClassifierAgentV2(model="gpt-4o-mini", taxonomy=taxonomy)
         >>> isinstance(agent.root_nodes, list)
         True
         """
-        path: list[ClassificationStep] = []
-        path_nodes: list[TaxonomyNode] = []
-        best_confidence: float | None = None
-        stop_reason = ClassificationStopReason.NO_MATCH
-        saw_max_depth = False
-        saw_no_children = False
-        saw_terminal_stop = False
-        branch_queue = [_BranchState(nodes=list(self._root_nodes), depth=0)]
-        final_nodes: list[TaxonomyNode] = []
+        state = _TraversalState()
+        await self._classify_nodes(
+            text=text,
+            nodes=list(self._root_nodes),
+            depth=0,
+            context=context,
+            max_depth=max_depth,
+            confidence_threshold=confidence_threshold,
+            single_class=single_class,
+            state=state,
+        )
 
-        while branch_queue:
-            branch = branch_queue.pop(0)
-            current_nodes = branch.nodes
-            depth = branch.depth
-            if max_depth is not None and depth >= max_depth:
-                saw_max_depth = True
-                continue
-            if not current_nodes:
-                continue
-
-            template_context = _build_context(
-                current_nodes=current_nodes,
-                path=path,
-                depth=depth,
-                context=context,
-            )
-            step_structure = _build_step_structure(current_nodes)
-            raw_step = await self.run_async(
-                input=text,
-                context=template_context,
-                output_structure=step_structure,
-            )
-            step = _normalize_step_output(raw_step, step_structure)
-            path.append(step)
-
-            if (
-                confidence_threshold is not None
-                and step.confidence is not None
-                and step.confidence < confidence_threshold
-            ):
-                continue
-
-            resolved_nodes = _resolve_nodes(current_nodes, step)
-            if resolved_nodes:
-                if single_class:
-                    resolved_nodes = resolved_nodes[:1]
-                path_nodes.extend(resolved_nodes)
-
-            if step.stop_reason.is_terminal:
-                if resolved_nodes:
-                    final_nodes.extend(resolved_nodes)
-                    best_confidence = _max_confidence(best_confidence, step.confidence)
-                    saw_terminal_stop = True
-                continue
-
-            if not resolved_nodes:
-                stop_reason = ClassificationStopReason.NO_MATCH
-                continue
-
-            for node in resolved_nodes:
-                if node.children:
-                    branch_queue.append(
-                        _BranchState(nodes=list(node.children), depth=depth + 1)
-                    )
-                else:
-                    saw_no_children = True
-                    final_nodes.append(node)
-                    best_confidence = _max_confidence(best_confidence, step.confidence)
-
-        final_nodes_value = final_nodes or None
-        final_node = final_nodes[0] if final_nodes else None
-        if saw_terminal_stop:
-            stop_reason = ClassificationStopReason.STOP
-        elif final_nodes and saw_no_children:
-            stop_reason = ClassificationStopReason.NO_CHILDREN
-        elif final_nodes:
-            stop_reason = ClassificationStopReason.STOP
-        elif saw_max_depth:
-            stop_reason = ClassificationStopReason.MAX_DEPTH
-        elif saw_no_children:
-            stop_reason = ClassificationStopReason.NO_CHILDREN
+        final_nodes_value = state.final_nodes or None
+        final_node = state.final_nodes[0] if state.final_nodes else None
+        stop_reason = _resolve_stop_reason(state)
         return ClassificationResult(
             final_node=final_node,
             final_nodes=final_nodes_value,
-            confidence=best_confidence,
+            confidence=state.best_confidence,
             stop_reason=stop_reason,
-            path=path,
-            path_nodes=path_nodes,
+            path=state.path,
+            path_nodes=state.path_nodes,
         )
+
+    async def _classify_nodes(
+        self,
+        *,
+        text: str,
+        nodes: list[TaxonomyNode],
+        depth: int,
+        context: Optional[Dict[str, Any]],
+        max_depth: Optional[int],
+        confidence_threshold: float | None,
+        single_class: bool,
+        state: "_TraversalState",
+    ) -> None:
+        """Classify a taxonomy level and recursively traverse children.
+
+        Parameters
+        ----------
+        text : str
+            Source text to classify.
+        nodes : list[TaxonomyNode]
+            Candidate taxonomy nodes for the current level.
+        depth : int
+            Current traversal depth.
+        context : dict or None
+            Additional context values to merge into the prompt.
+        max_depth : int or None
+            Maximum traversal depth before stopping.
+        confidence_threshold : float or None
+            Minimum confidence required to accept a classification step.
+        single_class : bool
+            Whether to keep only the highest-priority selection per step.
+        state : _TraversalState
+            Aggregated traversal state.
+        """
+        if max_depth is not None and depth >= max_depth:
+            state.saw_max_depth = True
+            return
+        if not nodes:
+            return
+
+        template_context = _build_context(
+            current_nodes=nodes,
+            path=state.path,
+            depth=depth,
+            context=context,
+        )
+        step_structure = _build_step_structure(nodes)
+        raw_step = await self.run_async(
+            input=text,
+            context=template_context,
+            output_structure=step_structure,
+        )
+        step = _normalize_step_output(raw_step, step_structure)
+        state.path.append(step)
+
+        if (
+            confidence_threshold is not None
+            and step.confidence is not None
+            and step.confidence < confidence_threshold
+        ):
+            return
+
+        resolved_nodes = _resolve_nodes(nodes, step)
+        if resolved_nodes:
+            if single_class:
+                resolved_nodes = resolved_nodes[:1]
+            state.path_nodes.extend(resolved_nodes)
+
+        if step.stop_reason.is_terminal:
+            if resolved_nodes:
+                state.final_nodes.extend(resolved_nodes)
+                state.best_confidence = _max_confidence(
+                    state.best_confidence, step.confidence
+                )
+                state.saw_terminal_stop = True
+            return
+
+        if not resolved_nodes:
+            return
+
+        for node in resolved_nodes:
+            if node.children:
+                await self._classify_nodes(
+                    text=text,
+                    nodes=list(node.children),
+                    depth=depth + 1,
+                    context=context,
+                    max_depth=max_depth,
+                    confidence_threshold=confidence_threshold,
+                    single_class=single_class,
+                    state=state,
+                )
+            else:
+                state.saw_no_children = True
+                state.final_nodes.append(node)
+                state.best_confidence = _max_confidence(
+                    state.best_confidence, step.confidence
+                )
 
     @property
     def taxonomy(self) -> TaxonomyNode | Sequence[TaxonomyNode]:
@@ -244,10 +269,43 @@ class TaxonomyClassifierAgent(AgentBase):
         return self._root_nodes
 
 
-@dataclass(frozen=True)
-class _BranchState:
-    nodes: list[TaxonomyNode]
-    depth: int
+@dataclass
+class _TraversalState:
+    """Track recursive traversal state."""
+
+    path: list[ClassificationStep] = field(default_factory=list)
+    path_nodes: list[TaxonomyNode] = field(default_factory=list)
+    final_nodes: list[TaxonomyNode] = field(default_factory=list)
+    best_confidence: float | None = None
+    saw_max_depth: bool = False
+    saw_no_children: bool = False
+    saw_terminal_stop: bool = False
+
+
+def _resolve_stop_reason(state: _TraversalState) -> ClassificationStopReason:
+    """Resolve the final stop reason based on traversal state.
+
+    Parameters
+    ----------
+    state : _TraversalState
+        Traversal state to inspect.
+
+    Returns
+    -------
+    ClassificationStopReason
+        Resolved stop reason.
+    """
+    if state.saw_terminal_stop:
+        return ClassificationStopReason.STOP
+    if state.final_nodes and state.saw_no_children:
+        return ClassificationStopReason.NO_CHILDREN
+    if state.final_nodes:
+        return ClassificationStopReason.STOP
+    if state.saw_max_depth:
+        return ClassificationStopReason.MAX_DEPTH
+    if state.saw_no_children:
+        return ClassificationStopReason.NO_CHILDREN
+    return ClassificationStopReason.NO_MATCH
 
 
 def _normalize_roots(
@@ -650,4 +708,4 @@ def _max_confidence(
     return max(current, candidate)
 
 
-__all__ = ["TaxonomyClassifierAgent"]
+__all__ = ["TaxonomyClassifierAgentV2"]
