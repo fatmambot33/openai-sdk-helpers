@@ -19,8 +19,6 @@ class TaxonomyNode(StructureBase):
         Human-readable label for the taxonomy node.
     description : str or None
         Optional description of the node.
-    path : list[str]
-        Path segments identifying the node location in the taxonomy.
     children : list[TaxonomyNode]
         Child nodes in the taxonomy.
 
@@ -30,6 +28,8 @@ class TaxonomyNode(StructureBase):
         Return True when the taxonomy node has no children.
     build_path(parent_path)
         Build a computed path using the provided parent path segments.
+    computed_path
+        Return the computed path for the node.
     child_by_id(node_id)
         Return the child node matching the provided identifier.
     """
@@ -42,11 +42,6 @@ class TaxonomyNode(StructureBase):
         "description",
         description="Optional description of the taxonomy node.",
         default=None,
-    )
-    path: list[str] = spec_field(
-        "path",
-        description="Path segments identifying the node location in the taxonomy.",
-        default_factory=list,
     )
     children: list["TaxonomyNode"] = spec_field(
         "children",
@@ -80,6 +75,17 @@ class TaxonomyNode(StructureBase):
         if parent_path is None:
             return [self.label]
         return [*parent_path, self.label]
+
+    @property
+    def computed_path(self) -> list[str]:
+        """Return the computed path for the node.
+
+        Returns
+        -------
+        list[str]
+            Computed path segments for this node.
+        """
+        return self.build_path()
 
     def child_by_id(self, node_id: str | None) -> Optional["TaxonomyNode"]:
         """Return the child node matching the provided identifier.
