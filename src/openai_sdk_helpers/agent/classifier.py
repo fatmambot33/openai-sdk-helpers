@@ -125,7 +125,7 @@ class TaxonomyClassifierAgent(AgentBase):
             path.append(step)
             stop_reason = step.stop_reason
 
-            if step.stop_reason.is_terminal():
+            if step.stop_reason.is_terminal:
                 break
 
             selected_node = _resolve_node(current_nodes, step)

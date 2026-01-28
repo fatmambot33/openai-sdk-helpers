@@ -111,7 +111,7 @@ class ClassificationStopReason(str, Enum):
 
     Methods
     -------
-    is_terminal()
+    is_terminal
         Return True if the stop reason should halt traversal.
     """
 
@@ -121,6 +121,7 @@ class ClassificationStopReason(str, Enum):
     MAX_DEPTH = "max_depth"
     NO_CHILDREN = "no_children"
 
+    @property
     def is_terminal(self) -> bool:
         """Return True if the stop reason should halt traversal.
 
@@ -219,9 +220,9 @@ class ClassificationResult(StructureBase):
 
     Methods
     -------
-    depth()
+    depth
         Return the number of classification steps recorded.
-    path_labels()
+    path_labels
         Return the labels selected at each step.
     """
 
@@ -251,6 +252,7 @@ class ClassificationResult(StructureBase):
         default_factory=list,
     )
 
+    @property
     def depth(self) -> int:
         """Return the number of classification steps recorded.
 
@@ -261,6 +263,7 @@ class ClassificationResult(StructureBase):
         """
         return len(self.path)
 
+    @property
     def path_labels(self) -> list[str]:
         """Return the labels selected at each step.
 
