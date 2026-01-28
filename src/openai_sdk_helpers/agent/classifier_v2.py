@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import re
 from dataclasses import dataclass, field
 from enum import Enum
@@ -227,23 +228,47 @@ class TaxonomyClassifierAgentV2(AgentBase):
         if not resolved_nodes:
             return
 
+        base_path_len = len(state.path)
+        base_path_nodes_len = len(state.path_nodes)
+        child_tasks = []
         for node in resolved_nodes:
             if node.children:
-                await self._classify_nodes(
-                    text=text,
-                    nodes=list(node.children),
-                    depth=depth + 1,
-                    context=context,
-                    max_depth=max_depth,
-                    confidence_threshold=confidence_threshold,
-                    single_class=single_class,
-                    state=state,
+                sub_agent = self._build_sub_agent(list(node.children))
+                sub_state = _copy_traversal_state(state)
+                child_tasks.append(
+                    self._classify_subtree(
+                        sub_agent=sub_agent,
+                        text=text,
+                        nodes=list(node.children),
+                        depth=depth + 1,
+                        context=context,
+                        max_depth=max_depth,
+                        confidence_threshold=confidence_threshold,
+                        single_class=single_class,
+                        state=sub_state,
+                    )
                 )
             else:
                 state.saw_no_children = True
                 state.final_nodes.append(node)
                 state.best_confidence = _max_confidence(
                     state.best_confidence, step.confidence
+                )
+        if child_tasks:
+            child_states = await asyncio.gather(*child_tasks)
+            for child_state in child_states:
+                state.path.extend(child_state.path[base_path_len:])
+                state.path_nodes.extend(child_state.path_nodes[base_path_nodes_len:])
+                state.final_nodes.extend(child_state.final_nodes)
+                state.best_confidence = _max_confidence(
+                    state.best_confidence, child_state.best_confidence
+                )
+                state.saw_max_depth = state.saw_max_depth or child_state.saw_max_depth
+                state.saw_no_children = (
+                    state.saw_no_children or child_state.saw_no_children
+                )
+                state.saw_terminal_stop = (
+                    state.saw_terminal_stop or child_state.saw_terminal_stop
                 )
 
     @property
@@ -268,6 +293,81 @@ class TaxonomyClassifierAgentV2(AgentBase):
         """
         return self._root_nodes
 
+    def _build_sub_agent(
+        self,
+        nodes: Sequence[TaxonomyNode],
+    ) -> "TaxonomyClassifierAgentV2":
+        """Build a classifier agent for a taxonomy subtree.
+
+        Parameters
+        ----------
+        nodes : Sequence[TaxonomyNode]
+            Taxonomy nodes to use as the sub-agent's root taxonomy.
+
+        Returns
+        -------
+        TaxonomyClassifierAgentV2
+            Configured classifier agent for the taxonomy slice.
+        """
+        return TaxonomyClassifierAgentV2(
+            template_path=self._template_path,
+            model=self._model,
+            taxonomy=list(nodes),
+        )
+
+    async def _classify_subtree(
+        self,
+        *,
+        sub_agent: "TaxonomyClassifierAgentV2",
+        text: str,
+        nodes: list[TaxonomyNode],
+        depth: int,
+        context: Optional[Dict[str, Any]],
+        max_depth: Optional[int],
+        confidence_threshold: float | None,
+        single_class: bool,
+        state: "_TraversalState",
+    ) -> "_TraversalState":
+        """Classify a taxonomy subtree and return the traversal state.
+
+        Parameters
+        ----------
+        sub_agent : TaxonomyClassifierAgentV2
+            Sub-agent configured for the subtree traversal.
+        text : str
+            Source text to classify.
+        nodes : list[TaxonomyNode]
+            Candidate taxonomy nodes for the subtree.
+        depth : int
+            Current traversal depth.
+        context : dict or None
+            Additional context values to merge into the prompt.
+        max_depth : int or None
+            Maximum traversal depth before stopping.
+        confidence_threshold : float or None
+            Minimum confidence required to accept a classification step.
+        single_class : bool
+            Whether to keep only the highest-priority selection per step.
+        state : _TraversalState
+            Traversal state to populate for the subtree.
+
+        Returns
+        -------
+        _TraversalState
+            Populated traversal state for the subtree.
+        """
+        await sub_agent._classify_nodes(
+            text=text,
+            nodes=nodes,
+            depth=depth,
+            context=context,
+            max_depth=max_depth,
+            confidence_threshold=confidence_threshold,
+            single_class=single_class,
+            state=state,
+        )
+        return state
+
 
 @dataclass
 class _TraversalState:
@@ -280,6 +380,30 @@ class _TraversalState:
     saw_max_depth: bool = False
     saw_no_children: bool = False
     saw_terminal_stop: bool = False
+
+
+def _copy_traversal_state(state: _TraversalState) -> _TraversalState:
+    """Copy traversal state for parallel subtree execution.
+
+    Parameters
+    ----------
+    state : _TraversalState
+        Traversal state to clone.
+
+    Returns
+    -------
+    _TraversalState
+        Cloned traversal state with copied collections.
+    """
+    return _TraversalState(
+        path=list(state.path),
+        path_nodes=list(state.path_nodes),
+        final_nodes=list(state.final_nodes),
+        best_confidence=state.best_confidence,
+        saw_max_depth=state.saw_max_depth,
+        saw_no_children=state.saw_no_children,
+        saw_terminal_stop=state.saw_terminal_stop,
+    )
 
 
 def _resolve_stop_reason(state: _TraversalState) -> ClassificationStopReason:
