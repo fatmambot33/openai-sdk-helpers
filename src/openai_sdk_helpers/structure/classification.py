@@ -24,12 +24,12 @@ class TaxonomyNode(StructureBase):
 
     Methods
     -------
-    is_leaf()
-        Return True when the taxonomy node has no children.
     build_path(parent_path)
         Build a computed path using the provided parent path segments.
     computed_path
         Return the computed path for the node.
+    is_leaf
+        Return True when the taxonomy node has no children.
     child_by_id(node_id)
         Return the child node matching the provided identifier.
     """
@@ -49,6 +49,7 @@ class TaxonomyNode(StructureBase):
         default_factory=list,
     )
 
+    @property
     def is_leaf(self) -> bool:
         """Return True when the taxonomy node has no children.
 

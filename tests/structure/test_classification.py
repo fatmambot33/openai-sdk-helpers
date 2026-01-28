@@ -9,4 +9,5 @@ def test_taxonomy_node_build_path():
     node = TaxonomyNode(id="leaf", label="Leaf")
 
     assert node.computed_path == ["Leaf"]
+    assert node.is_leaf is True
     assert node.build_path(["Root", "Branch"]) == ["Root", "Branch", "Leaf"]
