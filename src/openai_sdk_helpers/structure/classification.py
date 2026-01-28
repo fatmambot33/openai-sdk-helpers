@@ -145,8 +145,12 @@ class ClassificationStep(StructureBase):
     ----------
     selected_id : str or None
         Identifier of the selected taxonomy node.
+    selected_ids : list[str] or None
+        Identifiers of selected taxonomy nodes for multi-class classification.
     selected_label : str or None
         Label of the selected taxonomy node.
+    selected_labels : list[str] or None
+        Labels of selected taxonomy nodes for multi-class classification.
     confidence : float or None
         Confidence score between 0 and 1.
     stop_reason : ClassificationStopReason
@@ -165,9 +169,19 @@ class ClassificationStep(StructureBase):
         description="Identifier of the selected taxonomy node.",
         default=None,
     )
+    selected_ids: list[str] | None = spec_field(
+        "selected_ids",
+        description="Identifiers of selected taxonomy nodes.",
+        default=None,
+    )
     selected_label: Optional[str] = spec_field(
         "selected_label",
         description="Label of the selected taxonomy node.",
+        default=None,
+    )
+    selected_labels: list[str] | None = spec_field(
+        "selected_labels",
+        description="Labels of selected taxonomy nodes.",
         default=None,
     )
     confidence: Optional[float] = spec_field(
@@ -196,7 +210,9 @@ class ClassificationStep(StructureBase):
         """
         return {
             "selected_id": self.selected_id,
+            "selected_ids": self.selected_ids,
             "selected_label": self.selected_label,
+            "selected_labels": self.selected_labels,
             "confidence": self.confidence,
             "stop_reason": self.stop_reason.value,
         }
@@ -209,8 +225,12 @@ class ClassificationResult(StructureBase):
     ----------
     final_id : str or None
         Identifier of the final taxonomy node selection.
+    final_ids : list[str] or None
+        Identifiers of final taxonomy node selections.
     final_label : str or None
         Label of the final taxonomy node selection.
+    final_labels : list[str] or None
+        Labels of final taxonomy node selections.
     confidence : float or None
         Confidence score for the final selection.
     stop_reason : ClassificationStopReason
@@ -231,9 +251,19 @@ class ClassificationResult(StructureBase):
         description="Identifier of the final taxonomy node selection.",
         default=None,
     )
+    final_ids: list[str] | None = spec_field(
+        "final_ids",
+        description="Identifiers of final taxonomy node selections.",
+        default=None,
+    )
     final_label: Optional[str] = spec_field(
         "final_label",
         description="Label of the final taxonomy node selection.",
+        default=None,
+    )
+    final_labels: list[str] | None = spec_field(
+        "final_labels",
+        description="Labels of final taxonomy node selections.",
         default=None,
     )
     confidence: Optional[float] = spec_field(
@@ -272,7 +302,13 @@ class ClassificationResult(StructureBase):
         list[str]
             Labels selected at each classification step.
         """
-        return [step.selected_label for step in self.path if step.selected_label]
+        labels: list[str] = []
+        for step in self.path:
+            if step.selected_labels:
+                labels.extend(step.selected_labels)
+            elif step.selected_label:
+                labels.append(step.selected_label)
+        return labels
 
 
 def flatten_taxonomy(nodes: Iterable[TaxonomyNode]) -> list[TaxonomyNode]:

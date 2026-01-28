@@ -137,10 +137,12 @@ class TaxonomyClassifierAgent(AgentBase):
             current_nodes = list(selected_node.children)
             depth += 1
 
-        final_id, final_label, confidence = _final_values(path)
+        final_id, final_label, confidence, final_ids, final_labels = _final_values(path)
         return ClassificationResult(
             final_id=final_id,
+            final_ids=final_ids,
             final_label=final_label,
+            final_labels=final_labels,
             confidence=confidence,
             stop_reason=stop_reason,
             path=path,
@@ -253,20 +255,28 @@ def _resolve_node(
     TaxonomyNode or None
         Matching taxonomy node if found.
     """
-    if step.selected_id:
+    selected_ids = _selected_ids(step)
+    for selected_id in selected_ids:
         for node in nodes:
-            if node.id == step.selected_id:
+            if node.id == selected_id:
                 return node
-    if step.selected_label:
+    selected_labels = _selected_labels(step)
+    for selected_label in selected_labels:
         for node in nodes:
-            if node.label == step.selected_label:
+            if node.label == selected_label:
                 return node
     return None
 
 
 def _final_values(
     path: Sequence[ClassificationStep],
-) -> tuple[Optional[str], Optional[str], Optional[float]]:
+) -> tuple[
+    Optional[str],
+    Optional[str],
+    Optional[float],
+    list[str] | None,
+    list[str] | None,
+]:
     """Return the final selection values from the path.
 
     Parameters
@@ -276,13 +286,61 @@ def _final_values(
 
     Returns
     -------
-    tuple[str or None, str or None, float or None]
-        Final identifier, label, and confidence.
+    tuple[str or None, str or None, float or None, list[str] or None, list[str] or None]
+        Final identifier, label, confidence, and multi-class selections.
     """
     if not path:
-        return None, None, None
+        return None, None, None, None, None
     last_step = path[-1]
-    return last_step.selected_id, last_step.selected_label, last_step.confidence
+    selected_ids = _selected_ids(last_step) or None
+    selected_labels = _selected_labels(last_step) or None
+    final_id = selected_ids[0] if selected_ids else last_step.selected_id
+    final_label = selected_labels[0] if selected_labels else last_step.selected_label
+    return (
+        final_id,
+        final_label,
+        last_step.confidence,
+        selected_ids,
+        selected_labels,
+    )
+
+
+def _selected_ids(step: ClassificationStep) -> list[str]:
+    """Return selected identifiers for a classification step.
+
+    Parameters
+    ----------
+    step : ClassificationStep
+        Classification output to normalize.
+
+    Returns
+    -------
+    list[str]
+        Selected identifiers in priority order.
+    """
+    if step.selected_ids:
+        return [selected_id for selected_id in step.selected_ids if selected_id]
+    return [step.selected_id] if step.selected_id else []
+
+
+def _selected_labels(step: ClassificationStep) -> list[str]:
+    """Return selected labels for a classification step.
+
+    Parameters
+    ----------
+    step : ClassificationStep
+        Classification output to normalize.
+
+    Returns
+    -------
+    list[str]
+        Selected labels in priority order.
+    """
+    if step.selected_labels:
+        return [
+            selected_label for selected_label in step.selected_labels if selected_label
+        ]
+    return [step.selected_label] if step.selected_label else []
 
 
 __all__ = ["TaxonomyClassifierAgent"]
