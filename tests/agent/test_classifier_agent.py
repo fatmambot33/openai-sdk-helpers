@@ -93,7 +93,5 @@ async def test_classifier_stops_when_no_children():
 async def test_classifier_requires_taxonomy_nodes():
     """Classifier should reject empty taxonomy definitions."""
 
-    agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[])
-
     with pytest.raises(ValueError, match="taxonomy must include at least one node"):
-        await agent.run_agent("Text")
+        TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[])
