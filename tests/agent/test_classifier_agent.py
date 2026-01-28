@@ -38,13 +38,17 @@ async def test_classifier_traverses_taxonomy_levels():
     steps = [
         ClassificationStep(
             selected_id="finance",
+            selected_ids=["finance"],
             selected_label="Finance",
+            selected_labels=["Finance"],
             confidence=0.7,
             stop_reason=ClassificationStopReason.CONTINUE,
         ),
         ClassificationStep(
             selected_id="tax",
+            selected_ids=["tax"],
             selected_label="Tax",
+            selected_labels=["Tax"],
             confidence=0.9,
             stop_reason=ClassificationStopReason.STOP,
         ),
@@ -59,7 +63,9 @@ async def test_classifier_traverses_taxonomy_levels():
 
     assert isinstance(result, ClassificationResult)
     assert result.final_id == "tax"
+    assert result.final_ids == ["tax"]
     assert result.final_label == "Tax"
+    assert result.final_labels == ["Tax"]
     assert result.stop_reason is ClassificationStopReason.STOP
     assert len(result.path) == 2
 
@@ -73,7 +79,9 @@ async def test_classifier_stops_when_no_children():
 
     step = ClassificationStep(
         selected_id="root",
+        selected_ids=["root"],
         selected_label="Root",
+        selected_labels=["Root"],
         confidence=0.6,
         stop_reason=ClassificationStopReason.CONTINUE,
     )
@@ -87,6 +95,91 @@ async def test_classifier_stops_when_no_children():
 
     assert result.stop_reason is ClassificationStopReason.NO_CHILDREN
     assert result.final_id == "root"
+    assert result.final_ids == ["root"]
+
+
+@pytest.mark.anyio
+async def test_classifier_falls_back_when_selected_ids_empty():
+    """Classifier should fall back to selected_id when selected_ids is empty."""
+
+    root = TaxonomyNode(
+        id="finance",
+        label="Finance",
+        children=[TaxonomyNode(id="tax", label="Tax")],
+    )
+    agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[root])
+
+    steps = [
+        ClassificationStep(
+            selected_id="finance",
+            selected_ids=[""],
+            selected_label="Finance",
+            selected_labels=None,
+            confidence=0.7,
+            stop_reason=ClassificationStopReason.CONTINUE,
+        ),
+        ClassificationStep(
+            selected_id="tax",
+            selected_ids=["tax"],
+            selected_label="Tax",
+            selected_labels=["Tax"],
+            confidence=0.9,
+            stop_reason=ClassificationStopReason.STOP,
+        ),
+    ]
+
+    with (
+        patch.object(agent, "get_agent", return_value=MagicMock()),
+        patch.object(agent, "run_async", new_callable=AsyncMock) as mock_run,
+    ):
+        mock_run.side_effect = steps
+        result = await agent.run_agent("Tax update")
+
+    assert result.stop_reason is ClassificationStopReason.STOP
+    assert result.final_id == "tax"
+    assert result.final_ids == ["tax"]
+
+
+@pytest.mark.anyio
+async def test_classifier_falls_back_when_selected_labels_empty():
+    """Classifier should fall back to selected_label when selected_labels is empty."""
+
+    root = TaxonomyNode(
+        id="finance",
+        label="Finance",
+        children=[TaxonomyNode(id="tax", label="Tax")],
+    )
+    agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[root])
+
+    steps = [
+        ClassificationStep(
+            selected_id=None,
+            selected_ids=None,
+            selected_label="Finance",
+            selected_labels=[""],
+            confidence=0.7,
+            stop_reason=ClassificationStopReason.CONTINUE,
+        ),
+        ClassificationStep(
+            selected_id="tax",
+            selected_ids=["tax"],
+            selected_label="Tax",
+            selected_labels=["Tax"],
+            confidence=0.9,
+            stop_reason=ClassificationStopReason.STOP,
+        ),
+    ]
+
+    with (
+        patch.object(agent, "get_agent", return_value=MagicMock()),
+        patch.object(agent, "run_async", new_callable=AsyncMock) as mock_run,
+    ):
+        mock_run.side_effect = steps
+        result = await agent.run_agent("Tax update")
+
+    assert result.stop_reason is ClassificationStopReason.STOP
+    assert result.final_label == "Tax"
+    assert result.final_labels == ["Tax"]
 
 
 @pytest.mark.anyio

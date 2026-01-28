@@ -24,13 +24,17 @@ def test_classification_result_properties():
     steps = [
         ClassificationStep(
             selected_id="root",
+            selected_ids=["root"],
             selected_label="Root",
+            selected_labels=["Root"],
             confidence=0.8,
             stop_reason=ClassificationStopReason.CONTINUE,
         ),
         ClassificationStep(
             selected_id="leaf",
+            selected_ids=["leaf", "branch"],
             selected_label="Leaf",
+            selected_labels=["Leaf", "Branch"],
             confidence=0.9,
             stop_reason=ClassificationStopReason.STOP,
         ),
@@ -38,14 +42,16 @@ def test_classification_result_properties():
 
     result = ClassificationResult(
         final_id="leaf",
+        final_ids=["leaf", "branch"],
         final_label="Leaf",
+        final_labels=["Leaf", "Branch"],
         confidence=0.9,
         stop_reason=ClassificationStopReason.STOP,
         path=steps,
     )
 
     assert result.depth == 2
-    assert result.path_labels == ["Root", "Leaf"]
+    assert result.path_labels == ["Root", "Leaf", "Branch"]
 
 
 def test_stop_reason_is_terminal_property():
