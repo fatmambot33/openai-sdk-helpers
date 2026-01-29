@@ -531,8 +531,6 @@ class StructureBase(BaseModelJSONSerializable):
                                 resolved = _resolve_ref(item["$ref"], root, seen)
                                 if resolved is not None:
                                     item = resolved
-                                else:
-                                    item = _build_any_value_schema()
                             updated_items.append(_inline_anyof_refs(item, root, seen))
                         updated[key] = updated_items
                     else:
