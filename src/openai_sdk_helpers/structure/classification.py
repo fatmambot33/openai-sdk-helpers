@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable, Optional, cast
 
 from .base import StructureBase, spec_field
 
@@ -13,8 +13,6 @@ class TaxonomyNode(StructureBase):
 
     Attributes
     ----------
-    id : str
-        Unique identifier for the taxonomy node.
     label : str
         Human-readable label for the taxonomy node.
     description : str | None
@@ -30,11 +28,10 @@ class TaxonomyNode(StructureBase):
         Return the computed path for the node.
     is_leaf
         Return True when the taxonomy node has no children.
-    child_by_id(node_id)
-        Return the child node matching the provided identifier.
+    child_by_path(path)
+        Return the child node matching the provided path.
     """
 
-    id: str = spec_field("id", description="Unique identifier for the taxonomy.")
     label: str = spec_field(
         "label", description="Human-readable label for the taxonomy node."
     )
@@ -88,22 +85,53 @@ class TaxonomyNode(StructureBase):
         """
         return self.build_path()
 
-    def child_by_id(self, node_id: str | None) -> Optional["TaxonomyNode"]:
-        """Return the child node matching the provided identifier.
+    def child_by_path(
+        self, path: Iterable[str] | str | None
+    ) -> Optional["TaxonomyNode"]:
+        """Return the child node matching the provided path.
 
         Parameters
         ----------
-        node_id : str or None
-            Identifier of the child node to locate.
+        path : Iterable[str] or str or None
+            Path segments or a delimited path string to locate.
 
         Returns
         -------
         TaxonomyNode or None
             Matching child node, if found.
         """
-        if node_id is None:
+        if path is None:
             return None
-        return next((child for child in self.children if child.id == node_id), None)
+        if isinstance(path, str):
+            path_segments = _split_path_identifier(path)
+        else:
+            path_segments = list(path)
+        last_segment = path_segments[-1] if path_segments else None
+        if not last_segment:
+            return None
+        return next(
+            (child for child in self.children if child.label == last_segment),
+            None,
+        )
+
+
+def _split_path_identifier(path: str) -> list[str]:
+    """Split a path identifier into label segments.
+
+    Parameters
+    ----------
+    path : str
+        Path identifier to split.
+
+    Returns
+    -------
+    list[str]
+        Label segments extracted from the path identifier.
+    """
+    delimiter = " > "
+    escape_token = "\\>"
+    segments = path.split(delimiter) if path else []
+    return [segment.replace(escape_token, delimiter) for segment in segments]
 
 
 class ClassificationStopReason(str, Enum):
@@ -144,9 +172,9 @@ class ClassificationStep(StructureBase):
     Attributes
     ----------
     selected_id : str or None
-        Identifier of the selected taxonomy node.
+        Path identifier of the selected taxonomy node.
     selected_ids : list[str] or None
-        Identifiers of selected taxonomy nodes for multi-class classification.
+        Path identifiers of selected taxonomy nodes for multi-class classification.
     selected_label : str or None
         Label of the selected taxonomy node.
     selected_labels : list[str] or None
@@ -179,12 +207,12 @@ class ClassificationStep(StructureBase):
 
     selected_id: Optional[str] = spec_field(
         "selected_id",
-        description="Identifier of the selected taxonomy node.",
+        description="Path identifier of the selected taxonomy node.",
         default=None,
     )
     selected_ids: list[str] | None = spec_field(
         "selected_ids",
-        description="Identifiers of selected taxonomy nodes.",
+        description="Path identifiers of selected taxonomy nodes.",
         default=None,
     )
     selected_label: Optional[str] = spec_field(
@@ -206,6 +234,7 @@ class ClassificationStep(StructureBase):
         "stop_reason",
         description="Reason for stopping or continuing traversal.",
         default=ClassificationStopReason.STOP,
+        allow_null=False,
     )
     rationale: Optional[str] = spec_field(
         "rationale",
@@ -232,6 +261,129 @@ class ClassificationStep(StructureBase):
             "selected_ids": self.selected_ids,
             "selected_label": self.selected_label,
             "selected_labels": self.selected_labels,
+            "confidence": self.confidence,
+            "stop_reason": self.stop_reason.value,
+        }
+
+
+class ClassificationStepV2(StructureBase):
+    """Represent a classification step constrained to taxonomy node enums.
+
+    Attributes
+    ----------
+    selected_node : Enum or None
+        Enum value of the selected taxonomy node.
+    selected_nodes : list[Enum] or None
+        Enum values of selected taxonomy nodes for multi-class classification.
+    confidence : float or None
+        Confidence score between 0 and 1.
+    stop_reason : ClassificationStopReason
+        Reason for stopping or continuing traversal.
+    rationale : str or None
+        Optional rationale for the classification decision.
+
+    Methods
+    -------
+    build_for_enum(enum_cls)
+        Build a ClassificationStepV2 subclass with enum-constrained selections.
+    as_summary()
+        Return a dictionary summary of the classification step.
+
+    Examples
+    --------
+    Create a multi-class V2 step and summarize the selections:
+
+    >>> NodeEnum = Enum("NodeEnum", {"BILLING": "billing"})
+    >>> StepEnum = ClassificationStepV2.build_for_enum(NodeEnum)
+    >>> step = StepEnum(
+    ...     selected_nodes=[NodeEnum.BILLING],
+    ...     confidence=0.82,
+    ...     stop_reason=ClassificationStopReason.STOP,
+    ... )
+    >>> step.as_summary()["selected_nodes"]
+    [<NodeEnum.BILLING: 'billing'>]
+    """
+
+    selected_node: Enum | None = spec_field(
+        "selected_node",
+        description="Path identifier of the selected taxonomy node.",
+        default=None,
+    )
+    selected_nodes: list[Enum] | None = spec_field(
+        "selected_nodes",
+        description="Path identifiers of selected taxonomy nodes.",
+        default=None,
+    )
+    confidence: Optional[float] = spec_field(
+        "confidence",
+        description="Confidence score between 0 and 1.",
+        default=None,
+    )
+    stop_reason: ClassificationStopReason = spec_field(
+        "stop_reason",
+        description="Reason for stopping or continuing traversal.",
+        default=ClassificationStopReason.STOP,
+        allow_null=False,
+    )
+    rationale: Optional[str] = spec_field(
+        "rationale",
+        description="Optional rationale for the classification decision.",
+        default=None,
+    )
+
+    @classmethod
+    def build_for_enum(cls, enum_cls: type[Enum]) -> type["ClassificationStepV2"]:
+        """Build a ClassificationStepV2 subclass with enum-constrained fields.
+
+        Parameters
+        ----------
+        enum_cls : type[Enum]
+            Enum type to use for node selections.
+
+        Returns
+        -------
+        type[ClassificationStepV2]
+            Specialized ClassificationStepV2 class bound to the enum.
+        """
+        namespace: dict[str, Any] = {
+            "__annotations__": {
+                "selected_node": enum_cls | None,
+                "selected_nodes": list[enum_cls] | None,
+            },
+            "selected_node": spec_field(
+                "selected_node",
+                description="Path identifier of the selected taxonomy node.",
+                default=None,
+            ),
+            "selected_nodes": spec_field(
+                "selected_nodes",
+                description="Path identifiers of selected taxonomy nodes.",
+                default=None,
+            ),
+        }
+        return cast(
+            type["ClassificationStepV2"], type("BoundStepV2", (cls,), namespace)
+        )
+
+    def as_summary(self) -> dict[str, Any]:
+        """Return a dictionary summary of the classification step.
+
+        Returns
+        -------
+        dict[str, Any]
+            Summary data for logging or inspection.
+
+        Examples
+        --------
+        >>> NodeEnum = Enum("NodeEnum", {"ROOT": "root"})
+        >>> StepEnum = ClassificationStepV2.build_for_enum(NodeEnum)
+        >>> step = StepEnum(selected_node=NodeEnum.ROOT)
+        >>> step.as_summary()["selected_node"]
+        <NodeEnum.ROOT: 'root'>
+        """
+        return {
+            "selected_node": self.selected_node,
+            "selected_nodes": self.selected_nodes,
             "confidence": self.confidence,
             "stop_reason": self.stop_reason.value,
         }
@@ -266,7 +418,7 @@ class ClassificationResult(StructureBase):
     --------
     Summarize single and multi-class output:
 
-    >>> node = TaxonomyNode(id="tax", label="Tax")
+    >>> node = TaxonomyNode(label="Tax")
     >>> result = ClassificationResult(
     ...     final_node=node,
     ...     final_nodes=[node],
@@ -274,7 +426,7 @@ class ClassificationResult(StructureBase):
     ...     stop_reason=ClassificationStopReason.STOP,
     ... )
     >>> result.final_nodes
-    [TaxonomyNode(id='tax', label='Tax', description=None, children=[])]
+    [TaxonomyNode(label='Tax', description=None, children=[])]
     """
 
     final_node: TaxonomyNode | None = spec_field(
@@ -373,6 +525,7 @@ def flatten_taxonomy(nodes: Iterable[TaxonomyNode]) -> list[TaxonomyNode]:
 __all__ = [
     "ClassificationResult",
     "ClassificationStep",
+    "ClassificationStepV2",
     "ClassificationStopReason",
     "TaxonomyNode",
     "flatten_taxonomy",
