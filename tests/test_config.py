@@ -61,6 +61,56 @@ def test_overrides_take_precedence(monkeypatch, tmp_path):
     }
 
 
+def test_from_secrets_loads_values():
+    secrets = {
+        "OPENAI_API_KEY": "secret-key",
+        "OPENAI_ORG_ID": "secret-org",
+        "OPENAI_PROJECT_ID": "secret-project",
+        "OPENAI_BASE_URL": "https://secret.test",
+        "OPENAI_MODEL": "secret-model",
+        "OPENAI_TIMEOUT": "6.5",
+        "OPENAI_MAX_RETRIES": "5",
+    }
+
+    settings = OpenAISettings.from_secrets(secrets)
+
+    assert settings.api_key == "secret-key"
+    assert settings.org_id == "secret-org"
+    assert settings.project_id == "secret-project"
+    assert settings.base_url == "https://secret.test"
+    assert settings.default_model == "secret-model"
+    assert settings.timeout == 6.5
+    assert settings.max_retries == 5
+
+
+def test_from_secrets_overrides_take_precedence():
+    secrets = {"OPENAI_API_KEY": "secret-key"}
+
+    settings = OpenAISettings.from_secrets(
+        secrets,
+        api_key="override-key",
+        timeout=10.0,
+        max_retries=1,
+    )
+
+    assert settings.api_key == "override-key"
+    assert settings.timeout == 10.0
+    assert settings.max_retries == 1
+
+
+def test_from_secrets_requires_api_key():
+    with pytest.raises(ValueError, match="OPENAI_API_KEY is required"):
+        OpenAISettings.from_secrets({})
+
+
+def test_from_secrets_defaults_to_env(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "env-secret-key")
+
+    settings = OpenAISettings.from_secrets()
+
+    assert settings.api_key == "env-secret-key"
+
+
 def test_create_client_uses_kwargs(monkeypatch):
     settings = OpenAISettings(
         api_key="another-key",

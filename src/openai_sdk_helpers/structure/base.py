@@ -134,9 +134,21 @@ def _ensure_items_have_schema(target: Any) -> None:
 
 def _ensure_schema_has_type(schema: dict[str, Any]) -> None:
     """Ensure a schema dictionary includes a type entry when possible."""
+    any_of = schema.get("anyOf")
+    if isinstance(any_of, list):
+        for entry in any_of:
+            if isinstance(entry, dict):
+                _ensure_schema_has_type(entry)
+    properties = schema.get("properties")
+    if isinstance(properties, dict):
+        for value in properties.values():
+            if isinstance(value, dict):
+                _ensure_schema_has_type(value)
+    items = schema.get("items")
+    if isinstance(items, dict):
+        _ensure_schema_has_type(items)
     if "type" in schema or "$ref" in schema:
         return
-    any_of = schema.get("anyOf")
     if isinstance(any_of, list):
         inferred_types: set[str] = set()
         for entry in any_of:
@@ -471,7 +483,7 @@ class StructureBase(BaseModelJSONSerializable):
             if isinstance(obj, dict):
                 if "$ref" in obj:
                     for key in list(obj.keys()):
-                        if key != "$ref":
+                        if key not in {"$ref", "type"}:
                             obj.pop(key, None)
                 for v in obj.values():
                     clean_refs(v)
@@ -482,60 +494,9 @@ class StructureBase(BaseModelJSONSerializable):
 
         cleaned_schema = cast(dict[str, Any], clean_refs(schema))
 
-        def _resolve_ref(
-            ref: str,
-            root: dict[str, Any],
-            seen: set[str],
-        ) -> dict[str, Any] | None:
-            if not ref.startswith("#/"):
-                return None
-            if ref in seen:
-                return None
-            seen.add(ref)
-
-            current: Any = root
-            for part in ref.lstrip("#/").split("/"):
-                part = part.replace("~1", "/").replace("~0", "~")
-                if isinstance(current, dict) and part in current:
-                    current = current[part]
-                else:
-                    seen.discard(ref)
-                    return None
-            if isinstance(current, dict):
-                resolved = cast(dict[str, Any], json.loads(json.dumps(current)))
-            else:
-                resolved = None
-            seen.discard(ref)
-            return resolved
-
-        def _inline_anyof_refs(obj: Any, root: dict[str, Any], seen: set[str]) -> Any:
-            if isinstance(obj, dict):
-                updated: dict[str, Any] = {}
-                for key, value in obj.items():
-                    if key == "anyOf" and isinstance(value, list):
-                        updated_items = []
-                        for item in value:
-                            if (
-                                isinstance(item, dict)
-                                and "$ref" in item
-                                and "type" not in item
-                            ):
-                                resolved = _resolve_ref(item["$ref"], root, seen)
-                                if resolved is not None:
-                                    item = resolved
-                            updated_items.append(_inline_anyof_refs(item, root, seen))
-                        updated[key] = updated_items
-                    else:
-                        updated[key] = _inline_anyof_refs(value, root, seen)
-                return updated
-            if isinstance(obj, list):
-                return [_inline_anyof_refs(item, root, seen) for item in obj]
-            return obj
-
-        cleaned_schema = cast(
-            dict[str, Any], _inline_anyof_refs(cleaned_schema, schema, set())
-        )
+        cleaned_schema = cast(dict[str, Any], cleaned_schema)
         _ensure_items_have_schema(cleaned_schema)
+        _ensure_schema_has_type(cleaned_schema)
 
         nullable_fields = {
             name

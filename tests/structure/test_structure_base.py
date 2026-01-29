@@ -11,6 +11,7 @@ from openai_sdk_helpers.structure.base import (
     StructureBase,
     SchemaOptions,
     _enforce_additional_properties,
+    _ensure_schema_has_type,
     spec_field,
 )
 from openai_sdk_helpers.structure.responses import (
@@ -81,8 +82,13 @@ def test_get_schema():
     assert "anyOf" in color_schema
     assert any(
         isinstance(item, dict)
-        and item.get("type") == "string"
-        and item.get("enum") == ["red", "green", "blue"]
+        and (
+            (
+                item.get("type") == "string"
+                and item.get("enum") == ["red", "green", "blue"]
+            )
+            or "$ref" in item
+        )
         for item in color_schema["anyOf"]
     )
     assert {"type": "null"} in color_schema["anyOf"]
@@ -189,6 +195,21 @@ def test_any_of_object_enforces_additional_properties():
     )
     assert object_entry["additionalProperties"] is False
     assert object_entry["properties"] == {}
+
+
+def test_anyof_entries_include_types():
+    """Ensure anyOf entries receive inferred type information."""
+    schema = {
+        "anyOf": [
+            {"properties": {"name": {"type": "string"}}},
+            {"type": "null"},
+        ]
+    }
+
+    _ensure_schema_has_type(schema)
+
+    any_of_entry = schema["anyOf"][0]
+    assert any_of_entry["type"] == "object"
 
 
 def test_spec_field():
