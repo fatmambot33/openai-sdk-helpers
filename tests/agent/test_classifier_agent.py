@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from enum import Enum
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -7,11 +8,13 @@ import pytest
 from openai_sdk_helpers.agent.classifier import (
     TaxonomyClassifierAgent,
     _build_node_path_map,
+    _build_step_structure,
+    _normalize_step_output,
 )
 from openai_sdk_helpers.structure import (
     ClassificationResult,
-    ClassificationStep,
     ClassificationStopReason,
+    StructureBase,
     TaxonomyNode,
 )
 
@@ -27,6 +30,21 @@ def test_classifier_default_prompt_template():
     assert "taxonomy classification assistant" in prompt
 
 
+def _enum_member(enum_cls: type[Enum], value: str) -> Enum:
+    """Return enum member matching the provided value."""
+    return enum_cls._value2member_map_[value]
+
+
+def _build_step(values: list[str]) -> tuple[type[StructureBase], type[Enum]]:
+    """Build a step structure and its enum class for provided values."""
+    step_structure = _build_step_structure(values)
+    enum_cls = step_structure._extract_enum_class(
+        step_structure.model_fields["selected_node"].annotation
+    )
+    assert enum_cls is not None
+    return step_structure, enum_cls
+
+
 @pytest.mark.anyio
 async def test_classifier_traverses_taxonomy_levels():
     """Classifier should walk the taxonomy until a terminal step."""
@@ -37,20 +55,18 @@ async def test_classifier_traverses_taxonomy_levels():
     alternate = TaxonomyNode(label="Health")
     agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[root, alternate])
 
+    root_step, root_enum = _build_step(["Finance", "Health"])
+    tax_step, tax_enum = _build_step(["Finance > Tax"])
     steps = [
-        ClassificationStep(
-            selected_id="Finance",
-            selected_ids=["Finance"],
-            selected_label="Finance",
-            selected_labels=["Finance"],
+        root_step(
+            selected_node=_enum_member(root_enum, "Finance"),
+            selected_nodes=[_enum_member(root_enum, "Finance")],
             confidence=0.7,
             stop_reason=ClassificationStopReason.CONTINUE,
         ),
-        ClassificationStep(
-            selected_id="Finance > Tax",
-            selected_ids=["Finance > Tax"],
-            selected_label="Tax",
-            selected_labels=["Tax"],
+        tax_step(
+            selected_node=_enum_member(tax_enum, "Finance > Tax"),
+            selected_nodes=[_enum_member(tax_enum, "Finance > Tax")],
             confidence=0.9,
             stop_reason=ClassificationStopReason.STOP,
         ),
@@ -86,22 +102,25 @@ async def test_classifier_traverses_multiple_branches():
     )
     agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[meat, vegetables])
 
+    root_step, root_enum = _build_step(["Meat", "Vegetables"])
+    meat_step, meat_enum = _build_step(["Meat > Beef"])
+    veg_step, veg_enum = _build_step(["Vegetables > Carrot"])
     steps = [
-        ClassificationStep(
-            selected_ids=["Meat", "Vegetables"],
-            selected_labels=["Meat", "Vegetables"],
+        root_step(
+            selected_nodes=[
+                _enum_member(root_enum, "Meat"),
+                _enum_member(root_enum, "Vegetables"),
+            ],
             confidence=0.7,
             stop_reason=ClassificationStopReason.CONTINUE,
         ),
-        ClassificationStep(
-            selected_ids=["Meat > Beef"],
-            selected_labels=["Beef"],
+        meat_step(
+            selected_nodes=[_enum_member(meat_enum, "Meat > Beef")],
             confidence=0.9,
             stop_reason=ClassificationStopReason.STOP,
         ),
-        ClassificationStep(
-            selected_ids=["Vegetables > Carrot"],
-            selected_labels=["Carrot"],
+        veg_step(
+            selected_nodes=[_enum_member(veg_enum, "Vegetables > Carrot")],
             confidence=0.9,
             stop_reason=ClassificationStopReason.STOP,
         ),
@@ -122,7 +141,48 @@ async def test_classifier_traverses_multiple_branches():
         "Beef",
         "Carrot",
     ]
-    assert result.path[-1].selected_ids == ["Vegetables > Carrot"]
+    assert result.path[-1].selected_nodes == [
+        _enum_member(veg_enum, "Vegetables > Carrot")
+    ]
+
+
+@pytest.mark.anyio
+async def test_classifier_avoids_duplicate_leaf_nodes() -> None:
+    """Classifier should avoid duplicating leaf nodes when merging branches."""
+    leaf = TaxonomyNode(label="Leaf")
+    branch = TaxonomyNode(
+        label="Branch",
+        children=[TaxonomyNode(label="Child")],
+    )
+    agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[leaf, branch])
+
+    root_step, root_enum = _build_step(["Leaf", "Branch"])
+    child_step, child_enum = _build_step(["Branch > Child"])
+    steps = [
+        root_step(
+            selected_nodes=[
+                _enum_member(root_enum, "Leaf"),
+                _enum_member(root_enum, "Branch"),
+            ],
+            confidence=0.7,
+            stop_reason=ClassificationStopReason.CONTINUE,
+        ),
+        child_step(
+            selected_nodes=[_enum_member(child_enum, "Branch > Child")],
+            confidence=0.9,
+            stop_reason=ClassificationStopReason.STOP,
+        ),
+    ]
+
+    with (
+        patch.object(agent, "get_agent", return_value=MagicMock()),
+        patch.object(agent, "run_async", new_callable=AsyncMock) as mock_run,
+    ):
+        mock_run.side_effect = steps
+        result = await agent.run_agent("Mixed taxonomy")
+
+    assert result.final_nodes is not None
+    assert [node.label for node in result.final_nodes] == ["Leaf", "Child"]
 
 
 @pytest.mark.anyio
@@ -138,16 +198,19 @@ async def test_classifier_single_class_limits_branches():
     )
     agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[meat, vegetables])
 
+    root_step, root_enum = _build_step(["Meat", "Vegetables"])
+    meat_step, meat_enum = _build_step(["Meat > Beef"])
     steps = [
-        ClassificationStep(
-            selected_ids=["Meat", "Vegetables"],
-            selected_labels=["Meat", "Vegetables"],
+        root_step(
+            selected_nodes=[
+                _enum_member(root_enum, "Meat"),
+                _enum_member(root_enum, "Vegetables"),
+            ],
             confidence=0.7,
             stop_reason=ClassificationStopReason.CONTINUE,
         ),
-        ClassificationStep(
-            selected_ids=["Meat > Beef"],
-            selected_labels=["Beef"],
+        meat_step(
+            selected_nodes=[_enum_member(meat_enum, "Meat > Beef")],
             confidence=0.9,
             stop_reason=ClassificationStopReason.STOP,
         ),
@@ -174,9 +237,9 @@ async def test_classifier_confidence_threshold_stops_branch():
     )
     agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[root])
 
-    step = ClassificationStep(
-        selected_ids=["Root"],
-        selected_labels=["Root"],
+    root_step, root_enum = _build_step(["Root"])
+    step = root_step(
+        selected_nodes=[_enum_member(root_enum, "Root")],
         confidence=0.2,
         stop_reason=ClassificationStopReason.CONTINUE,
     )
@@ -199,11 +262,10 @@ async def test_classifier_stops_when_no_children():
     root = TaxonomyNode(label="Root")
     agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[root])
 
-    step = ClassificationStep(
-        selected_id="Root",
-        selected_ids=["Root"],
-        selected_label="Root",
-        selected_labels=["Root"],
+    root_step, root_enum = _build_step(["Root"])
+    step = root_step(
+        selected_node=_enum_member(root_enum, "Root"),
+        selected_nodes=[_enum_member(root_enum, "Root")],
         confidence=0.6,
         stop_reason=ClassificationStopReason.CONTINUE,
     )
@@ -221,8 +283,8 @@ async def test_classifier_stops_when_no_children():
 
 
 @pytest.mark.anyio
-async def test_classifier_falls_back_when_selected_ids_empty():
-    """Classifier should fall back to selected_id when selected_ids is empty."""
+async def test_classifier_falls_back_when_selected_nodes_empty():
+    """Classifier should fall back to selected_node when selected_nodes is empty."""
 
     root = TaxonomyNode(
         label="Finance",
@@ -230,61 +292,18 @@ async def test_classifier_falls_back_when_selected_ids_empty():
     )
     agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[root])
 
+    root_step, root_enum = _build_step(["Finance"])
+    tax_step, tax_enum = _build_step(["Finance > Tax"])
     steps = [
-        ClassificationStep(
-            selected_id="Finance",
-            selected_ids=[""],
-            selected_label="Finance",
-            selected_labels=None,
+        root_step(
+            selected_node=_enum_member(root_enum, "Finance"),
+            selected_nodes=[],
             confidence=0.7,
             stop_reason=ClassificationStopReason.CONTINUE,
         ),
-        ClassificationStep(
-            selected_id="Finance > Tax",
-            selected_ids=["Finance > Tax"],
-            selected_label="Tax",
-            selected_labels=["Tax"],
-            confidence=0.9,
-            stop_reason=ClassificationStopReason.STOP,
-        ),
-    ]
-
-    with (
-        patch.object(agent, "get_agent", return_value=MagicMock()),
-        patch.object(agent, "run_async", new_callable=AsyncMock) as mock_run,
-    ):
-        mock_run.side_effect = steps
-        result = await agent.run_agent("Tax update")
-
-    assert result.stop_reason is ClassificationStopReason.STOP
-    assert result.final_node is not None
-    assert result.final_node.label == "Tax"
-
-
-@pytest.mark.anyio
-async def test_classifier_falls_back_when_selected_labels_empty():
-    """Classifier should fall back to selected_label when selected_labels is empty."""
-
-    root = TaxonomyNode(
-        label="Finance",
-        children=[TaxonomyNode(label="Tax")],
-    )
-    agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[root])
-
-    steps = [
-        ClassificationStep(
-            selected_id=None,
-            selected_ids=None,
-            selected_label="Finance",
-            selected_labels=[""],
-            confidence=0.7,
-            stop_reason=ClassificationStopReason.CONTINUE,
-        ),
-        ClassificationStep(
-            selected_id="Finance > Tax",
-            selected_ids=["Finance > Tax"],
-            selected_label="Tax",
-            selected_labels=["Tax"],
+        tax_step(
+            selected_node=_enum_member(tax_enum, "Finance > Tax"),
+            selected_nodes=[_enum_member(tax_enum, "Finance > Tax")],
             confidence=0.9,
             stop_reason=ClassificationStopReason.STOP,
         ),
@@ -320,3 +339,74 @@ def test_classifier_path_map_disambiguates_duplicate_labels() -> None:
     node_paths = _build_node_path_map(nodes, [])
 
     assert list(node_paths.keys()) == ["Duplicate", "Duplicate (2)"]
+
+
+@pytest.mark.anyio
+async def test_classifier_builds_sub_agents() -> None:
+    """Classifier should construct sub-agents for child taxonomy nodes."""
+    taxonomy = [
+        TaxonomyNode(
+            label="Root",
+            children=[TaxonomyNode(label="Child")],
+        )
+    ]
+    agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=taxonomy)
+    root_step, root_enum = _build_step(["Root"])
+    child_step, child_enum = _build_step(["Root > Child"])
+    steps = [
+        root_step(
+            selected_node=_enum_member(root_enum, "Root"),
+            selected_nodes=[_enum_member(root_enum, "Root")],
+            confidence=0.8,
+            stop_reason=ClassificationStopReason.CONTINUE,
+        ),
+        child_step(
+            selected_node=_enum_member(child_enum, "Root > Child"),
+            selected_nodes=[_enum_member(child_enum, "Root > Child")],
+            confidence=0.9,
+            stop_reason=ClassificationStopReason.STOP,
+        ),
+    ]
+
+    with (
+        patch.object(
+            TaxonomyClassifierAgent,
+            "run_async",
+            new_callable=AsyncMock,
+        ) as mock_run,
+        patch.object(
+            agent, "_build_sub_agent", wraps=agent._build_sub_agent
+        ) as mock_build,
+    ):
+        mock_run.side_effect = steps
+        result = await agent.run_agent("delegate this")
+
+    assert mock_build.call_count == 1
+    assert mock_build.call_args.args[0] == taxonomy[0].children
+    assert mock_run.call_count == 2
+    assert result.final_nodes is not None
+    assert [node.label for node in result.final_nodes] == ["Child"]
+
+
+def test_classifier_maps_enum_selections_to_identifiers() -> None:
+    """Classifier should normalize enum selections into identifiers."""
+    nodes = [TaxonomyNode(label="Billing")]
+    node_paths = _build_node_path_map(nodes, [])
+    step_structure = _build_step_structure(list(node_paths.keys()))
+    enum_cls = step_structure._extract_enum_class(
+        step_structure.model_fields["selected_node"].annotation
+    )
+    assert enum_cls is not None
+    enum_member = list(enum_cls)[0]
+    assert enum_member.value == "Billing"
+    raw_step = step_structure(
+        selected_node=enum_member,
+        selected_nodes=[enum_member],
+        confidence=0.7,
+        stop_reason=ClassificationStopReason.STOP,
+    )
+
+    normalized = _normalize_step_output(raw_step, step_structure)
+
+    assert normalized.selected_node == enum_member
+    assert normalized.selected_nodes == [enum_member]

@@ -1,12 +1,13 @@
-"""Agent for taxonomy-driven text classification."""
+"""Recursive agent for taxonomy-driven text classification."""
 
 from __future__ import annotations
 
+import asyncio
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional, Sequence, cast
+from typing import Any, Awaitable, Dict, Iterable, Optional, Sequence, cast
 
 from ..structure import (
     ClassificationResult,
@@ -14,14 +15,13 @@ from ..structure import (
     ClassificationStopReason,
     StructureBase,
     TaxonomyNode,
-    spec_field,
 )
 from .base import AgentBase
 from .configuration import AgentConfiguration
 
 
 class TaxonomyClassifierAgent(AgentBase):
-    """Classify text by traversing a taxonomy level by level.
+    """Classify text by recursively traversing a taxonomy.
 
     Parameters
     ----------
@@ -33,7 +33,7 @@ class TaxonomyClassifierAgent(AgentBase):
     Methods
     -------
     run_agent(text, taxonomy, context, max_depth)
-        Classify text by walking the taxonomy tree.
+        Classify text by recursively walking the taxonomy tree.
 
     Examples
     --------
@@ -61,15 +61,17 @@ class TaxonomyClassifierAgent(AgentBase):
             Optional template file path for prompt rendering.
         model : str | None, default=None
             Model identifier to use for classification.
+        taxonomy : TaxonomyNode | Sequence[TaxonomyNode]
+            Root taxonomy node or list of root nodes.
 
         Raises
         ------
         ValueError
-            If the model is not provided.
+            If the taxonomy is empty.
 
         Examples
         --------
-        >>> classifier = TaxonomyClassifierAgent(model="gpt-4o-mini")
+        >>> classifier = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[])
         """
         self._taxonomy = taxonomy
         self._root_nodes = _normalize_roots(taxonomy)
@@ -79,7 +81,7 @@ class TaxonomyClassifierAgent(AgentBase):
         configuration = AgentConfiguration(
             name="taxonomy_classifier",
             instructions="Agent instructions",
-            description="Classify text by traversing taxonomy levels.",
+            description="Classify text by traversing taxonomy levels recursively.",
             template_path=resolved_template_path,
             output_structure=ClassificationStep,
             model=model,
@@ -95,7 +97,7 @@ class TaxonomyClassifierAgent(AgentBase):
         confidence_threshold: float | None = None,
         single_class: bool = False,
     ) -> ClassificationResult:
-        """Classify ``text`` by iterating over taxonomy levels.
+        """Classify ``text`` by recursively walking taxonomy levels.
 
         Parameters
         ----------
@@ -115,119 +117,170 @@ class TaxonomyClassifierAgent(AgentBase):
         ClassificationResult
             Structured classification result describing the traversal.
 
-        Raises
-        ------
-        ValueError
-            If the taxonomy is empty.
-
         Examples
         --------
-        >>> taxonomy = TaxonomyNode(
-        ...     label="Finance",
-        ...     children=[TaxonomyNode(label="Tax")],
-        ... )
+        >>> taxonomy = TaxonomyNode(label="Finance")
         >>> agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=taxonomy)
         >>> isinstance(agent.root_nodes, list)
         True
         """
-        path: list[ClassificationStep] = []
-        path_nodes: list[TaxonomyNode] = []
-        best_confidence: float | None = None
-        stop_reason = ClassificationStopReason.NO_MATCH
-        saw_max_depth = False
-        saw_no_children = False
-        saw_terminal_stop = False
-        branch_queue = [
-            _BranchState(nodes=list(self._root_nodes), depth=0, parent_path=[])
-        ]
-        final_nodes: list[TaxonomyNode] = []
+        state = _TraversalState()
+        await self._classify_nodes(
+            text=text,
+            nodes=list(self._root_nodes),
+            depth=0,
+            parent_path=[],
+            context=context,
+            max_depth=max_depth,
+            confidence_threshold=confidence_threshold,
+            single_class=single_class,
+            state=state,
+        )
 
-        while branch_queue:
-            branch = branch_queue.pop(0)
-            current_nodes = branch.nodes
-            depth = branch.depth
-            if max_depth is not None and depth >= max_depth:
-                saw_max_depth = True
-                continue
-            if not current_nodes:
-                continue
-
-            node_paths = _build_node_path_map(current_nodes, branch.parent_path)
-            template_context = _build_context(
-                node_descriptors=_build_node_descriptors(node_paths),
-                path=path,
-                depth=depth,
-                context=context,
-            )
-            step_structure = _build_step_structure(
-                list(node_paths.keys()), current_nodes
-            )
-            raw_step = await self.run_async(
-                input=text,
-                context=template_context,
-                output_structure=step_structure,
-            )
-            step = _normalize_step_output(raw_step, step_structure)
-            path.append(step)
-
-            if (
-                confidence_threshold is not None
-                and step.confidence is not None
-                and step.confidence < confidence_threshold
-            ):
-                continue
-
-            resolved_nodes = _resolve_nodes(node_paths, step)
-            if resolved_nodes:
-                if single_class:
-                    resolved_nodes = resolved_nodes[:1]
-                path_nodes.extend(resolved_nodes)
-
-            if step.stop_reason.is_terminal:
-                if resolved_nodes:
-                    final_nodes.extend(resolved_nodes)
-                    best_confidence = _max_confidence(best_confidence, step.confidence)
-                    saw_terminal_stop = True
-                continue
-
-            if not resolved_nodes:
-                stop_reason = ClassificationStopReason.NO_MATCH
-                continue
-
-            for node in resolved_nodes:
-                if node.children:
-                    branch_queue.append(
-                        _BranchState(
-                            nodes=list(node.children),
-                            depth=depth + 1,
-                            parent_path=[*branch.parent_path, node.label],
-                        )
-                    )
-                else:
-                    saw_no_children = True
-                    final_nodes.append(node)
-                    best_confidence = _max_confidence(best_confidence, step.confidence)
-
-        final_nodes_value = final_nodes or None
-        final_node = final_nodes[0] if final_nodes else None
-        if saw_terminal_stop:
-            stop_reason = ClassificationStopReason.STOP
-        elif final_nodes and saw_no_children:
-            stop_reason = ClassificationStopReason.NO_CHILDREN
-        elif final_nodes:
-            stop_reason = ClassificationStopReason.STOP
-        elif saw_max_depth:
-            stop_reason = ClassificationStopReason.MAX_DEPTH
-        elif saw_no_children:
-            stop_reason = ClassificationStopReason.NO_CHILDREN
+        final_nodes_value = state.final_nodes or None
+        final_node = state.final_nodes[0] if state.final_nodes else None
+        stop_reason = _resolve_stop_reason(state)
         return ClassificationResult(
             final_node=final_node,
             final_nodes=final_nodes_value,
-            confidence=best_confidence,
+            confidence=state.best_confidence,
             stop_reason=stop_reason,
-            path=path,
-            path_nodes=path_nodes,
+            path=state.path,
+            path_nodes=state.path_nodes,
         )
+
+    async def _classify_nodes(
+        self,
+        *,
+        text: str,
+        nodes: list[TaxonomyNode],
+        depth: int,
+        parent_path: list[str],
+        context: Optional[Dict[str, Any]],
+        max_depth: Optional[int],
+        confidence_threshold: float | None,
+        single_class: bool,
+        state: "_TraversalState",
+    ) -> None:
+        """Classify a taxonomy level and recursively traverse children.
+
+        Parameters
+        ----------
+        text : str
+            Source text to classify.
+        nodes : list[TaxonomyNode]
+            Candidate taxonomy nodes for the current level.
+        depth : int
+            Current traversal depth.
+        context : dict or None
+            Additional context values to merge into the prompt.
+        max_depth : int or None
+            Maximum traversal depth before stopping.
+        confidence_threshold : float or None
+            Minimum confidence required to accept a classification step.
+        single_class : bool
+            Whether to keep only the highest-priority selection per step.
+        state : _TraversalState
+            Aggregated traversal state.
+        """
+        if max_depth is not None and depth >= max_depth:
+            state.saw_max_depth = True
+            return
+        if not nodes:
+            return
+
+        node_paths = _build_node_path_map(nodes, parent_path)
+        template_context = _build_context(
+            node_descriptors=_build_node_descriptors(node_paths),
+            path=state.path,
+            depth=depth,
+            context=context,
+        )
+        step_structure = _build_step_structure(list(node_paths.keys()))
+        raw_step = await self.run_async(
+            input=text,
+            context=template_context,
+            output_structure=step_structure,
+        )
+        step = _normalize_step_output(raw_step, step_structure)
+        state.path.append(step)
+
+        if (
+            confidence_threshold is not None
+            and step.confidence is not None
+            and step.confidence < confidence_threshold
+        ):
+            return
+
+        resolved_nodes = _resolve_nodes(node_paths, step)
+        if resolved_nodes:
+            if single_class:
+                resolved_nodes = resolved_nodes[:1]
+            state.path_nodes.extend(resolved_nodes)
+
+        if step.stop_reason.is_terminal:
+            if resolved_nodes:
+                state.final_nodes.extend(resolved_nodes)
+                state.best_confidence = _max_confidence(
+                    state.best_confidence, step.confidence
+                )
+                state.saw_terminal_stop = True
+            return
+
+        if not resolved_nodes:
+            return
+
+        base_path_len = len(state.path)
+        base_path_nodes_len = len(state.path_nodes)
+        child_tasks: list[tuple[Awaitable["_TraversalState"], int]] = []
+        for node in resolved_nodes:
+            if node.children:
+                sub_agent = self._build_sub_agent(list(node.children))
+                sub_state = _copy_traversal_state(state)
+                base_final_nodes_len = len(state.final_nodes)
+                child_tasks.append(
+                    (
+                        self._classify_subtree(
+                            sub_agent=sub_agent,
+                            text=text,
+                            nodes=list(node.children),
+                            depth=depth + 1,
+                            parent_path=[*parent_path, node.label],
+                            context=context,
+                            max_depth=max_depth,
+                            confidence_threshold=confidence_threshold,
+                            single_class=single_class,
+                            state=sub_state,
+                        ),
+                        base_final_nodes_len,
+                    )
+                )
+            else:
+                state.saw_no_children = True
+                state.final_nodes.append(node)
+                state.best_confidence = _max_confidence(
+                    state.best_confidence, step.confidence
+                )
+        if child_tasks:
+            child_states = await asyncio.gather(
+                *(child_task for child_task, _ in child_tasks)
+            )
+            for child_state, (_, base_final_nodes_len) in zip(
+                child_states, child_tasks, strict=True
+            ):
+                state.path.extend(child_state.path[base_path_len:])
+                state.path_nodes.extend(child_state.path_nodes[base_path_nodes_len:])
+                state.final_nodes.extend(child_state.final_nodes[base_final_nodes_len:])
+                state.best_confidence = _max_confidence(
+                    state.best_confidence, child_state.best_confidence
+                )
+                state.saw_max_depth = state.saw_max_depth or child_state.saw_max_depth
+                state.saw_no_children = (
+                    state.saw_no_children or child_state.saw_no_children
+                )
+                state.saw_terminal_stop = (
+                    state.saw_terminal_stop or child_state.saw_terminal_stop
+                )
 
     @property
     def taxonomy(self) -> TaxonomyNode | Sequence[TaxonomyNode]:
@@ -251,12 +304,149 @@ class TaxonomyClassifierAgent(AgentBase):
         """
         return self._root_nodes
 
+    def _build_sub_agent(
+        self,
+        nodes: Sequence[TaxonomyNode],
+    ) -> "TaxonomyClassifierAgent":
+        """Build a classifier agent for a taxonomy subtree.
 
-@dataclass(frozen=True)
-class _BranchState:
-    nodes: list[TaxonomyNode]
-    depth: int
-    parent_path: list[str]
+        Parameters
+        ----------
+        nodes : Sequence[TaxonomyNode]
+            Taxonomy nodes to use as the sub-agent's root taxonomy.
+
+        Returns
+        -------
+        TaxonomyClassifierAgent
+            Configured classifier agent for the taxonomy slice.
+        """
+        sub_agent = TaxonomyClassifierAgent(
+            template_path=self._template_path,
+            model=self._model,
+            taxonomy=list(nodes),
+        )
+        sub_agent.run_async = self.run_async
+        return sub_agent
+
+    async def _classify_subtree(
+        self,
+        *,
+        sub_agent: "TaxonomyClassifierAgent",
+        text: str,
+        nodes: list[TaxonomyNode],
+        depth: int,
+        parent_path: list[str],
+        context: Optional[Dict[str, Any]],
+        max_depth: Optional[int],
+        confidence_threshold: float | None,
+        single_class: bool,
+        state: "_TraversalState",
+    ) -> "_TraversalState":
+        """Classify a taxonomy subtree and return the traversal state.
+
+        Parameters
+        ----------
+        sub_agent : TaxonomyClassifierAgent
+            Sub-agent configured for the subtree traversal.
+        text : str
+            Source text to classify.
+        nodes : list[TaxonomyNode]
+            Candidate taxonomy nodes for the subtree.
+        depth : int
+            Current traversal depth.
+        parent_path : list[str]
+            Path segments leading to the current subtree.
+        context : dict or None
+            Additional context values to merge into the prompt.
+        max_depth : int or None
+            Maximum traversal depth before stopping.
+        confidence_threshold : float or None
+            Minimum confidence required to accept a classification step.
+        single_class : bool
+            Whether to keep only the highest-priority selection per step.
+        state : _TraversalState
+            Traversal state to populate for the subtree.
+
+        Returns
+        -------
+        _TraversalState
+            Populated traversal state for the subtree.
+        """
+        await sub_agent._classify_nodes(
+            text=text,
+            nodes=nodes,
+            depth=depth,
+            parent_path=parent_path,
+            context=context,
+            max_depth=max_depth,
+            confidence_threshold=confidence_threshold,
+            single_class=single_class,
+            state=state,
+        )
+        return state
+
+
+@dataclass
+class _TraversalState:
+    """Track recursive traversal state."""
+
+    path: list[ClassificationStep] = field(default_factory=list)
+    path_nodes: list[TaxonomyNode] = field(default_factory=list)
+    final_nodes: list[TaxonomyNode] = field(default_factory=list)
+    best_confidence: float | None = None
+    saw_max_depth: bool = False
+    saw_no_children: bool = False
+    saw_terminal_stop: bool = False
+
+
+def _copy_traversal_state(state: _TraversalState) -> _TraversalState:
+    """Copy traversal state for parallel subtree execution.
+
+    Parameters
+    ----------
+    state : _TraversalState
+        Traversal state to clone.
+
+    Returns
+    -------
+    _TraversalState
+        Cloned traversal state with copied collections.
+    """
+    return _TraversalState(
+        path=list(state.path),
+        path_nodes=list(state.path_nodes),
+        final_nodes=list(state.final_nodes),
+        best_confidence=state.best_confidence,
+        saw_max_depth=state.saw_max_depth,
+        saw_no_children=state.saw_no_children,
+        saw_terminal_stop=state.saw_terminal_stop,
+    )
+
+
+def _resolve_stop_reason(state: _TraversalState) -> ClassificationStopReason:
+    """Resolve the final stop reason based on traversal state.
+
+    Parameters
+    ----------
+    state : _TraversalState
+        Traversal state to inspect.
+
+    Returns
+    -------
+    ClassificationStopReason
+        Resolved stop reason.
+    """
+    if state.saw_terminal_stop:
+        return ClassificationStopReason.STOP
+    if state.final_nodes and state.saw_no_children:
+        return ClassificationStopReason.NO_CHILDREN
+    if state.final_nodes:
+        return ClassificationStopReason.STOP
+    if state.saw_max_depth:
+        return ClassificationStopReason.MAX_DEPTH
+    if state.saw_no_children:
+        return ClassificationStopReason.NO_CHILDREN
+    return ClassificationStopReason.NO_MATCH
 
 
 def _normalize_roots(
@@ -327,102 +517,21 @@ def _build_context(
 
 def _build_step_structure(
     path_identifiers: Sequence[str],
-    nodes: Sequence[TaxonomyNode],
-) -> type[StructureBase]:
+) -> type[ClassificationStep]:
     """Build a step output structure constrained to taxonomy paths.
 
     Parameters
     ----------
     path_identifiers : Sequence[str]
         Path identifiers for nodes at the current classification step.
-    nodes : Sequence[TaxonomyNode]
-        Candidate taxonomy nodes for the current classification step.
 
     Returns
     -------
-    type[StructureBase]
+    type[ClassificationStep]
         Dynamic structure class for the classification step output.
     """
-    id_enum = _build_taxonomy_enum("TaxonomyPath", path_identifiers)
-    label_enum = _build_taxonomy_enum("TaxonomyLabel", [node.label for node in nodes])
-    namespace: dict[str, Any] = {
-        "__annotations__": {
-            "selected_id": id_enum | None,
-            "selected_ids": list[id_enum] | None,
-            "selected_label": label_enum | None,
-            "selected_labels": list[label_enum] | None,
-            "confidence": float | None,
-            "stop_reason": ClassificationStopReason,
-            "rationale": str | None,
-        },
-        "selected_id": spec_field(
-            "selected_id",
-            description="Identifier of the selected taxonomy node.",
-            default=None,
-        ),
-        "selected_ids": spec_field(
-            "selected_ids",
-            description="Identifiers of selected taxonomy nodes.",
-            default=None,
-        ),
-        "selected_label": spec_field(
-            "selected_label",
-            description="Label of the selected taxonomy node.",
-            default=None,
-        ),
-        "selected_labels": spec_field(
-            "selected_labels",
-            description="Labels of selected taxonomy nodes.",
-            default=None,
-        ),
-        "confidence": spec_field(
-            "confidence",
-            description="Confidence score between 0 and 1.",
-            default=None,
-        ),
-        "stop_reason": spec_field(
-            "stop_reason",
-            description="Reason for stopping or continuing traversal.",
-            default=ClassificationStopReason.STOP,
-            allow_null=False,
-        ),
-        "rationale": spec_field(
-            "rationale",
-            description="Optional rationale for the classification decision.",
-            default=None,
-        ),
-    }
-    step_structure = type(
-        "TaxonomyStepStructure",
-        (StructureBase,),
-        namespace,
-    )
-    return cast(type[StructureBase], step_structure)
-
-
-def _build_taxonomy_enum(name: str, values: Sequence[str]) -> type[Enum]:
-    """Build a safe Enum from taxonomy node values.
-
-    Parameters
-    ----------
-    name : str
-        Name to use for the enum class.
-    values : Sequence[str]
-        Taxonomy node values to include as enum members.
-
-    Returns
-    -------
-    type[Enum]
-        Enum class with sanitized member names.
-    """
-    members: dict[str, str] = {}
-    prefix = _sanitize_enum_prefix(name)
-    for index, value in enumerate(values, start=1):
-        member_name = _sanitize_enum_member(prefix, value, index, members)
-        members[member_name] = value
-    if not members:
-        members["UNSPECIFIED"] = ""
-    return cast(type[Enum], Enum(name, members))
+    node_enum = _build_taxonomy_enum("TaxonomyPath", path_identifiers)
+    return ClassificationStep.build_for_enum(node_enum)
 
 
 def _build_node_path_map(
@@ -502,6 +611,31 @@ def _format_path_identifier(path_segments: Sequence[str]) -> str:
     return delimiter.join(escaped_segments)
 
 
+def _build_taxonomy_enum(name: str, values: Sequence[str]) -> type[Enum]:
+    """Build a safe Enum from taxonomy node values.
+
+    Parameters
+    ----------
+    name : str
+        Name to use for the enum class.
+    values : Sequence[str]
+        Taxonomy node values to include as enum members.
+
+    Returns
+    -------
+    type[Enum]
+        Enum class with sanitized member names.
+    """
+    members: dict[str, str] = {}
+    prefix = _sanitize_enum_prefix(name)
+    for index, value in enumerate(values, start=1):
+        member_name = _sanitize_enum_member(prefix, value, index, members)
+        members[member_name] = value
+    if not members:
+        members["UNSPECIFIED"] = ""
+    return cast(type[Enum], Enum(name, members))
+
+
 def _sanitize_enum_prefix(prefix: str) -> str:
     """Return a safe prefix for taxonomy enum member names.
 
@@ -575,16 +709,10 @@ def _normalize_step_output(
     ClassificationStep
         Normalized classification step instance.
     """
+    if isinstance(step, ClassificationStep):
+        return step
     payload = step.to_json()
-    enum_fields = _extract_enum_fields(step_structure)
-    normalized = {}
-    for key, value in payload.items():
-        enum_cls = enum_fields.get(key)
-        if enum_cls is not None:
-            normalized[key] = _normalize_enum_value(value, enum_cls)
-        else:
-            normalized[key] = value
-    return ClassificationStep.from_json(normalized)
+    return ClassificationStep.from_json(payload)
 
 
 def _extract_enum_fields(
@@ -656,24 +784,16 @@ def _resolve_nodes(
         Matching taxonomy nodes in priority order.
     """
     resolved: list[TaxonomyNode] = []
-    selected_ids = _selected_ids(step)
-    if selected_ids:
-        for selected_id in selected_ids:
-            node = node_paths.get(selected_id)
+    selected_nodes = _selected_nodes(step)
+    if selected_nodes:
+        for selected_node in selected_nodes:
+            node = node_paths.get(selected_node)
             if node:
                 resolved.append(node)
-        if resolved:
-            return resolved
-    selected_labels = _selected_labels(step)
-    if selected_labels:
-        for selected_label in selected_labels:
-            for node in node_paths.values():
-                if node.label == selected_label:
-                    resolved.append(node)
     return resolved
 
 
-def _selected_ids(step: ClassificationStep) -> list[str]:
+def _selected_nodes(step: ClassificationStep) -> list[str]:
     """Return selected identifiers for a classification step.
 
     Parameters
@@ -686,33 +806,17 @@ def _selected_ids(step: ClassificationStep) -> list[str]:
     list[str]
         Selected identifiers in priority order.
     """
-    if step.selected_ids is not None:
-        selected_ids = [selected_id for selected_id in step.selected_ids if selected_id]
-        if selected_ids:
-            return selected_ids
-    return [step.selected_id] if step.selected_id else []
-
-
-def _selected_labels(step: ClassificationStep) -> list[str]:
-    """Return selected labels for a classification step.
-
-    Parameters
-    ----------
-    step : ClassificationStep
-        Classification output to normalize.
-
-    Returns
-    -------
-    list[str]
-        Selected labels in priority order.
-    """
-    if step.selected_labels is not None:
-        selected_labels = [
-            selected_label for selected_label in step.selected_labels if selected_label
+    if step.selected_nodes is not None:
+        selected_nodes = [
+            str(_normalize_enum_value(selected_node, Enum))
+            for selected_node in step.selected_nodes
+            if selected_node
         ]
-        if selected_labels:
-            return selected_labels
-    return [step.selected_label] if step.selected_label else []
+        if selected_nodes:
+            return selected_nodes
+    if step.selected_node:
+        return [str(_normalize_enum_value(step.selected_node, Enum))]
+    return []
 
 
 def _max_confidence(

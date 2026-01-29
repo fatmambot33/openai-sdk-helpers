@@ -8,7 +8,6 @@ from .coordinator import CoordinatorAgent
 from .runner import run_sync, run_async
 from .search.base import SearchPlanner, SearchToolAgent, SearchWriter
 from .classifier import TaxonomyClassifierAgent
-from .classifier_v2 import TaxonomyClassifierAgentV2
 from .summarizer import SummarizerAgent
 from .translator import TranslatorAgent
 from .validator import ValidatorAgent
@@ -30,7 +29,6 @@ __all__ = [
     "SearchToolAgent",
     "SearchWriter",
     "TaxonomyClassifierAgent",
-    "TaxonomyClassifierAgentV2",
     "SummarizerAgent",
     "TranslatorAgent",
     "ValidatorAgent",

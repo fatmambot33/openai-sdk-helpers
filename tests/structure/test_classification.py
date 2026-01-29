@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from enum import Enum
+
 from openai_sdk_helpers.structure import (
     ClassificationResult,
     ClassificationStep,
@@ -25,20 +27,25 @@ def test_classification_result_properties():
     leaf_node = TaxonomyNode(label="Leaf")
     branch_node = TaxonomyNode(label="Branch")
 
+    step_enum = Enum(
+        "StepEnum",
+        {
+            "ROOT": "Root",
+            "ROOT_LEAF": "Root > Leaf",
+            "ROOT_BRANCH": "Root > Branch",
+        },
+    )
+    Step = ClassificationStep.build_for_enum(step_enum)
     steps = [
-        ClassificationStep(
-            selected_id="Root",
-            selected_ids=["Root"],
-            selected_label="Root",
-            selected_labels=["Root"],
+        Step(
+            selected_node=step_enum.ROOT,
+            selected_nodes=[step_enum.ROOT],
             confidence=0.8,
             stop_reason=ClassificationStopReason.CONTINUE,
         ),
-        ClassificationStep(
-            selected_id="Root > Leaf",
-            selected_ids=["Root > Leaf", "Root > Branch"],
-            selected_label="Leaf",
-            selected_labels=["Leaf", "Branch"],
+        Step(
+            selected_node=step_enum.ROOT_LEAF,
+            selected_nodes=[step_enum.ROOT_LEAF, step_enum.ROOT_BRANCH],
             confidence=0.9,
             stop_reason=ClassificationStopReason.STOP,
         ),
@@ -54,7 +61,7 @@ def test_classification_result_properties():
     )
 
     assert result.depth == 2
-    assert result.path_labels == ["Root", "Leaf", "Branch"]
+    assert result.path_identifiers == ["Root", "Root > Leaf", "Root > Branch"]
     assert result.final_node == leaf_node
     assert result.final_nodes == [leaf_node, branch_node]
     assert [node.label for node in result.path_nodes] == [
