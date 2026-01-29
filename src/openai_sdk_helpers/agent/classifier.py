@@ -759,10 +759,10 @@ def _normalize_enum_value(value: Any, enum_cls: type[Enum]) -> Any:
     if isinstance(value, list):
         return [_normalize_enum_value(item, enum_cls) for item in value]
     if isinstance(value, str):
-        if value in enum_cls.__members__:
-            return enum_cls.__members__[value].value
         if value in enum_cls._value2member_map_:
             return enum_cls(value).value
+        if value in enum_cls.__members__:
+            return enum_cls.__members__[value].value
     return value
 
 
