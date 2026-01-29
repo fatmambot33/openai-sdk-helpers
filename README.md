@@ -198,7 +198,7 @@ print(translation)
 
 # Classify text against a taxonomy
 classification = classifier.run_sync("I need help with my invoice")
-print(classification.selected_node)
+print(classification.final_node)
 
 # Validate against guardrails
 validation = validator.run_sync(
