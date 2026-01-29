@@ -7,6 +7,7 @@ from openai_sdk_helpers.structure import (
     ClassificationStep,
     ClassificationStopReason,
     TaxonomyNode,
+    taxonomy_enum_path,
 )
 
 
@@ -76,3 +77,22 @@ def test_stop_reason_is_terminal_property():
 
     assert ClassificationStopReason.NO_MATCH.is_terminal is True
     assert ClassificationStopReason.CONTINUE.is_terminal is False
+
+
+def test_taxonomy_enum_path():
+    """taxonomy_enum_path should return segments from enum values."""
+
+    step_enum = Enum(
+        "StepEnum",
+        {
+            "ROOT": "Root",
+            "ROOT_LEAF": "Root > Leaf",
+            "ROOT_ESCAPED": "Root > Leaf\\>Branch",
+        },
+    )
+
+    assert taxonomy_enum_path(step_enum.ROOT) == ["Root"]
+    assert taxonomy_enum_path(step_enum.ROOT_LEAF) == ["Root", "Leaf"]
+    assert taxonomy_enum_path(step_enum.ROOT_ESCAPED) == ["Root", "Leaf > Branch"]
+    assert taxonomy_enum_path("Root > Branch") == ["Root", "Branch"]
+    assert taxonomy_enum_path(None) == []

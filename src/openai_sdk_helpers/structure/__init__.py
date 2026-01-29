@@ -82,6 +82,7 @@ from .classification import (
     ClassificationStopReason,
     TaxonomyNode,
     flatten_taxonomy,
+    taxonomy_enum_path,
 )
 from .extraction import (
     AnnotatedDocumentStructure,
@@ -110,6 +111,7 @@ __all__ = [
     "ClassificationStopReason",
     "TaxonomyNode",
     "flatten_taxonomy",
+    "taxonomy_enum_path",
     "TaskStructure",
     "PlanStructure",
     "create_plan",
