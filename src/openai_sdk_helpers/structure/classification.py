@@ -444,10 +444,41 @@ def flatten_taxonomy(nodes: Iterable[TaxonomyNode]) -> list[TaxonomyNode]:
     return flattened
 
 
+def taxonomy_enum_path(value: Enum | str | None) -> list[str]:
+    """Return the taxonomy path segments for an enum value.
+
+    Parameters
+    ----------
+    value : Enum or str or None
+        Enum member or path identifier string to split. If None, return an
+        empty list.
+
+    Returns
+    -------
+    list[str]
+        Path segments extracted from the taxonomy identifier.
+
+    Examples
+    --------
+    >>> StepEnum = Enum("StepEnum", {"ROOT_LEAF": "Root > Leaf"})
+    >>> taxonomy_enum_path(StepEnum.ROOT_LEAF)
+    ['Root', 'Leaf']
+    """
+    if value is None:
+        return []
+    normalized_value = _normalize_enum_value(value)
+    if not normalized_value:
+        return []
+    if not isinstance(normalized_value, str):
+        normalized_value = str(normalized_value)
+    return _split_path_identifier(normalized_value)
+
+
 __all__ = [
     "ClassificationResult",
     "ClassificationStep",
     "ClassificationStopReason",
     "TaxonomyNode",
     "flatten_taxonomy",
+    "taxonomy_enum_path",
 ]
