@@ -141,7 +141,9 @@ async def test_classifier_traverses_multiple_branches():
         "Beef",
         "Carrot",
     ]
-    assert result.path[-1].selected_nodes == ["Vegetables > Carrot"]
+    assert result.path[-1].selected_nodes == [
+        _enum_member(veg_enum, "Vegetables > Carrot")
+    ]
 
 
 @pytest.mark.anyio
@@ -406,5 +408,5 @@ def test_classifier_maps_enum_selections_to_identifiers() -> None:
 
     normalized = _normalize_step_output(raw_step, step_structure)
 
-    assert normalized.selected_node == "Billing"
-    assert normalized.selected_nodes == ["Billing"]
+    assert normalized.selected_node == enum_member
+    assert normalized.selected_nodes == [enum_member]

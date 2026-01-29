@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from enum import Enum
+
 from openai_sdk_helpers.structure import (
     ClassificationResult,
     ClassificationStep,
@@ -25,16 +27,25 @@ def test_classification_result_properties():
     leaf_node = TaxonomyNode(label="Leaf")
     branch_node = TaxonomyNode(label="Branch")
 
+    step_enum = Enum(
+        "StepEnum",
+        {
+            "ROOT": "Root",
+            "ROOT_LEAF": "Root > Leaf",
+            "ROOT_BRANCH": "Root > Branch",
+        },
+    )
+    Step = ClassificationStep.build_for_enum(step_enum)
     steps = [
-        ClassificationStep(
-            selected_node="Root",
-            selected_nodes=["Root"],
+        Step(
+            selected_node=step_enum.ROOT,
+            selected_nodes=[step_enum.ROOT],
             confidence=0.8,
             stop_reason=ClassificationStopReason.CONTINUE,
         ),
-        ClassificationStep(
-            selected_node="Root > Leaf",
-            selected_nodes=["Root > Leaf", "Root > Branch"],
+        Step(
+            selected_node=step_enum.ROOT_LEAF,
+            selected_nodes=[step_enum.ROOT_LEAF, step_enum.ROOT_BRANCH],
             confidence=0.9,
             stop_reason=ClassificationStopReason.STOP,
         ),

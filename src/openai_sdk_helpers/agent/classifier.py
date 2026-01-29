@@ -709,16 +709,10 @@ def _normalize_step_output(
     ClassificationStep
         Normalized classification step instance.
     """
+    if isinstance(step, ClassificationStep):
+        return step
     payload = step.to_json()
-    enum_fields = _extract_enum_fields(step_structure)
-    normalized: dict[str, Any] = {}
-    for key, value in payload.items():
-        enum_cls = enum_fields.get(key)
-        if enum_cls is not None:
-            normalized[key] = _normalize_enum_value(value, enum_cls)
-        else:
-            normalized[key] = value
-    return ClassificationStep.from_json(normalized)
+    return ClassificationStep.from_json(payload)
 
 
 def _extract_enum_fields(
@@ -814,11 +808,15 @@ def _selected_nodes(step: ClassificationStep) -> list[str]:
     """
     if step.selected_nodes is not None:
         selected_nodes = [
-            selected_node for selected_node in step.selected_nodes if selected_node
+            str(_normalize_enum_value(selected_node, Enum))
+            for selected_node in step.selected_nodes
+            if selected_node
         ]
         if selected_nodes:
             return selected_nodes
-    return [step.selected_node] if step.selected_node else []
+    if step.selected_node:
+        return [str(_normalize_enum_value(step.selected_node, Enum))]
+    return []
 
 
 def _max_confidence(
