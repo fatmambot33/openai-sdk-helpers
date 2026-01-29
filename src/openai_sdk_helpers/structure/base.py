@@ -483,7 +483,7 @@ class StructureBase(BaseModelJSONSerializable):
             if isinstance(obj, dict):
                 if "$ref" in obj:
                     for key in list(obj.keys()):
-                        if key != "$ref":
+                        if key not in {"$ref", "type"}:
                             obj.pop(key, None)
                 for v in obj.values():
                     clean_refs(v)
