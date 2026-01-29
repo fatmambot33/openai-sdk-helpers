@@ -134,9 +134,21 @@ def _ensure_items_have_schema(target: Any) -> None:
 
 def _ensure_schema_has_type(schema: dict[str, Any]) -> None:
     """Ensure a schema dictionary includes a type entry when possible."""
+    any_of = schema.get("anyOf")
+    if isinstance(any_of, list):
+        for entry in any_of:
+            if isinstance(entry, dict):
+                _ensure_schema_has_type(entry)
+    properties = schema.get("properties")
+    if isinstance(properties, dict):
+        for value in properties.values():
+            if isinstance(value, dict):
+                _ensure_schema_has_type(value)
+    items = schema.get("items")
+    if isinstance(items, dict):
+        _ensure_schema_has_type(items)
     if "type" in schema or "$ref" in schema:
         return
-    any_of = schema.get("anyOf")
     if isinstance(any_of, list):
         inferred_types: set[str] = set()
         for entry in any_of:
@@ -515,14 +527,12 @@ class StructureBase(BaseModelJSONSerializable):
                     if key == "anyOf" and isinstance(value, list):
                         updated_items = []
                         for item in value:
-                            if (
-                                isinstance(item, dict)
-                                and "$ref" in item
-                                and "type" not in item
-                            ):
+                            if isinstance(item, dict) and "$ref" in item:
                                 resolved = _resolve_ref(item["$ref"], root, seen)
                                 if resolved is not None:
                                     item = resolved
+                                else:
+                                    item = _build_any_value_schema()
                             updated_items.append(_inline_anyof_refs(item, root, seen))
                         updated[key] = updated_items
                     else:
@@ -536,6 +546,7 @@ class StructureBase(BaseModelJSONSerializable):
             dict[str, Any], _inline_anyof_refs(cleaned_schema, schema, set())
         )
         _ensure_items_have_schema(cleaned_schema)
+        _ensure_schema_has_type(cleaned_schema)
 
         nullable_fields = {
             name
