@@ -59,6 +59,7 @@ The `agent` module provides a higher-level abstraction for building agents, whil
   - **SummarizerAgent**: Generate concise summaries from provided text
   - **TranslatorAgent**: Translate text into target languages
   - **ValidatorAgent**: Check inputs and outputs against safety guardrails
+  - **TaxonomyClassifierAgent**: Classify text into taxonomy-driven labels
 
 #### Response Module (Built on `openai` SDK)
 - **Response handling utilities** for direct API control with fine-grained message management
@@ -172,12 +173,18 @@ These use the `agent` module built on `openai-agents` SDK:
 ```python
 from openai_sdk_helpers.agent import (
     SummarizerAgent,
+    TaxonomyClassifierAgent,
     TranslatorAgent,
     ValidatorAgent,
 )
+from openai_sdk_helpers.structure import TaxonomyNode
 
 # Initialize agents with a default model
 summarizer = SummarizerAgent(default_model="gpt-4o-mini")
+classifier = TaxonomyClassifierAgent(
+    model="gpt-4o-mini",
+    taxonomy=[TaxonomyNode(label="Billing"), TaxonomyNode(label="Support")],
+)
 translator = TranslatorAgent(default_model="gpt-4o-mini")
 validator = ValidatorAgent(default_model="gpt-4o-mini")
 
@@ -188,6 +195,10 @@ print(summary.text)
 # Translate text
 translation = translator.run_sync("Bonjour", target_language="English")
 print(translation)
+
+# Classify text against a taxonomy
+classification = classifier.run_sync("I need help with my invoice")
+print(classification.selected_node)
 
 # Validate against guardrails
 validation = validator.run_sync(
