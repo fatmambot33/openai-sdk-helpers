@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 import re
 from dataclasses import dataclass, field
 from enum import Enum
@@ -32,8 +33,12 @@ class TaxonomyClassifierAgent(AgentBase):
 
     Methods
     -------
-    run_agent(text, taxonomy, context, max_depth)
+    run_agent(text, taxonomy, context, max_depth, session)
         Classify text by recursively walking the taxonomy tree.
+    run_async(input, context, max_depth, confidence_threshold, single_class)
+        Classify text asynchronously using taxonomy traversal.
+    run_sync(input, context, max_depth, confidence_threshold, single_class)
+        Classify text synchronously using taxonomy traversal.
 
     Examples
     --------
@@ -96,6 +101,7 @@ class TaxonomyClassifierAgent(AgentBase):
         max_depth: Optional[int] = None,
         confidence_threshold: float | None = None,
         single_class: bool = False,
+        session: Optional[Any] = None,
     ) -> ClassificationResult:
         """Classify ``text`` by recursively walking taxonomy levels.
 
@@ -111,6 +117,8 @@ class TaxonomyClassifierAgent(AgentBase):
             Minimum confidence required to accept a classification step.
         single_class : bool, default=False
             Whether to keep only the highest-priority selection per step.
+        session : Session or None, default=None
+            Optional session for maintaining conversation history across runs.
 
         Returns
         -------
@@ -134,6 +142,7 @@ class TaxonomyClassifierAgent(AgentBase):
             max_depth=max_depth,
             confidence_threshold=confidence_threshold,
             single_class=single_class,
+            session=session,
             state=state,
         )
 
@@ -149,6 +158,159 @@ class TaxonomyClassifierAgent(AgentBase):
             path_nodes=state.path_nodes,
         )
 
+    async def run_async(
+        self,
+        input: str,
+        *,
+        context: Optional[Dict[str, Any]] = None,
+        output_structure: Optional[type[StructureBase]] = None,
+        session: Optional[Any] = None,
+        max_depth: Optional[int] = None,
+        confidence_threshold: float | None = None,
+        single_class: bool = False,
+    ) -> ClassificationResult:
+        """Classify ``input`` asynchronously with taxonomy traversal.
+
+        Parameters
+        ----------
+        input : str
+            Source text to classify.
+        context : dict or None, default=None
+            Additional context values to merge into the prompt.
+        output_structure : type[StructureBase] or None, default=None
+            Unused in taxonomy traversal. Present for API compatibility.
+        session : Session or None, default=None
+            Optional session for maintaining conversation history across runs.
+        max_depth : int or None, default=None
+            Maximum depth to traverse before stopping.
+        confidence_threshold : float or None, default=None
+            Minimum confidence required to accept a classification step.
+        single_class : bool, default=False
+            Whether to keep only the highest-priority selection per step.
+
+        Returns
+        -------
+        ClassificationResult
+            Structured classification result describing the traversal.
+        """
+        _ = output_structure
+        kwargs: Dict[str, Any] = {
+            "context": context,
+            "max_depth": max_depth,
+            "confidence_threshold": confidence_threshold,
+            "single_class": single_class,
+        }
+        if session is not None:
+            kwargs["session"] = session
+        return await self.run_agent(input, **kwargs)
+
+    def run_sync(
+        self,
+        input: str,
+        *,
+        context: Optional[Dict[str, Any]] = None,
+        output_structure: Optional[type[StructureBase]] = None,
+        session: Optional[Any] = None,
+        max_depth: Optional[int] = None,
+        confidence_threshold: float | None = None,
+        single_class: bool = False,
+    ) -> ClassificationResult:
+        """Classify ``input`` synchronously with taxonomy traversal.
+
+        Parameters
+        ----------
+        input : str
+            Source text to classify.
+        context : dict or None, default=None
+            Additional context values to merge into the prompt.
+        output_structure : type[StructureBase] or None, default=None
+            Unused in taxonomy traversal. Present for API compatibility.
+        session : Session or None, default=None
+            Optional session for maintaining conversation history across runs.
+        max_depth : int or None, default=None
+            Maximum depth to traverse before stopping.
+        confidence_threshold : float or None, default=None
+            Minimum confidence required to accept a classification step.
+        single_class : bool, default=False
+            Whether to keep only the highest-priority selection per step.
+
+        Returns
+        -------
+        ClassificationResult
+            Structured classification result describing the traversal.
+        """
+        _ = output_structure
+        kwargs: Dict[str, Any] = {
+            "context": context,
+            "max_depth": max_depth,
+            "confidence_threshold": confidence_threshold,
+            "single_class": single_class,
+        }
+        if session is not None:
+            kwargs["session"] = session
+
+        async def runner() -> ClassificationResult:
+            return await self.run_agent(input, **kwargs)
+
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(runner())
+
+        result: ClassificationResult | None = None
+        error: Exception | None = None
+
+        def _thread_func() -> None:
+            nonlocal error, result
+            try:
+                result = asyncio.run(runner())
+            except Exception as exc:
+                error = exc
+
+        thread = threading.Thread(target=_thread_func)
+        thread.start()
+        thread.join()
+
+        if error is not None:
+            raise error
+        if result is None:
+            msg = "Classification did not return a result"
+            raise RuntimeError(msg)
+        return result
+
+    async def _run_step_async(
+        self,
+        *,
+        input: str,
+        context: Optional[Dict[str, Any]] = None,
+        output_structure: Optional[type[StructureBase]] = None,
+        session: Optional[Any] = None,
+    ) -> StructureBase:
+        """Execute a single classification step asynchronously.
+
+        Parameters
+        ----------
+        input : str
+            Prompt or query for the agent.
+        context : dict or None, default=None
+            Optional dictionary passed to the agent.
+        output_structure : type[StructureBase] or None, default=None
+            Optional type used to cast the final output.
+        session : Session or None, default=None
+            Optional session for maintaining conversation history across runs.
+
+        Returns
+        -------
+        StructureBase
+            Parsed result for the classification step.
+        """
+        return await super().run_async(
+            input=input,
+            context=context,
+            output_structure=output_structure,
+            session=session,
+        )
+
     async def _classify_nodes(
         self,
         *,
@@ -160,6 +322,7 @@ class TaxonomyClassifierAgent(AgentBase):
         max_depth: Optional[int],
         confidence_threshold: float | None,
         single_class: bool,
+        session: Optional[Any],
         state: "_TraversalState",
     ) -> None:
         """Classify a taxonomy level and recursively traverse children.
@@ -180,6 +343,8 @@ class TaxonomyClassifierAgent(AgentBase):
             Minimum confidence required to accept a classification step.
         single_class : bool
             Whether to keep only the highest-priority selection per step.
+        session : Session or None
+            Optional session for maintaining conversation history across runs.
         state : _TraversalState
             Aggregated traversal state.
         """
@@ -197,10 +362,11 @@ class TaxonomyClassifierAgent(AgentBase):
             context=context,
         )
         step_structure = _build_step_structure(list(node_paths.keys()))
-        raw_step = await self.run_async(
+        raw_step = await self._run_step_async(
             input=text,
             context=template_context,
             output_structure=step_structure,
+            session=session,
         )
         step = _normalize_step_output(raw_step, step_structure)
         state.path.append(step)
@@ -250,6 +416,7 @@ class TaxonomyClassifierAgent(AgentBase):
                             max_depth=max_depth,
                             confidence_threshold=confidence_threshold,
                             single_class=single_class,
+                            session=session,
                             state=sub_state,
                         ),
                         base_final_nodes_len,
@@ -325,7 +492,7 @@ class TaxonomyClassifierAgent(AgentBase):
             model=self._model,
             taxonomy=list(nodes),
         )
-        sub_agent.run_async = self.run_async
+        sub_agent._run_step_async = self._run_step_async
         return sub_agent
 
     async def _classify_subtree(
@@ -340,6 +507,7 @@ class TaxonomyClassifierAgent(AgentBase):
         max_depth: Optional[int],
         confidence_threshold: float | None,
         single_class: bool,
+        session: Optional[Any],
         state: "_TraversalState",
     ) -> "_TraversalState":
         """Classify a taxonomy subtree and return the traversal state.
@@ -364,6 +532,8 @@ class TaxonomyClassifierAgent(AgentBase):
             Minimum confidence required to accept a classification step.
         single_class : bool
             Whether to keep only the highest-priority selection per step.
+        session : Session or None
+            Optional session for maintaining conversation history across runs.
         state : _TraversalState
             Traversal state to populate for the subtree.
 
@@ -381,6 +551,7 @@ class TaxonomyClassifierAgent(AgentBase):
             max_depth=max_depth,
             confidence_threshold=confidence_threshold,
             single_class=single_class,
+            session=session,
             state=state,
         )
         return state
