@@ -232,24 +232,29 @@ class TaxonomyClassifierAgent(AgentBase):
 
         base_path_len = len(state.path)
         base_path_nodes_len = len(state.path_nodes)
-        base_final_nodes_len = len(state.final_nodes)
-        child_tasks = []
+        child_tasks: list[tuple[asyncio.Task["_TraversalState"], int]] = []
         for node in resolved_nodes:
             if node.children:
                 sub_agent = self._build_sub_agent(list(node.children))
                 sub_state = _copy_traversal_state(state)
+                base_final_nodes_len = len(state.final_nodes)
                 child_tasks.append(
-                    self._classify_subtree(
-                        sub_agent=sub_agent,
-                        text=text,
-                        nodes=list(node.children),
-                        depth=depth + 1,
-                        parent_path=[*parent_path, node.label],
-                        context=context,
-                        max_depth=max_depth,
-                        confidence_threshold=confidence_threshold,
-                        single_class=single_class,
-                        state=sub_state,
+                    (
+                        asyncio.create_task(
+                            self._classify_subtree(
+                                sub_agent=sub_agent,
+                                text=text,
+                                nodes=list(node.children),
+                                depth=depth + 1,
+                                parent_path=[*parent_path, node.label],
+                                context=context,
+                                max_depth=max_depth,
+                                confidence_threshold=confidence_threshold,
+                                single_class=single_class,
+                                state=sub_state,
+                            )
+                        ),
+                        base_final_nodes_len,
                     )
                 )
             else:
@@ -259,8 +264,12 @@ class TaxonomyClassifierAgent(AgentBase):
                     state.best_confidence, step.confidence
                 )
         if child_tasks:
-            child_states = await asyncio.gather(*child_tasks)
-            for child_state in child_states:
+            child_states = await asyncio.gather(
+                *(child_task for child_task, _ in child_tasks)
+            )
+            for child_state, (_, base_final_nodes_len) in zip(
+                child_states, child_tasks, strict=True
+            ):
                 state.path.extend(child_state.path[base_path_len:])
                 state.path_nodes.extend(child_state.path_nodes[base_path_nodes_len:])
                 state.final_nodes.extend(child_state.final_nodes[base_final_nodes_len:])

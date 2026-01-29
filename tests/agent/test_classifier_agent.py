@@ -121,6 +121,40 @@ async def test_classifier_traverses_multiple_branches():
 
 
 @pytest.mark.anyio
+async def test_classifier_avoids_duplicate_leaf_nodes() -> None:
+    """Classifier should avoid duplicating leaf nodes when merging branches."""
+    leaf = TaxonomyNode(label="Leaf")
+    branch = TaxonomyNode(
+        label="Branch",
+        children=[TaxonomyNode(label="Child")],
+    )
+    agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[leaf, branch])
+
+    steps = [
+        ClassificationStep(
+            selected_nodes=["Leaf", "Branch"],
+            confidence=0.7,
+            stop_reason=ClassificationStopReason.CONTINUE,
+        ),
+        ClassificationStep(
+            selected_nodes=["Branch > Child"],
+            confidence=0.9,
+            stop_reason=ClassificationStopReason.STOP,
+        ),
+    ]
+
+    with (
+        patch.object(agent, "get_agent", return_value=MagicMock()),
+        patch.object(agent, "run_async", new_callable=AsyncMock) as mock_run,
+    ):
+        mock_run.side_effect = steps
+        result = await agent.run_agent("Mixed taxonomy")
+
+    assert result.final_nodes is not None
+    assert [node.label for node in result.final_nodes] == ["Leaf", "Child"]
+
+
+@pytest.mark.anyio
 async def test_classifier_single_class_limits_branches():
     """Classifier should limit traversal to a single branch when enabled."""
     meat = TaxonomyNode(
