@@ -4,7 +4,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from openai_sdk_helpers.agent.classifier import TaxonomyClassifierAgent
+from openai_sdk_helpers.agent.classifier import (
+    TaxonomyClassifierAgent,
+    _build_node_path_map,
+)
 from openai_sdk_helpers.structure import (
     ClassificationResult,
     ClassificationStep,
@@ -305,3 +308,15 @@ async def test_classifier_requires_taxonomy_nodes():
 
     with pytest.raises(ValueError, match="taxonomy must include at least one node"):
         TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[])
+
+
+def test_classifier_path_map_disambiguates_duplicate_labels() -> None:
+    """Classifier should disambiguate duplicate labels at the same level."""
+    nodes = [
+        TaxonomyNode(label="Duplicate"),
+        TaxonomyNode(label="Duplicate"),
+    ]
+
+    node_paths = _build_node_path_map(nodes, [])
+
+    assert list(node_paths.keys()) == ["Duplicate", "Duplicate (2)"]

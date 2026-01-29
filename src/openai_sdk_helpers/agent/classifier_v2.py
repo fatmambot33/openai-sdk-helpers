@@ -546,8 +546,12 @@ def _build_node_path_map(
         Mapping of path identifiers to taxonomy nodes.
     """
     path_map: dict[str, TaxonomyNode] = {}
+    seen: dict[str, int] = {}
     for node in nodes:
-        path = " > ".join([*parent_path, node.label])
+        base_path = _format_path_identifier([*parent_path, node.label])
+        count = seen.get(base_path, 0) + 1
+        seen[base_path] = count
+        path = f"{base_path} ({count})" if count > 1 else base_path
         path_map[path] = node
     return path_map
 
@@ -577,6 +581,27 @@ def _build_node_descriptors(
             }
         )
     return descriptors
+
+
+def _format_path_identifier(path_segments: Sequence[str]) -> str:
+    """Format path segments into a safe identifier string.
+
+    Parameters
+    ----------
+    path_segments : Sequence[str]
+        Path segments to format.
+
+    Returns
+    -------
+    str
+        Escaped path identifier string.
+    """
+    delimiter = " > "
+    escape_token = "\\>"
+    escaped_segments = [
+        segment.replace(delimiter, escape_token) for segment in path_segments
+    ]
+    return delimiter.join(escaped_segments)
 
 
 def _build_taxonomy_enum(name: str, values: Sequence[str]) -> type[Enum]:

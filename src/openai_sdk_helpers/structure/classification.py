@@ -103,16 +103,35 @@ class TaxonomyNode(StructureBase):
         if path is None:
             return None
         if isinstance(path, str):
-            path_value = path
+            path_segments = _split_path_identifier(path)
         else:
-            path_value = " > ".join(path)
-        last_segment = path_value.split(" > ")[-1] if path_value else None
+            path_segments = list(path)
+        last_segment = path_segments[-1] if path_segments else None
         if not last_segment:
             return None
         return next(
             (child for child in self.children if child.label == last_segment),
             None,
         )
+
+
+def _split_path_identifier(path: str) -> list[str]:
+    """Split a path identifier into label segments.
+
+    Parameters
+    ----------
+    path : str
+        Path identifier to split.
+
+    Returns
+    -------
+    list[str]
+        Label segments extracted from the path identifier.
+    """
+    delimiter = " > "
+    escape_token = "\\>"
+    segments = path.split(delimiter) if path else []
+    return [segment.replace(escape_token, delimiter) for segment in segments]
 
 
 class ClassificationStopReason(str, Enum):
