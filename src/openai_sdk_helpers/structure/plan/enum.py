@@ -29,6 +29,8 @@ class AgentEnum(CrosswalkJSONEnum):
         Translation agent for language conversion.
     VALIDATOR : str
         Validation agent for checking constraints and guardrails.
+    CLASSIFIER : str
+        Taxonomy classifier agent for structured label selection.
     PLANNER : str
         Meta-planning agent for generating execution plans.
     DESIGNER : str
@@ -58,6 +60,7 @@ class AgentEnum(CrosswalkJSONEnum):
     SUMMARIZER = "SummarizerAgent"
     TRANSLATOR = "TranslatorAgent"
     VALIDATOR = "ValidatorAgent"
+    CLASSIFIER = "TaxonomyClassifierAgent"
     PLANNER = "MetaPlanner"
     DESIGNER = "AgentDesigner"
     BUILDER = "AgentBuilder"
@@ -89,6 +92,7 @@ class AgentEnum(CrosswalkJSONEnum):
             "SUMMARIZER": {"value": "SummarizerAgent"},
             "TRANSLATOR": {"value": "TranslatorAgent"},
             "VALIDATOR": {"value": "ValidatorAgent"},
+            "CLASSIFIER": {"value": "TaxonomyClassifierAgent"},
             "PLANNER": {"value": "MetaPlanner"},
             "DESIGNER": {"value": "AgentDesigner"},
             "BUILDER": {"value": "AgentBuilder"},
