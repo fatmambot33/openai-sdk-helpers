@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from enum import Enum
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -12,8 +13,8 @@ from openai_sdk_helpers.agent.classifier import (
 )
 from openai_sdk_helpers.structure import (
     ClassificationResult,
-    ClassificationStep,
     ClassificationStopReason,
+    StructureBase,
     TaxonomyNode,
 )
 
@@ -29,6 +30,21 @@ def test_classifier_default_prompt_template():
     assert "taxonomy classification assistant" in prompt
 
 
+def _enum_member(enum_cls: type[Enum], value: str) -> Enum:
+    """Return enum member matching the provided value."""
+    return enum_cls._value2member_map_[value]
+
+
+def _build_step(values: list[str]) -> tuple[type[StructureBase], type[Enum]]:
+    """Build a step structure and its enum class for provided values."""
+    step_structure = _build_step_structure(values)
+    enum_cls = step_structure._extract_enum_class(
+        step_structure.model_fields["selected_node"].annotation
+    )
+    assert enum_cls is not None
+    return step_structure, enum_cls
+
+
 @pytest.mark.anyio
 async def test_classifier_traverses_taxonomy_levels():
     """Classifier should walk the taxonomy until a terminal step."""
@@ -39,16 +55,18 @@ async def test_classifier_traverses_taxonomy_levels():
     alternate = TaxonomyNode(label="Health")
     agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[root, alternate])
 
+    root_step, root_enum = _build_step(["Finance", "Health"])
+    tax_step, tax_enum = _build_step(["Finance > Tax"])
     steps = [
-        ClassificationStep(
-            selected_node="Finance",
-            selected_nodes=["Finance"],
+        root_step(
+            selected_node=_enum_member(root_enum, "Finance"),
+            selected_nodes=[_enum_member(root_enum, "Finance")],
             confidence=0.7,
             stop_reason=ClassificationStopReason.CONTINUE,
         ),
-        ClassificationStep(
-            selected_node="Finance > Tax",
-            selected_nodes=["Finance > Tax"],
+        tax_step(
+            selected_node=_enum_member(tax_enum, "Finance > Tax"),
+            selected_nodes=[_enum_member(tax_enum, "Finance > Tax")],
             confidence=0.9,
             stop_reason=ClassificationStopReason.STOP,
         ),
@@ -84,19 +102,25 @@ async def test_classifier_traverses_multiple_branches():
     )
     agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[meat, vegetables])
 
+    root_step, root_enum = _build_step(["Meat", "Vegetables"])
+    meat_step, meat_enum = _build_step(["Meat > Beef"])
+    veg_step, veg_enum = _build_step(["Vegetables > Carrot"])
     steps = [
-        ClassificationStep(
-            selected_nodes=["Meat", "Vegetables"],
+        root_step(
+            selected_nodes=[
+                _enum_member(root_enum, "Meat"),
+                _enum_member(root_enum, "Vegetables"),
+            ],
             confidence=0.7,
             stop_reason=ClassificationStopReason.CONTINUE,
         ),
-        ClassificationStep(
-            selected_nodes=["Meat > Beef"],
+        meat_step(
+            selected_nodes=[_enum_member(meat_enum, "Meat > Beef")],
             confidence=0.9,
             stop_reason=ClassificationStopReason.STOP,
         ),
-        ClassificationStep(
-            selected_nodes=["Vegetables > Carrot"],
+        veg_step(
+            selected_nodes=[_enum_member(veg_enum, "Vegetables > Carrot")],
             confidence=0.9,
             stop_reason=ClassificationStopReason.STOP,
         ),
@@ -130,14 +154,19 @@ async def test_classifier_avoids_duplicate_leaf_nodes() -> None:
     )
     agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[leaf, branch])
 
+    root_step, root_enum = _build_step(["Leaf", "Branch"])
+    child_step, child_enum = _build_step(["Branch > Child"])
     steps = [
-        ClassificationStep(
-            selected_nodes=["Leaf", "Branch"],
+        root_step(
+            selected_nodes=[
+                _enum_member(root_enum, "Leaf"),
+                _enum_member(root_enum, "Branch"),
+            ],
             confidence=0.7,
             stop_reason=ClassificationStopReason.CONTINUE,
         ),
-        ClassificationStep(
-            selected_nodes=["Branch > Child"],
+        child_step(
+            selected_nodes=[_enum_member(child_enum, "Branch > Child")],
             confidence=0.9,
             stop_reason=ClassificationStopReason.STOP,
         ),
@@ -167,14 +196,19 @@ async def test_classifier_single_class_limits_branches():
     )
     agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[meat, vegetables])
 
+    root_step, root_enum = _build_step(["Meat", "Vegetables"])
+    meat_step, meat_enum = _build_step(["Meat > Beef"])
     steps = [
-        ClassificationStep(
-            selected_nodes=["Meat", "Vegetables"],
+        root_step(
+            selected_nodes=[
+                _enum_member(root_enum, "Meat"),
+                _enum_member(root_enum, "Vegetables"),
+            ],
             confidence=0.7,
             stop_reason=ClassificationStopReason.CONTINUE,
         ),
-        ClassificationStep(
-            selected_nodes=["Meat > Beef"],
+        meat_step(
+            selected_nodes=[_enum_member(meat_enum, "Meat > Beef")],
             confidence=0.9,
             stop_reason=ClassificationStopReason.STOP,
         ),
@@ -201,8 +235,9 @@ async def test_classifier_confidence_threshold_stops_branch():
     )
     agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[root])
 
-    step = ClassificationStep(
-        selected_nodes=["Root"],
+    root_step, root_enum = _build_step(["Root"])
+    step = root_step(
+        selected_nodes=[_enum_member(root_enum, "Root")],
         confidence=0.2,
         stop_reason=ClassificationStopReason.CONTINUE,
     )
@@ -225,9 +260,10 @@ async def test_classifier_stops_when_no_children():
     root = TaxonomyNode(label="Root")
     agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[root])
 
-    step = ClassificationStep(
-        selected_node="Root",
-        selected_nodes=["Root"],
+    root_step, root_enum = _build_step(["Root"])
+    step = root_step(
+        selected_node=_enum_member(root_enum, "Root"),
+        selected_nodes=[_enum_member(root_enum, "Root")],
         confidence=0.6,
         stop_reason=ClassificationStopReason.CONTINUE,
     )
@@ -254,16 +290,18 @@ async def test_classifier_falls_back_when_selected_nodes_empty():
     )
     agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[root])
 
+    root_step, root_enum = _build_step(["Finance"])
+    tax_step, tax_enum = _build_step(["Finance > Tax"])
     steps = [
-        ClassificationStep(
-            selected_node="Finance",
-            selected_nodes=[""],
+        root_step(
+            selected_node=_enum_member(root_enum, "Finance"),
+            selected_nodes=[],
             confidence=0.7,
             stop_reason=ClassificationStopReason.CONTINUE,
         ),
-        ClassificationStep(
-            selected_node="Finance > Tax",
-            selected_nodes=["Finance > Tax"],
+        tax_step(
+            selected_node=_enum_member(tax_enum, "Finance > Tax"),
+            selected_nodes=[_enum_member(tax_enum, "Finance > Tax")],
             confidence=0.9,
             stop_reason=ClassificationStopReason.STOP,
         ),
@@ -311,16 +349,18 @@ async def test_classifier_builds_sub_agents() -> None:
         )
     ]
     agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=taxonomy)
+    root_step, root_enum = _build_step(["Root"])
+    child_step, child_enum = _build_step(["Root > Child"])
     steps = [
-        ClassificationStep(
-            selected_node="Root",
-            selected_nodes=["Root"],
+        root_step(
+            selected_node=_enum_member(root_enum, "Root"),
+            selected_nodes=[_enum_member(root_enum, "Root")],
             confidence=0.8,
             stop_reason=ClassificationStopReason.CONTINUE,
         ),
-        ClassificationStep(
-            selected_node="Root > Child",
-            selected_nodes=["Root > Child"],
+        child_step(
+            selected_node=_enum_member(child_enum, "Root > Child"),
+            selected_nodes=[_enum_member(child_enum, "Root > Child")],
             confidence=0.9,
             stop_reason=ClassificationStopReason.STOP,
         ),
