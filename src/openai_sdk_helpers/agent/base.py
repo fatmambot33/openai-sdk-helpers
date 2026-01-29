@@ -429,8 +429,15 @@ class AgentBase(DataclassJSONSerializable):
         """
         return self._session
 
-    def get_agent(self) -> Agent:
+    def get_agent(
+        self, output_structure: Optional[type[StructureBase]] = None
+    ) -> Agent:
         """Construct and return the configured :class:`agents.Agent` instance.
+
+        Parameters
+        ----------
+        output_structure : type[StructureBase] or None, default=None
+            Optional override for the agent output schema.
 
         Returns
         -------
@@ -442,8 +449,9 @@ class AgentBase(DataclassJSONSerializable):
             "instructions": self._configuration.instructions_text or ".",
             "model": self._model,
         }
-        if self._configuration.output_structure:
-            agent_config["output_type"] = self._configuration.output_structure
+        output_type = output_structure or self._configuration.output_structure
+        if output_type is not None:
+            agent_config["output_type"] = output_type
         if self._configuration.tools:
             agent_config["tools"] = self._configuration.tools
         if self._model_settings:
@@ -490,7 +498,7 @@ class AgentBase(DataclassJSONSerializable):
         session_to_use = session if session is not None else self._session
         try:
             return await run_async(
-                agent=self.get_agent(),
+                agent=self.get_agent(output_structure=output_structure),
                 input=input,
                 context=context,
                 output_structure=output_structure,
@@ -545,7 +553,7 @@ class AgentBase(DataclassJSONSerializable):
         session_to_use = session if session is not None else self._session
         try:
             return run_sync(
-                agent=self.get_agent(),
+                agent=self.get_agent(output_structure=output_structure),
                 input=input,
                 context=context,
                 output_structure=output_structure,
