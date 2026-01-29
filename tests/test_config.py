@@ -98,7 +98,8 @@ def test_from_secrets_overrides_take_precedence():
     assert settings.max_retries == 1
 
 
-def test_from_secrets_requires_api_key():
+def test_from_secrets_requires_api_key(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     with pytest.raises(ValueError, match="OPENAI_API_KEY is required"):
         OpenAISettings.from_secrets({})
 
