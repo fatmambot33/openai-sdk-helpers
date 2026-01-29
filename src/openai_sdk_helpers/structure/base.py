@@ -520,6 +520,15 @@ class StructureBase(BaseModelJSONSerializable):
             seen.discard(ref)
             return resolved
 
+        def _has_ref(obj: Any) -> bool:
+            if isinstance(obj, dict):
+                if "$ref" in obj:
+                    return True
+                return any(_has_ref(value) for value in obj.values())
+            if isinstance(obj, list):
+                return any(_has_ref(item) for item in obj)
+            return False
+
         def _inline_anyof_refs(obj: Any, root: dict[str, Any], seen: set[str]) -> Any:
             if isinstance(obj, dict):
                 updated: dict[str, Any] = {}
@@ -529,7 +538,7 @@ class StructureBase(BaseModelJSONSerializable):
                         for item in value:
                             if isinstance(item, dict) and "$ref" in item:
                                 resolved = _resolve_ref(item["$ref"], root, seen)
-                                if resolved is not None:
+                                if resolved is not None and not _has_ref(resolved):
                                     item = resolved
                             updated_items.append(_inline_anyof_refs(item, root, seen))
                         updated[key] = updated_items
