@@ -230,6 +230,7 @@ class TaxonomyClassifierAgentV2(AgentBase):
 
         base_path_len = len(state.path)
         base_path_nodes_len = len(state.path_nodes)
+        base_final_nodes_len = len(state.final_nodes)
         child_tasks = []
         for node in resolved_nodes:
             if node.children:
@@ -259,7 +260,7 @@ class TaxonomyClassifierAgentV2(AgentBase):
             for child_state in child_states:
                 state.path.extend(child_state.path[base_path_len:])
                 state.path_nodes.extend(child_state.path_nodes[base_path_nodes_len:])
-                state.final_nodes.extend(child_state.final_nodes)
+                state.final_nodes.extend(child_state.final_nodes[base_final_nodes_len:])
                 state.best_confidence = _max_confidence(
                     state.best_confidence, child_state.best_confidence
                 )
