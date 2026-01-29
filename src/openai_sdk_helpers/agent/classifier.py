@@ -627,34 +627,34 @@ def _build_taxonomy_enum(name: str, values: Sequence[str]) -> type[Enum]:
         Enum class with sanitized member names.
     """
     members: dict[str, str] = {}
-    prefix = _sanitize_enum_prefix(name)
     for index, value in enumerate(values, start=1):
-        member_name = _sanitize_enum_member(prefix, value, index, members)
+        member_name = _sanitize_enum_member(value, index, members)
         members[member_name] = value
     if not members:
         members["UNSPECIFIED"] = ""
     return cast(type[Enum], Enum(name, members))
 
 
-def _sanitize_enum_prefix(prefix: str) -> str:
-    """Return a safe prefix for taxonomy enum member names.
+def _split_taxonomy_path(value: str) -> list[str]:
+    """Split a taxonomy identifier into its path segments.
 
     Parameters
     ----------
-    prefix : str
-        Prefix to normalize for enum member naming.
+    value : str
+        Taxonomy path identifier to split.
 
     Returns
     -------
-    str
-        Normalized prefix for enum members.
+    list[str]
+        Path segments with escaped delimiters restored.
     """
-    normalized = re.sub(r"[^0-9a-zA-Z]+", "_", prefix).strip("_").upper()
-    return normalized or "VALUE"
+    delimiter = " > "
+    escape_token = "\\>"
+    segments = value.split(delimiter)
+    return [segment.replace(escape_token, delimiter) for segment in segments]
 
 
 def _sanitize_enum_member(
-    prefix: str,
     value: str,
     index: int,
     existing: dict[str, str],
@@ -663,8 +663,6 @@ def _sanitize_enum_member(
 
     Parameters
     ----------
-    prefix : str
-        Enum member prefix to include in the name.
     value : str
         Raw taxonomy value to sanitize.
     index : int
@@ -677,16 +675,19 @@ def _sanitize_enum_member(
     str
         Sanitized enum member name.
     """
-    normalized_value = re.sub(r"[^0-9a-zA-Z]+", "_", value).strip("_").upper()
-    if not normalized_value:
-        normalized_value = "VALUE"
-    if normalized_value[0].isdigit():
-        normalized_value = f"VALUE_{index}"
-    normalized = f"{prefix}_{index}_{normalized_value}"
-    candidate = normalized
+    normalized_segments: list[str] = []
+    for segment in _split_taxonomy_path(value):
+        normalized = re.sub(r"[^0-9a-zA-Z]+", "_", segment).strip("_").upper()
+        if not normalized:
+            normalized = "VALUE"
+        if normalized[0].isdigit():
+            normalized = f"VALUE_{normalized}"
+        normalized_segments.append(normalized)
+    normalized_path = "__".join(normalized_segments) or f"VALUE_{index}"
+    candidate = normalized_path
     suffix = 1
     while candidate in existing:
-        candidate = f"{normalized}_{suffix}"
+        candidate = f"{normalized_path}__{suffix}"
         suffix += 1
     return candidate
 
@@ -758,10 +759,10 @@ def _normalize_enum_value(value: Any, enum_cls: type[Enum]) -> Any:
     if isinstance(value, list):
         return [_normalize_enum_value(item, enum_cls) for item in value]
     if isinstance(value, str):
-        if value in enum_cls.__members__:
-            return enum_cls.__members__[value].value
         if value in enum_cls._value2member_map_:
             return enum_cls(value).value
+        if value in enum_cls.__members__:
+            return enum_cls.__members__[value].value
     return value
 
 
