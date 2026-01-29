@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional, Sequence, cast
+from typing import Any, Awaitable, Dict, Iterable, Optional, Sequence, cast
 
 from ..structure import (
     ClassificationResult,
@@ -232,7 +232,7 @@ class TaxonomyClassifierAgent(AgentBase):
 
         base_path_len = len(state.path)
         base_path_nodes_len = len(state.path_nodes)
-        child_tasks: list[tuple[asyncio.Task["_TraversalState"], int]] = []
+        child_tasks: list[tuple[Awaitable["_TraversalState"], int]] = []
         for node in resolved_nodes:
             if node.children:
                 sub_agent = self._build_sub_agent(list(node.children))
@@ -240,19 +240,17 @@ class TaxonomyClassifierAgent(AgentBase):
                 base_final_nodes_len = len(state.final_nodes)
                 child_tasks.append(
                     (
-                        asyncio.create_task(
-                            self._classify_subtree(
-                                sub_agent=sub_agent,
-                                text=text,
-                                nodes=list(node.children),
-                                depth=depth + 1,
-                                parent_path=[*parent_path, node.label],
-                                context=context,
-                                max_depth=max_depth,
-                                confidence_threshold=confidence_threshold,
-                                single_class=single_class,
-                                state=sub_state,
-                            )
+                        self._classify_subtree(
+                            sub_agent=sub_agent,
+                            text=text,
+                            nodes=list(node.children),
+                            depth=depth + 1,
+                            parent_path=[*parent_path, node.label],
+                            context=context,
+                            max_depth=max_depth,
+                            confidence_threshold=confidence_threshold,
+                            single_class=single_class,
+                            state=sub_state,
                         ),
                         base_final_nodes_len,
                     )
@@ -322,11 +320,13 @@ class TaxonomyClassifierAgent(AgentBase):
         TaxonomyClassifierAgent
             Configured classifier agent for the taxonomy slice.
         """
-        return TaxonomyClassifierAgent(
+        sub_agent = TaxonomyClassifierAgent(
             template_path=self._template_path,
             model=self._model,
             taxonomy=list(nodes),
         )
+        sub_agent.run_async = self.run_async
+        return sub_agent
 
     async def _classify_subtree(
         self,

@@ -50,7 +50,7 @@ def test_classification_result_properties():
     )
 
     assert result.depth == 2
-    assert result.path_identifiers == ["Root", "Leaf", "Branch"]
+    assert result.path_identifiers == ["Root", "Root > Leaf", "Root > Branch"]
     assert result.final_node == leaf_node
     assert result.final_nodes == [leaf_node, branch_node]
     assert [node.label for node in result.path_nodes] == [

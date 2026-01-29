@@ -171,9 +171,9 @@ class ClassificationStep(StructureBase):
 
     Attributes
     ----------
-    selected_node : str or Enum or None
+    selected_node : str or None
         Identifier of the selected taxonomy node.
-    selected_nodes : list[str] or list[Enum] or None
+    selected_nodes : list[str] or None
         Identifiers of selected taxonomy nodes for multi-class classification.
     confidence : float or None
         Confidence score between 0 and 1.
@@ -204,12 +204,12 @@ class ClassificationStep(StructureBase):
     [<NodeEnum.BILLING: 'billing'>]
     """
 
-    selected_node: str | Enum | None = spec_field(
+    selected_node: str | None = spec_field(
         "selected_node",
         description="Path identifier of the selected taxonomy node.",
         default=None,
     )
-    selected_nodes: list[str] | list[Enum] | None = spec_field(
+    selected_nodes: list[str] | None = spec_field(
         "selected_nodes",
         description="Path identifiers of selected taxonomy nodes.",
         default=None,
@@ -261,9 +261,7 @@ class ClassificationStep(StructureBase):
                 default=None,
             ),
         }
-        return cast(
-            type["ClassificationStep"], type("BoundStep", (cls,), namespace)
-        )
+        return cast(type["ClassificationStep"], type("BoundStep", (cls,), namespace))
 
     def as_summary(self) -> dict[str, Any]:
         """Return a dictionary summary of the classification step.
@@ -406,13 +404,13 @@ class ClassificationResult(StructureBase):
         --------
         >>> steps = [
         ...     ClassificationStep(selected_node="Root"),
-        ...     ClassificationStep(selected_nodes=["Leaf", "Branch"]),
+        ...     ClassificationStep(selected_nodes=["Root > Leaf", "Root > Branch"]),
         ... ]
         >>> ClassificationResult(
         ...     stop_reason=ClassificationStopReason.STOP,
         ...     path=steps,
         ... ).path_identifiers
-        ['Root', 'Leaf', 'Branch']
+        ['Root', 'Root > Leaf', 'Root > Branch']
         """
         identifiers: list[str] = []
         for step in self.path:
