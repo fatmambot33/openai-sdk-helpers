@@ -4,7 +4,12 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from openai_sdk_helpers.agent.classifier_v2 import TaxonomyClassifierAgentV2
+from openai_sdk_helpers.agent.classifier_v2 import (
+    TaxonomyClassifierAgentV2,
+    _build_node_path_map,
+    _build_step_structure_v2,
+    _normalize_step_output,
+)
 from openai_sdk_helpers.structure import (
     ClassificationStep,
     ClassificationStopReason,
@@ -17,24 +22,23 @@ async def test_classifier_v2_builds_sub_agents() -> None:
     """Classifier V2 should construct sub-agents for child taxonomy nodes."""
     taxonomy = [
         TaxonomyNode(
-            id="root",
             label="Root",
-            children=[TaxonomyNode(id="child", label="Child")],
+            children=[TaxonomyNode(label="Child")],
         )
     ]
     agent = TaxonomyClassifierAgentV2(model="gpt-4o-mini", taxonomy=taxonomy)
     steps = [
         ClassificationStep(
-            selected_id="root",
-            selected_ids=["root"],
+            selected_id="Root",
+            selected_ids=["Root"],
             selected_label="Root",
             selected_labels=["Root"],
             confidence=0.8,
             stop_reason=ClassificationStopReason.CONTINUE,
         ),
         ClassificationStep(
-            selected_id="child",
-            selected_ids=["child"],
+            selected_id="Root > Child",
+            selected_ids=["Root > Child"],
             selected_label="Child",
             selected_labels=["Child"],
             confidence=0.9,
@@ -59,4 +63,28 @@ async def test_classifier_v2_builds_sub_agents() -> None:
     assert mock_build.call_args.args[0] == taxonomy[0].children
     assert mock_run.call_count == 2
     assert result.final_nodes is not None
-    assert [node.id for node in result.final_nodes] == ["child"]
+    assert [node.label for node in result.final_nodes] == ["Child"]
+
+
+def test_classifier_v2_maps_step_v2_fields_to_selected_ids() -> None:
+    """Classifier V2 should map enum selections into identifier fields."""
+    nodes = [TaxonomyNode(label="Billing")]
+    node_paths = _build_node_path_map(nodes, [])
+    step_structure = _build_step_structure_v2(list(node_paths.keys()))
+    enum_cls = step_structure._extract_enum_class(
+        step_structure.model_fields["selected_node"].annotation
+    )
+    assert enum_cls is not None
+    enum_member = list(enum_cls)[0]
+    assert enum_member.value == "Billing"
+    raw_step = step_structure(
+        selected_node=enum_member,
+        selected_nodes=[enum_member],
+        confidence=0.7,
+        stop_reason=ClassificationStopReason.STOP,
+    )
+
+    normalized = _normalize_step_output(raw_step, step_structure)
+
+    assert normalized.selected_id == "Billing"
+    assert normalized.selected_ids == ["Billing"]

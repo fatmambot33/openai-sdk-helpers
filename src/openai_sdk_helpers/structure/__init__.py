@@ -79,6 +79,7 @@ from .base import *
 from .classification import (
     ClassificationResult,
     ClassificationStep,
+    ClassificationStepV2,
     ClassificationStopReason,
     TaxonomyNode,
     flatten_taxonomy,
@@ -107,6 +108,7 @@ __all__ = [
     "AgentEnum",
     "ClassificationResult",
     "ClassificationStep",
+    "ClassificationStepV2",
     "ClassificationStopReason",
     "TaxonomyNode",
     "flatten_taxonomy",

@@ -40,8 +40,8 @@ class TaxonomyClassifierAgent(AgentBase):
     Create a classifier with a flat taxonomy:
 
     >>> taxonomy = [
-    ...     TaxonomyNode(id="billing", label="Billing"),
-    ...     TaxonomyNode(id="support", label="Support"),
+    ...     TaxonomyNode(label="Billing"),
+    ...     TaxonomyNode(label="Support"),
     ... ]
     >>> agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=taxonomy)
     """
@@ -123,9 +123,8 @@ class TaxonomyClassifierAgent(AgentBase):
         Examples
         --------
         >>> taxonomy = TaxonomyNode(
-        ...     id="finance",
         ...     label="Finance",
-        ...     children=[TaxonomyNode(id="tax", label="Tax")],
+        ...     children=[TaxonomyNode(label="Tax")],
         ... )
         >>> agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=taxonomy)
         >>> isinstance(agent.root_nodes, list)
@@ -138,7 +137,9 @@ class TaxonomyClassifierAgent(AgentBase):
         saw_max_depth = False
         saw_no_children = False
         saw_terminal_stop = False
-        branch_queue = [_BranchState(nodes=list(self._root_nodes), depth=0)]
+        branch_queue = [
+            _BranchState(nodes=list(self._root_nodes), depth=0, parent_path=[])
+        ]
         final_nodes: list[TaxonomyNode] = []
 
         while branch_queue:
@@ -151,13 +152,16 @@ class TaxonomyClassifierAgent(AgentBase):
             if not current_nodes:
                 continue
 
+            node_paths = _build_node_path_map(current_nodes, branch.parent_path)
             template_context = _build_context(
-                current_nodes=current_nodes,
+                node_descriptors=_build_node_descriptors(node_paths),
                 path=path,
                 depth=depth,
                 context=context,
             )
-            step_structure = _build_step_structure(current_nodes)
+            step_structure = _build_step_structure(
+                list(node_paths.keys()), current_nodes
+            )
             raw_step = await self.run_async(
                 input=text,
                 context=template_context,
@@ -173,7 +177,7 @@ class TaxonomyClassifierAgent(AgentBase):
             ):
                 continue
 
-            resolved_nodes = _resolve_nodes(current_nodes, step)
+            resolved_nodes = _resolve_nodes(node_paths, step)
             if resolved_nodes:
                 if single_class:
                     resolved_nodes = resolved_nodes[:1]
@@ -193,7 +197,11 @@ class TaxonomyClassifierAgent(AgentBase):
             for node in resolved_nodes:
                 if node.children:
                     branch_queue.append(
-                        _BranchState(nodes=list(node.children), depth=depth + 1)
+                        _BranchState(
+                            nodes=list(node.children),
+                            depth=depth + 1,
+                            parent_path=[*branch.parent_path, node.label],
+                        )
                     )
                 else:
                     saw_no_children = True
@@ -248,6 +256,7 @@ class TaxonomyClassifierAgent(AgentBase):
 class _BranchState:
     nodes: list[TaxonomyNode]
     depth: int
+    parent_path: list[str]
 
 
 def _normalize_roots(
@@ -283,7 +292,7 @@ def _default_template_path() -> Path:
 
 def _build_context(
     *,
-    current_nodes: Iterable[TaxonomyNode],
+    node_descriptors: Iterable[dict[str, Any]],
     path: Sequence[ClassificationStep],
     depth: int,
     context: Optional[Dict[str, Any]],
@@ -292,8 +301,8 @@ def _build_context(
 
     Parameters
     ----------
-    current_nodes : Iterable[TaxonomyNode]
-        Nodes available at the current taxonomy level.
+    node_descriptors : Iterable[dict[str, Any]]
+        Node descriptors available at the current taxonomy level.
     path : Sequence[ClassificationStep]
         Steps recorded so far in the traversal.
     depth : int
@@ -307,7 +316,7 @@ def _build_context(
         Context dictionary for prompt rendering.
     """
     template_context: Dict[str, Any] = {
-        "taxonomy_nodes": list(current_nodes),
+        "taxonomy_nodes": list(node_descriptors),
         "path": [step.as_summary() for step in path],
         "depth": depth,
     }
@@ -317,12 +326,15 @@ def _build_context(
 
 
 def _build_step_structure(
+    path_identifiers: Sequence[str],
     nodes: Sequence[TaxonomyNode],
 ) -> type[StructureBase]:
-    """Build a step output structure constrained to the candidate taxonomy nodes.
+    """Build a step output structure constrained to taxonomy paths.
 
     Parameters
     ----------
+    path_identifiers : Sequence[str]
+        Path identifiers for nodes at the current classification step.
     nodes : Sequence[TaxonomyNode]
         Candidate taxonomy nodes for the current classification step.
 
@@ -331,7 +343,7 @@ def _build_step_structure(
     type[StructureBase]
         Dynamic structure class for the classification step output.
     """
-    id_enum = _build_taxonomy_enum("TaxonomyId", [node.id for node in nodes])
+    id_enum = _build_taxonomy_enum("TaxonomyPath", path_identifiers)
     label_enum = _build_taxonomy_enum("TaxonomyLabel", [node.label for node in nodes])
     namespace: dict[str, Any] = {
         "__annotations__": {
@@ -411,6 +423,58 @@ def _build_taxonomy_enum(name: str, values: Sequence[str]) -> type[Enum]:
     if not members:
         members["UNSPECIFIED"] = ""
     return cast(type[Enum], Enum(name, members))
+
+
+def _build_node_path_map(
+    nodes: Sequence[TaxonomyNode],
+    parent_path: Sequence[str],
+) -> dict[str, TaxonomyNode]:
+    """Build a mapping of node path identifiers to taxonomy nodes.
+
+    Parameters
+    ----------
+    nodes : Sequence[TaxonomyNode]
+        Candidate nodes at the current taxonomy level.
+    parent_path : Sequence[str]
+        Path segments leading to the current taxonomy level.
+
+    Returns
+    -------
+    dict[str, TaxonomyNode]
+        Mapping of path identifiers to taxonomy nodes.
+    """
+    path_map: dict[str, TaxonomyNode] = {}
+    for node in nodes:
+        path = " > ".join([*parent_path, node.label])
+        path_map[path] = node
+    return path_map
+
+
+def _build_node_descriptors(
+    node_paths: dict[str, TaxonomyNode],
+) -> list[dict[str, Any]]:
+    """Build node descriptors for prompt rendering.
+
+    Parameters
+    ----------
+    node_paths : dict[str, TaxonomyNode]
+        Mapping of path identifiers to taxonomy nodes.
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        Node descriptor dictionaries for prompt rendering.
+    """
+    descriptors: list[dict[str, Any]] = []
+    for path_id, node in node_paths.items():
+        descriptors.append(
+            {
+                "identifier": path_id,
+                "label": node.label,
+                "description": node.description,
+            }
+        )
+    return descriptors
 
 
 def _sanitize_enum_prefix(prefix: str) -> str:
@@ -549,15 +613,15 @@ def _normalize_enum_value(value: Any, enum_cls: type[Enum]) -> Any:
 
 
 def _resolve_nodes(
-    nodes: Sequence[TaxonomyNode],
+    node_paths: dict[str, TaxonomyNode],
     step: ClassificationStep,
 ) -> list[TaxonomyNode]:
     """Resolve selected taxonomy nodes for a classification step.
 
     Parameters
     ----------
-    nodes : Sequence[TaxonomyNode]
-        Candidate nodes at the current level.
+    node_paths : dict[str, TaxonomyNode]
+        Mapping of path identifiers to nodes at the current level.
     step : ClassificationStep
         Classification step output to resolve.
 
@@ -570,16 +634,17 @@ def _resolve_nodes(
     selected_ids = _selected_ids(step)
     if selected_ids:
         for selected_id in selected_ids:
-            for node in nodes:
-                if node.id == selected_id:
-                    resolved.append(node)
+            node = node_paths.get(selected_id)
+            if node:
+                resolved.append(node)
         if resolved:
             return resolved
     selected_labels = _selected_labels(step)
-    for selected_label in selected_labels:
-        for node in nodes:
-            if node.label == selected_label:
-                resolved.append(node)
+    if selected_labels:
+        for selected_label in selected_labels:
+            for node in node_paths.values():
+                if node.label == selected_label:
+                    resolved.append(node)
     return resolved
 
 
