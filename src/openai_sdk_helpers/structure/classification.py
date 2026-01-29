@@ -171,10 +171,10 @@ class ClassificationStep(StructureBase):
 
     Attributes
     ----------
-    selected_node : str or None
-        Identifier of the selected taxonomy node.
-    selected_nodes : list[str] or None
-        Identifiers of selected taxonomy nodes for multi-class classification.
+    selected_node : Enum or None
+        Enum value of the selected taxonomy node.
+    selected_nodes : list[Enum] or None
+        Enum values of selected taxonomy nodes for multi-class classification.
     confidence : float or None
         Confidence score between 0 and 1.
     stop_reason : ClassificationStopReason
@@ -204,12 +204,12 @@ class ClassificationStep(StructureBase):
     [<NodeEnum.BILLING: 'billing'>]
     """
 
-    selected_node: str | None = spec_field(
+    selected_node: Enum | None = spec_field(
         "selected_node",
         description="Path identifier of the selected taxonomy node.",
         default=None,
     )
-    selected_nodes: list[str] | None = spec_field(
+    selected_nodes: list[Enum] | None = spec_field(
         "selected_nodes",
         description="Path identifiers of selected taxonomy nodes.",
         default=None,
