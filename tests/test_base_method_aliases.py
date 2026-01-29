@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import uuid
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -20,6 +21,7 @@ class _StubAgentBase(AgentBase):
     def __init__(self) -> None:
         # Bypass the parent initializer by setting the required attributes.
         # This is intentional for testing - we don't want full agent setup.
+        self.uuid = uuid.uuid4()
         configuration = AgentConfiguration(
             name="stub",
             instructions="Test instructions",
@@ -38,7 +40,9 @@ class _StubAgentBase(AgentBase):
         self._session = None
         self._template = MagicMock(render=MagicMock(return_value=""))
 
-    def get_agent(self) -> Any:  # pragma: no cover - mocked in tests
+    def get_agent(  # pragma: no cover - mocked in tests
+        self, output_structure: type[SummaryStructure] | None = None
+    ) -> Any:
         return MagicMock()
 
 
