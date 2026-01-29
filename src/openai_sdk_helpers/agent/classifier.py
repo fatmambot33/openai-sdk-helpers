@@ -258,15 +258,21 @@ class TaxonomyClassifierAgent(AgentBase):
             return asyncio.run(runner())
 
         result: ClassificationResult | None = None
+        error: Exception | None = None
 
         def _thread_func() -> None:
-            nonlocal result
-            result = asyncio.run(runner())
+            nonlocal error, result
+            try:
+                result = asyncio.run(runner())
+            except Exception as exc:
+                error = exc
 
         thread = threading.Thread(target=_thread_func)
         thread.start()
         thread.join()
 
+        if error is not None:
+            raise error
         if result is None:
             msg = "Classification did not return a result"
             raise RuntimeError(msg)

@@ -465,3 +465,16 @@ def test_classifier_run_sync_delegates_to_run_agent() -> None:
         confidence_threshold=0.5,
         single_class=False,
     )
+
+
+@pytest.mark.anyio
+async def test_classifier_run_sync_raises_thread_errors() -> None:
+    """Classifier run_sync should re-raise thread errors."""
+    agent = TaxonomyClassifierAgent(
+        model="gpt-4o-mini", taxonomy=TaxonomyNode(label="Root")
+    )
+
+    with patch.object(agent, "run_agent", new_callable=AsyncMock) as mock_run:
+        mock_run.side_effect = ValueError("Boom")
+        with pytest.raises(ValueError, match="Boom"):
+            agent.run_sync("Tax update")
