@@ -204,7 +204,7 @@ class OpenAISettings(BaseModel):
         ----------
         secrets : Mapping[str, Any] or None, optional
             Mapping of secret values keyed by environment variable names.
-            Defaults to None.
+            Defaults to environment variables.
         overrides : Any
             Keyword overrides applied on top of secret values.
 
@@ -218,7 +218,7 @@ class OpenAISettings(BaseModel):
         ValueError
             If OPENAI_API_KEY is not found in the secrets mapping.
         """
-        secret_values = secrets or {}
+        secret_values: Mapping[str, Any] = secrets or os.environ
 
         def first_non_none(*candidates: Any) -> Any:
             for candidate in candidates:

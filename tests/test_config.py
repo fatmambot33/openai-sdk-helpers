@@ -103,6 +103,14 @@ def test_from_secrets_requires_api_key():
         OpenAISettings.from_secrets({})
 
 
+def test_from_secrets_defaults_to_env(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "env-secret-key")
+
+    settings = OpenAISettings.from_secrets()
+
+    assert settings.api_key == "env-secret-key"
+
+
 def test_create_client_uses_kwargs(monkeypatch):
     settings = OpenAISettings(
         api_key="another-key",
