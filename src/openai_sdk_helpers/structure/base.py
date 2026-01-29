@@ -494,64 +494,7 @@ class StructureBase(BaseModelJSONSerializable):
 
         cleaned_schema = cast(dict[str, Any], clean_refs(schema))
 
-        def _resolve_ref(
-            ref: str,
-            root: dict[str, Any],
-            seen: set[str],
-        ) -> dict[str, Any] | None:
-            if not ref.startswith("#/"):
-                return None
-            if ref in seen:
-                return None
-            seen.add(ref)
-
-            current: Any = root
-            for part in ref.lstrip("#/").split("/"):
-                part = part.replace("~1", "/").replace("~0", "~")
-                if isinstance(current, dict) and part in current:
-                    current = current[part]
-                else:
-                    seen.discard(ref)
-                    return None
-            if isinstance(current, dict):
-                resolved = cast(dict[str, Any], json.loads(json.dumps(current)))
-            else:
-                resolved = None
-            seen.discard(ref)
-            return resolved
-
-        def _has_ref(obj: Any) -> bool:
-            if isinstance(obj, dict):
-                if "$ref" in obj:
-                    return True
-                return any(_has_ref(value) for value in obj.values())
-            if isinstance(obj, list):
-                return any(_has_ref(item) for item in obj)
-            return False
-
-        def _inline_anyof_refs(obj: Any, root: dict[str, Any], seen: set[str]) -> Any:
-            if isinstance(obj, dict):
-                updated: dict[str, Any] = {}
-                for key, value in obj.items():
-                    if key == "anyOf" and isinstance(value, list):
-                        updated_items = []
-                        for item in value:
-                            if isinstance(item, dict) and "$ref" in item:
-                                resolved = _resolve_ref(item["$ref"], root, seen)
-                                if resolved is not None and not _has_ref(resolved):
-                                    item = resolved
-                            updated_items.append(_inline_anyof_refs(item, root, seen))
-                        updated[key] = updated_items
-                    else:
-                        updated[key] = _inline_anyof_refs(value, root, seen)
-                return updated
-            if isinstance(obj, list):
-                return [_inline_anyof_refs(item, root, seen) for item in obj]
-            return obj
-
-        cleaned_schema = cast(
-            dict[str, Any], _inline_anyof_refs(cleaned_schema, schema, set())
-        )
+        cleaned_schema = cast(dict[str, Any], cleaned_schema)
         _ensure_items_have_schema(cleaned_schema)
         _ensure_schema_has_type(cleaned_schema)
 
