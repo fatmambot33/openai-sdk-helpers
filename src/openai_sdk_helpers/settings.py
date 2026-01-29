@@ -48,6 +48,8 @@ class OpenAISettings(BaseModel):
     -------
     from_env(dotenv_path, **overrides)
         Build settings from environment variables and optional overrides.
+    from_secrets(secrets, **overrides)
+        Build settings from a secrets mapping and optional overrides.
     client_kwargs()
         Return keyword arguments for ``OpenAI`` initialization.
     create_client()
@@ -186,6 +188,69 @@ class OpenAISettings(BaseModel):
             raise ValueError(
                 "OPENAI_API_KEY is required to configure the OpenAI client"
                 f" and was not found{source_hint}."
+            )
+
+        return settings
+
+    @classmethod
+    def from_secrets(
+        cls,
+        secrets: Mapping[str, Any] | None = None,
+        **overrides: Any,
+    ) -> OpenAISettings:
+        """Load settings from a secrets mapping and optional overrides.
+
+        Parameters
+        ----------
+        secrets : Mapping[str, Any] or None, optional
+            Mapping of secret values keyed by environment variable names.
+            Defaults to None.
+        overrides : Any
+            Keyword overrides applied on top of secret values.
+
+        Returns
+        -------
+        OpenAISettings
+            Settings instance populated from secret values and overrides.
+
+        Raises
+        ------
+        ValueError
+            If OPENAI_API_KEY is not found in the secrets mapping.
+        """
+        secret_values = secrets or {}
+
+        def first_non_none(*candidates: Any) -> Any:
+            for candidate in candidates:
+                if candidate is not None:
+                    return candidate
+            return None
+
+        def resolve_value(override_key: str, secret_key: str) -> Any:
+            return first_non_none(
+                overrides.get(override_key),
+                secret_values.get(secret_key),
+            )
+
+        timeout_raw = resolve_value("timeout", "OPENAI_TIMEOUT")
+        max_retries_raw = resolve_value("max_retries", "OPENAI_MAX_RETRIES")
+
+        values: dict[str, Any] = {
+            "api_key": resolve_value("api_key", "OPENAI_API_KEY"),
+            "org_id": resolve_value("org_id", "OPENAI_ORG_ID"),
+            "project_id": resolve_value("project_id", "OPENAI_PROJECT_ID"),
+            "base_url": resolve_value("base_url", "OPENAI_BASE_URL"),
+            "default_model": resolve_value("default_model", "OPENAI_MODEL"),
+            "timeout": coerce_optional_float(timeout_raw),
+            "max_retries": coerce_optional_int(max_retries_raw),
+            "extra_client_kwargs": coerce_dict(overrides.get("extra_client_kwargs")),
+        }
+
+        settings = cls(**values)
+        if not settings.api_key:
+            raise ValueError(
+                "OPENAI_API_KEY is required to configure the OpenAI client"
+                " and was not found in secrets."
             )
 
         return settings
