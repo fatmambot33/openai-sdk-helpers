@@ -6,6 +6,7 @@ from openai_sdk_helpers.structure import (
     ClassificationResult,
     ClassificationStep,
     ClassificationStopReason,
+    Taxonomy,
     TaxonomyNode,
     taxonomy_enum_path,
 )
@@ -19,6 +20,22 @@ def test_taxonomy_node_build_path():
     assert node.computed_path == ["Leaf"]
     assert node.is_leaf is True
     assert node.build_path(["Root", "Branch"]) == ["Root", "Branch", "Leaf"]
+
+
+def test_taxonomy_flattened_nodes():
+    """Taxonomy should return flattened taxonomy nodes."""
+
+    leaf = TaxonomyNode(label="Leaf")
+    branch = TaxonomyNode(label="Branch", children=[leaf])
+    taxonomy = Taxonomy(
+        name="Support",
+        description="Customer support taxonomy.",
+        nodes=[branch],
+    )
+
+    assert taxonomy.name == "Support"
+    assert taxonomy.description == "Customer support taxonomy."
+    assert [node.label for node in taxonomy.flattened_nodes] == ["Branch", "Leaf"]
 
 
 def test_classification_result_properties():

@@ -115,6 +115,48 @@ class TaxonomyNode(StructureBase):
         )
 
 
+class Taxonomy(StructureBase):
+    """Represent a taxonomy with metadata and root nodes.
+
+    Attributes
+    ----------
+    name : str
+        Human-readable taxonomy name.
+    description : str | None
+        Optional description of the taxonomy.
+    nodes : list[TaxonomyNode]
+        Root taxonomy nodes.
+
+    Methods
+    -------
+    flattened_nodes
+        Return a flattened list of all taxonomy nodes.
+    """
+
+    name: str = spec_field("name", description="Human-readable taxonomy name.")
+    description: str | None = spec_field(
+        "description",
+        description="Optional description of the taxonomy.",
+        default=None,
+    )
+    nodes: list[TaxonomyNode] = spec_field(
+        "nodes",
+        description="Root taxonomy nodes.",
+        default_factory=list,
+    )
+
+    @property
+    def flattened_nodes(self) -> list[TaxonomyNode]:
+        """Return a flattened list of all taxonomy nodes.
+
+        Returns
+        -------
+        list[TaxonomyNode]
+            Depth-first list of taxonomy nodes.
+        """
+        return flatten_taxonomy(self.nodes)
+
+
 def _split_path_identifier(path: str) -> list[str]:
     """Split a path identifier into label segments.
 
@@ -478,6 +520,7 @@ __all__ = [
     "ClassificationResult",
     "ClassificationStep",
     "ClassificationStopReason",
+    "Taxonomy",
     "TaxonomyNode",
     "flatten_taxonomy",
     "taxonomy_enum_path",
