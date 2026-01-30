@@ -17,6 +17,7 @@ from ..structure import (
     StructureBase,
     TaxonomyNode,
 )
+from ..utils import ensure_list
 from .base import AgentBase
 from .configuration import AgentConfiguration
 
@@ -98,6 +99,7 @@ class TaxonomyClassifierAgent(AgentBase):
         text: str,
         *,
         context: Optional[Dict[str, Any]] = None,
+        file_ids: str | Sequence[str] | None = None,
         max_depth: Optional[int] = None,
         confidence_threshold: float | None = None,
         single_class: bool = False,
@@ -111,6 +113,8 @@ class TaxonomyClassifierAgent(AgentBase):
             Source text to classify.
         context : dict or None, default=None
             Additional context values to merge into the prompt.
+        file_ids : str or Sequence[str] or None, default=None
+            Optional file IDs to attach to each classification step.
         max_depth : int or None, default=None
             Maximum depth to traverse before stopping.
         confidence_threshold : float or None, default=None
@@ -133,12 +137,14 @@ class TaxonomyClassifierAgent(AgentBase):
         True
         """
         state = _TraversalState()
+        input_payload = _build_input_payload(text, file_ids)
         await self._classify_nodes(
-            text=text,
+            input_payload=input_payload,
             nodes=list(self._root_nodes),
             depth=0,
             parent_path=[],
             context=context,
+            file_ids=file_ids,
             max_depth=max_depth,
             confidence_threshold=confidence_threshold,
             single_class=single_class,
@@ -160,11 +166,12 @@ class TaxonomyClassifierAgent(AgentBase):
 
     async def run_async(
         self,
-        input: str,
+        input: str | list[dict[str, Any]],
         *,
         context: Optional[Dict[str, Any]] = None,
         output_structure: Optional[type[StructureBase]] = None,
         session: Optional[Any] = None,
+        file_ids: str | Sequence[str] | None = None,
         max_depth: Optional[int] = None,
         confidence_threshold: float | None = None,
         single_class: bool = False,
@@ -173,7 +180,7 @@ class TaxonomyClassifierAgent(AgentBase):
 
         Parameters
         ----------
-        input : str
+        input : str or list[dict[str, Any]]
             Source text to classify.
         context : dict or None, default=None
             Additional context values to merge into the prompt.
@@ -181,6 +188,8 @@ class TaxonomyClassifierAgent(AgentBase):
             Unused in taxonomy traversal. Present for API compatibility.
         session : Session or None, default=None
             Optional session for maintaining conversation history across runs.
+        file_ids : str or Sequence[str] or None, default=None
+            Optional file IDs to attach to each classification step.
         max_depth : int or None, default=None
             Maximum depth to traverse before stopping.
         confidence_threshold : float or None, default=None
@@ -194,8 +203,12 @@ class TaxonomyClassifierAgent(AgentBase):
             Structured classification result describing the traversal.
         """
         _ = output_structure
+        if not isinstance(input, str):
+            msg = "TaxonomyClassifierAgent run_async requires text input."
+            raise TypeError(msg)
         kwargs: Dict[str, Any] = {
             "context": context,
+            "file_ids": file_ids,
             "max_depth": max_depth,
             "confidence_threshold": confidence_threshold,
             "single_class": single_class,
@@ -206,11 +219,12 @@ class TaxonomyClassifierAgent(AgentBase):
 
     def run_sync(
         self,
-        input: str,
+        input: str | list[dict[str, Any]],
         *,
         context: Optional[Dict[str, Any]] = None,
         output_structure: Optional[type[StructureBase]] = None,
         session: Optional[Any] = None,
+        file_ids: str | Sequence[str] | None = None,
         max_depth: Optional[int] = None,
         confidence_threshold: float | None = None,
         single_class: bool = False,
@@ -219,7 +233,7 @@ class TaxonomyClassifierAgent(AgentBase):
 
         Parameters
         ----------
-        input : str
+        input : str or list[dict[str, Any]]
             Source text to classify.
         context : dict or None, default=None
             Additional context values to merge into the prompt.
@@ -227,6 +241,8 @@ class TaxonomyClassifierAgent(AgentBase):
             Unused in taxonomy traversal. Present for API compatibility.
         session : Session or None, default=None
             Optional session for maintaining conversation history across runs.
+        file_ids : str or Sequence[str] or None, default=None
+            Optional file IDs to attach to each classification step.
         max_depth : int or None, default=None
             Maximum depth to traverse before stopping.
         confidence_threshold : float or None, default=None
@@ -240,8 +256,12 @@ class TaxonomyClassifierAgent(AgentBase):
             Structured classification result describing the traversal.
         """
         _ = output_structure
+        if not isinstance(input, str):
+            msg = "TaxonomyClassifierAgent run_sync requires text input."
+            raise TypeError(msg)
         kwargs: Dict[str, Any] = {
             "context": context,
+            "file_ids": file_ids,
             "max_depth": max_depth,
             "confidence_threshold": confidence_threshold,
             "single_class": single_class,
@@ -281,7 +301,7 @@ class TaxonomyClassifierAgent(AgentBase):
     async def _run_step_async(
         self,
         *,
-        input: str,
+        input: str | list[dict[str, Any]],
         context: Optional[Dict[str, Any]] = None,
         output_structure: Optional[type[StructureBase]] = None,
         session: Optional[Any] = None,
@@ -290,8 +310,8 @@ class TaxonomyClassifierAgent(AgentBase):
 
         Parameters
         ----------
-        input : str
-            Prompt or query for the agent.
+        input : str or list[dict[str, Any]]
+            Prompt or structured input for the agent.
         context : dict or None, default=None
             Optional dictionary passed to the agent.
         output_structure : type[StructureBase] or None, default=None
@@ -314,11 +334,12 @@ class TaxonomyClassifierAgent(AgentBase):
     async def _classify_nodes(
         self,
         *,
-        text: str,
+        input_payload: str | list[dict[str, Any]],
         nodes: list[TaxonomyNode],
         depth: int,
         parent_path: list[str],
         context: Optional[Dict[str, Any]],
+        file_ids: str | Sequence[str] | None,
         max_depth: Optional[int],
         confidence_threshold: float | None,
         single_class: bool,
@@ -329,14 +350,16 @@ class TaxonomyClassifierAgent(AgentBase):
 
         Parameters
         ----------
-        text : str
-            Source text to classify.
+        input_payload : str or list[dict[str, Any]]
+            Input payload used to prompt the agent.
         nodes : list[TaxonomyNode]
             Candidate taxonomy nodes for the current level.
         depth : int
             Current traversal depth.
         context : dict or None
             Additional context values to merge into the prompt.
+        file_ids : str or Sequence[str] or None
+            Optional file IDs attached to each classification step.
         max_depth : int or None
             Maximum traversal depth before stopping.
         confidence_threshold : float or None
@@ -363,7 +386,7 @@ class TaxonomyClassifierAgent(AgentBase):
         )
         step_structure = _build_step_structure(list(node_paths.keys()))
         raw_step = await self._run_step_async(
-            input=text,
+            input=input_payload,
             context=template_context,
             output_structure=step_structure,
             session=session,
@@ -408,11 +431,12 @@ class TaxonomyClassifierAgent(AgentBase):
                     (
                         self._classify_subtree(
                             sub_agent=sub_agent,
-                            text=text,
+                            input_payload=input_payload,
                             nodes=list(node.children),
                             depth=depth + 1,
                             parent_path=[*parent_path, node.label],
                             context=context,
+                            file_ids=file_ids,
                             max_depth=max_depth,
                             confidence_threshold=confidence_threshold,
                             single_class=single_class,
@@ -499,11 +523,12 @@ class TaxonomyClassifierAgent(AgentBase):
         self,
         *,
         sub_agent: "TaxonomyClassifierAgent",
-        text: str,
+        input_payload: str | list[dict[str, Any]],
         nodes: list[TaxonomyNode],
         depth: int,
         parent_path: list[str],
         context: Optional[Dict[str, Any]],
+        file_ids: str | Sequence[str] | None,
         max_depth: Optional[int],
         confidence_threshold: float | None,
         single_class: bool,
@@ -516,8 +541,8 @@ class TaxonomyClassifierAgent(AgentBase):
         ----------
         sub_agent : TaxonomyClassifierAgent
             Sub-agent configured for the subtree traversal.
-        text : str
-            Source text to classify.
+        input_payload : str or list[dict[str, Any]]
+            Input payload used to prompt the agent.
         nodes : list[TaxonomyNode]
             Candidate taxonomy nodes for the subtree.
         depth : int
@@ -526,6 +551,8 @@ class TaxonomyClassifierAgent(AgentBase):
             Path segments leading to the current subtree.
         context : dict or None
             Additional context values to merge into the prompt.
+        file_ids : str or Sequence[str] or None
+            Optional file IDs attached to each classification step.
         max_depth : int or None
             Maximum traversal depth before stopping.
         confidence_threshold : float or None
@@ -543,11 +570,12 @@ class TaxonomyClassifierAgent(AgentBase):
             Populated traversal state for the subtree.
         """
         await sub_agent._classify_nodes(
-            text=text,
+            input_payload=input_payload,
             nodes=nodes,
             depth=depth,
             parent_path=parent_path,
             context=context,
+            file_ids=file_ids,
             max_depth=max_depth,
             confidence_threshold=confidence_threshold,
             single_class=single_class,
@@ -885,6 +913,38 @@ def _normalize_step_output(
         return step
     payload = step.to_json()
     return ClassificationStep.from_json(payload)
+
+
+def _build_input_payload(
+    text: str,
+    file_ids: str | Sequence[str] | None,
+) -> str | list[dict[str, Any]]:
+    """Build input payloads with optional file attachments.
+
+    Parameters
+    ----------
+    text : str
+        Prompt text to send to the agent.
+    file_ids : str or Sequence[str] or None
+        Optional file IDs to include as ``input_file`` attachments.
+
+    Returns
+    -------
+    str or list[dict[str, Any]]
+        Input payload suitable for the Agents SDK.
+    """
+    normalized_file_ids = [file_id for file_id in ensure_list(file_ids) if file_id]
+    if not normalized_file_ids:
+        return text
+    attachments = [
+        {"type": "input_file", "file_id": file_id} for file_id in normalized_file_ids
+    ]
+    return [
+        {
+            "role": "user",
+            "content": [{"type": "input_text", "text": text}, *attachments],
+        }
+    ]
 
 
 def _extract_enum_fields(

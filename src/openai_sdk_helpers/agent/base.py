@@ -470,7 +470,7 @@ class AgentBase(DataclassJSONSerializable):
 
     async def run_async(
         self,
-        input: str,
+        input: str | list[dict[str, Any]],
         *,
         context: Optional[Dict[str, Any]] = None,
         output_structure: Optional[type[StructureBase]] = None,
@@ -480,8 +480,8 @@ class AgentBase(DataclassJSONSerializable):
 
         Parameters
         ----------
-        input : str
-            Prompt or query for the agent.
+        input : str or list[dict[str, Any]]
+            Prompt text or structured input for the agent.
         context : dict or None, default=None
             Optional dictionary passed to the agent.
         output_structure : type[StructureBase] or None, default=None
@@ -525,7 +525,7 @@ class AgentBase(DataclassJSONSerializable):
 
     def run_sync(
         self,
-        input: str,
+        input: str | list[dict[str, Any]],
         *,
         context: Optional[Dict[str, Any]] = None,
         output_structure: Optional[type[StructureBase]] = None,
@@ -535,8 +535,8 @@ class AgentBase(DataclassJSONSerializable):
 
         Parameters
         ----------
-        input : str
-            Prompt or query for the agent.
+        input : str or list[dict[str, Any]]
+            Prompt text or structured input for the agent.
         context : dict or None, default=None
             Optional dictionary passed to the agent.
         output_structure : type[StructureBase] or None, default=None
