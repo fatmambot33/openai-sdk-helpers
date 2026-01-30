@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any, BinaryIO, Literal, cast
+from typing import Any, BinaryIO, Literal, Sequence, cast
 
 from openai import OpenAI, NOT_GIVEN
 from openai.types import FileDeleted, FileObject
@@ -354,7 +354,7 @@ class FilesAPIManager:
 
     def batch_upload(
         self,
-        files: list[BinaryIO | Path | str],
+        files: Sequence[BinaryIO | Path | str],
         purpose: FilePurpose,
         track: bool | None = None,
         expires_after: int | None = None,
@@ -363,7 +363,7 @@ class FilesAPIManager:
 
         Parameters
         ----------
-        files : list[BinaryIO | Path | str]
+        files : Sequence[BinaryIO | Path | str]
             File-like objects or file paths to upload.
         purpose : FilePurpose
             The intended purpose of the uploaded files.
