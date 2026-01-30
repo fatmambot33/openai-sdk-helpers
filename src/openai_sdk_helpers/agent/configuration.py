@@ -13,6 +13,7 @@ from ..utils.json.data_class import DataclassJSONSerializable
 from ..utils.registry import RegistryBase
 from ..utils.instructions import resolve_instructions_from_path
 from ..structure.base import StructureBase
+from ..settings import OpenAISettings
 
 
 class AgentRegistry(RegistryBase["AgentConfiguration"]):
@@ -152,6 +153,8 @@ class AgentConfiguration(DataclassJSONSerializable):
         Resolve the prompt template path for this configuration.
     gen_agent(run_context_wrapper)
         Create a AgentBase instance from this configuration.
+    to_openai_settings(dotenv_path=None, **overrides)
+        Build OpenAISettings using this configuration as defaults.
     replace(**changes)
         Create a new AgentConfiguration with specified fields replaced.
     to_json()
@@ -271,6 +274,43 @@ class AgentConfiguration(DataclassJSONSerializable):
     def _resolve_instructions(self) -> str:
         """Resolve instructions from string or file path."""
         return resolve_instructions_from_path(self.instructions)
+
+    def to_openai_settings(
+        self, *, dotenv_path: Path | None = None, **overrides: Any
+    ) -> OpenAISettings:
+        """Build OpenAI settings using this configuration as defaults.
+
+        Parameters
+        ----------
+        dotenv_path : Path or None, optional
+            Optional dotenv file path for loading environment variables.
+        overrides : Any
+            Keyword overrides applied on top of environment values. Use this
+            to supply API credentials and override defaults.
+
+        Returns
+        -------
+        OpenAISettings
+            OpenAI settings instance with defaults derived from this
+            configuration.
+
+        Raises
+        ------
+        ValueError
+            If no API key is supplied via overrides or environment variables.
+
+        Examples
+        --------
+        >>> configuration = AgentConfiguration(
+        ...     name="summarizer",
+        ...     instructions="Summarize text",
+        ...     model="gpt-4o-mini",
+        ... )
+        >>> settings = configuration.to_openai_settings(api_key="sk-...")
+        """
+        if self.model and "default_model" not in overrides:
+            overrides["default_model"] = self.model
+        return OpenAISettings.from_env(dotenv_path=dotenv_path, **overrides)
 
     def resolve_prompt_path(self, prompt_dir: Path | None = None) -> Path | None:
         """Resolve the prompt template path for this configuration.

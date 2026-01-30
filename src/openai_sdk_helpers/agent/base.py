@@ -6,7 +6,7 @@ import logging
 import traceback
 import uuid
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Optional, Protocol, cast
+from typing import TYPE_CHECKING, Any, Dict, Literal, Optional, Protocol, cast
 
 from agents import Agent, Handoff, InputGuardrail, OutputGuardrail, Session
 from agents.model_settings import ModelSettings
@@ -33,6 +33,7 @@ from .runner import run_async, run_sync
 if TYPE_CHECKING:
     from ..settings import OpenAISettings
     from ..response.base import ResponseBase
+    from ..files_api import FilePurpose, FilesAPIManager
 
 
 class AgentConfigurationProtocol(Protocol):
@@ -184,6 +185,8 @@ class AgentBase(DataclassJSONSerializable):
         Return response tool handler and definition for Responses API use.
     build_response(openai_settings, data_path=None, tool_handlers=None, system_vector_store=None)
         Build a ResponseBase instance based on this agent.
+    build_input_messages(content, files=None, files_manager=None, file_purpose="user_data", image_detail="auto")
+        Build Agents SDK input messages with optional file attachments.
     save_error(exc)
         Persist error details to a file named with the agent UUID.
     close()
@@ -658,6 +661,71 @@ class AgentBase(DataclassJSONSerializable):
             data_path=data_path,
             tool_handlers=tool_handlers,
             openai_settings=openai_settings,
+        )
+
+    @staticmethod
+    def build_input_messages(
+        content: str | list[str],
+        files: str | list[str] | None = None,
+        *,
+        files_manager: FilesAPIManager | None = None,
+        openai_settings: OpenAISettings | None = None,
+        file_purpose: FilePurpose = "user_data",
+        image_detail: Literal["low", "high", "auto"] = "auto",
+    ) -> list[dict[str, Any]]:
+        """Build Agents SDK input messages with file attachments.
+
+        Parameters
+        ----------
+        content : str or list[str]
+            Prompt text or list of prompt texts to send.
+        files : str, list[str], or None, default None
+            Optional file path or list of file paths. Image files are sent as
+            base64-encoded ``input_image`` entries. Document files are uploaded
+            using ``files_manager`` and sent as ``input_file`` entries.
+        files_manager : FilesAPIManager or None, default None
+            File upload helper used to create file IDs for document uploads.
+            Required when ``files`` contains non-image documents.
+        openai_settings : OpenAISettings or None, default None
+            Optional OpenAI settings used to build a FilesAPIManager when one is
+            not provided. When supplied, ``openai_settings.create_client()`` is
+            used to initialize the Files API manager.
+        file_purpose : FilePurpose, default "user_data"
+            Purpose passed to the Files API when uploading document files.
+        image_detail : {"low", "high", "auto"}, default "auto"
+            Detail hint passed along with base64-encoded image inputs.
+
+        Returns
+        -------
+        list[dict[str, Any]]
+            Agents SDK input messages that include text and optional file entries.
+
+        Raises
+        ------
+        ValueError
+            If document files are provided without a ``files_manager``.
+
+        Examples
+        --------
+        >>> from openai import OpenAI
+        >>> from openai_sdk_helpers.files_api import FilesAPIManager
+        >>> client = OpenAI()
+        >>> files_manager = FilesAPIManager(client)
+        >>> messages = AgentBase.build_input_messages(
+        ...     "Summarize this document",
+        ...     files="report.pdf",
+        ...     files_manager=files_manager,
+        ... )
+        """
+        from .files import build_agent_input_messages
+
+        return build_agent_input_messages(
+            content=content,
+            files=files,
+            files_manager=files_manager,
+            openai_settings=openai_settings,
+            file_purpose=file_purpose,
+            image_detail=image_detail,
         )
 
     def _build_response_parameters(self) -> dict[str, Any]:
