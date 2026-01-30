@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any, BinaryIO, Literal, cast
+from typing import Any, BinaryIO, Literal, Sequence, cast
 
 from openai import OpenAI, NOT_GIVEN
 from openai.types import FileDeleted, FileObject
@@ -62,6 +62,8 @@ class FilesAPIManager:
         Delete a specific file.
     retrieve_content(file_id)
         Download file content.
+    batch_upload(files, purpose, track, expires_after)
+        Upload multiple files to the Files API.
     cleanup()
         Delete all tracked files.
 
@@ -349,6 +351,49 @@ class FilesAPIManager:
         ...     f.write(content)
         """
         return self._client.files.content(file_id).read()
+
+    def batch_upload(
+        self,
+        files: Sequence[BinaryIO | Path | str],
+        purpose: FilePurpose,
+        track: bool | None = None,
+        expires_after: int | None = None,
+    ) -> list[FileObject]:
+        """Upload multiple files to the OpenAI Files API.
+
+        Parameters
+        ----------
+        files : Sequence[BinaryIO | Path | str]
+            File-like objects or file paths to upload.
+        purpose : FilePurpose
+            The intended purpose of the uploaded files.
+        track : bool or None, default None
+            Override auto_track for these uploads. If None, uses instance setting.
+        expires_after : int or None, default None
+            Number of seconds after which files expire. See ``create`` for details.
+
+        Returns
+        -------
+        list[FileObject]
+            Uploaded file objects in the same order as ``files``.
+
+        Examples
+        --------
+        >>> files = ["doc1.pdf", "doc2.pdf"]
+        >>> uploaded = manager.batch_upload(files, purpose="user_data")
+        >>> [file.id for file in uploaded]
+        """
+        if not files:
+            return []
+        return [
+            self.create(
+                file_path,
+                purpose=purpose,
+                track=track,
+                expires_after=expires_after,
+            )
+            for file_path in files
+        ]
 
     def cleanup(self) -> dict[str, bool]:
         """Delete all tracked files.

@@ -138,7 +138,7 @@ class TranslatorAgent(AgentBase):
 
     def run_sync(
         self,
-        input: str,
+        input: str | list[dict[str, Any]],
         *,
         context: Optional[Dict[str, Any]] = None,
         output_structure: Optional[type[StructureBase]] = None,
@@ -149,7 +149,7 @@ class TranslatorAgent(AgentBase):
 
         Parameters
         ----------
-        input : str
+        input : str or list[dict[str, Any]]
             Source content to translate.
         context : dict or None, default=None
             Additional context values to merge into the prompt.

@@ -7,7 +7,7 @@ signatures whether they need asynchronous or synchronous results.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, cast
 
 from agents import Agent, RunResult, Runner, Session
 
@@ -17,7 +17,7 @@ from ..structure.base import StructureBase
 
 async def run_async(
     agent: Agent,
-    input: str,
+    input: str | list[dict[str, Any]],
     *,
     context: Optional[Dict[str, Any]] = None,
     output_structure: Optional[type[StructureBase]] = None,
@@ -29,8 +29,8 @@ async def run_async(
     ----------
     agent : Agent
         Configured agent instance to execute.
-    input : str
-        Prompt or query string for the agent.
+    input : str or list[dict[str, Any]]
+        Prompt text or structured input for the agent.
     context : dict or None, default=None
         Optional context dictionary passed to the agent.
     output_structure : type[StructureBase] or None, default=None
@@ -53,7 +53,7 @@ async def run_async(
     ...     return result
     >>> asyncio.run(example())  # doctest: +SKIP
     """
-    result = await Runner.run(agent, input, context=context, session=session)
+    result = await Runner.run(agent, cast(Any, input), context=context, session=session)
     if output_structure is not None:
         return result.final_output_as(output_structure)
     return result
@@ -61,7 +61,7 @@ async def run_async(
 
 def run_sync(
     agent: Agent,
-    input: str,
+    input: str | list[dict[str, Any]],
     *,
     context: Optional[Dict[str, Any]] = None,
     output_structure: Optional[type[StructureBase]] = None,
@@ -77,8 +77,8 @@ def run_sync(
     ----------
     agent : Agent
         Configured agent instance to execute.
-    input : str
-        Prompt or query string for the agent.
+    input : str or list[dict[str, Any]]
+        Prompt text or structured input for the agent.
     context : dict or None, default=None
         Optional context dictionary passed to the agent.
     output_structure : type[StructureBase] or None, default=None
@@ -102,7 +102,7 @@ def run_sync(
     >>> agent = Agent(name="test", instructions="test", model="gpt-4o-mini")
     >>> result = run_sync(agent, "What is 2+2?")  # doctest: +SKIP
     """
-    coro = Runner.run(agent, input, context=context, session=session)
+    coro = Runner.run(agent, cast(Any, input), context=context, session=session)
     result: RunResult = run_coroutine_with_fallback(coro)
     if output_structure is not None:
         return result.final_output_as(output_structure)

@@ -83,8 +83,21 @@ def build_agent_input_messages(
             raise ValueError(
                 "files_manager is required to upload document files for agent input."
             )
-        for file_path in document_files:
-            uploaded_file = files_manager.create(file_path, purpose=file_purpose)
+        expires_after = 86400 if file_purpose == "user_data" else None
+        if hasattr(files_manager, "batch_upload"):
+            uploaded_files = files_manager.batch_upload(
+                document_files,
+                purpose=file_purpose,
+                expires_after=expires_after,
+            )
+        else:
+            uploaded_files = [
+                files_manager.create(
+                    file_path, purpose=file_purpose, expires_after=expires_after
+                )
+                for file_path in document_files
+            ]
+        for uploaded_file in uploaded_files:
             attachments.append({"type": "input_file", "file_id": uploaded_file.id})
 
     for image_path in image_files:

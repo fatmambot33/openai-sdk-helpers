@@ -88,6 +88,36 @@ def test_create_without_tracking(files_manager, mock_client, tmp_path):
     assert "file-789" not in files_manager.tracked_files
 
 
+def test_batch_upload(files_manager, mock_client, tmp_path):
+    """Test uploading multiple files."""
+    file_one = tmp_path / "one.txt"
+    file_two = tmp_path / "two.txt"
+    file_one.write_text("first")
+    file_two.write_text("second")
+
+    mock_first = Mock()
+    mock_first.id = "file-111"
+    mock_first.filename = "one.txt"
+    mock_second = Mock()
+    mock_second.id = "file-222"
+    mock_second.filename = "two.txt"
+    mock_client.files.create.side_effect = [mock_first, mock_second]
+
+    results = files_manager.batch_upload(
+        [file_one, file_two], purpose="user_data", track=True
+    )
+
+    assert [file_obj.id for file_obj in results] == ["file-111", "file-222"]
+    assert "file-111" in files_manager.tracked_files
+    assert "file-222" in files_manager.tracked_files
+    assert mock_client.files.create.call_count == 2
+
+
+def test_batch_upload_empty(files_manager):
+    """Test batch upload with no files."""
+    assert files_manager.batch_upload([], purpose="user_data") == []
+
+
 def test_create_nonexistent_file(files_manager):
     """Test creating from nonexistent file raises error."""
     with pytest.raises(FileNotFoundError):

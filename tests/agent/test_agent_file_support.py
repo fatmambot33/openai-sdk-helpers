@@ -43,7 +43,7 @@ def test_build_agent_input_messages_uploads_documents(tmp_path):
     file_path.write_bytes(b"fake pdf")
 
     files_manager = MagicMock()
-    files_manager.create.return_value = SimpleNamespace(id="file_123")
+    files_manager.batch_upload.return_value = [SimpleNamespace(id="file_123")]
 
     messages = build_agent_input_messages(
         "Summarize this",
@@ -51,7 +51,11 @@ def test_build_agent_input_messages_uploads_documents(tmp_path):
         files_manager=files_manager,
     )
 
-    files_manager.create.assert_called_once_with(str(file_path), purpose="user_data")
+    files_manager.batch_upload.assert_called_once_with(
+        [str(file_path)],
+        purpose="user_data",
+        expires_after=86400,
+    )
     content = messages[0]["content"]
     assert content[1]["type"] == "input_file"
     assert content[1]["file_id"] == "file_123"
@@ -65,7 +69,7 @@ def test_build_agent_input_messages_creates_manager_from_settings(
     file_path.write_bytes(b"fake pdf")
 
     mock_manager = MagicMock()
-    mock_manager.create.return_value = SimpleNamespace(id="file_456")
+    mock_manager.batch_upload.return_value = [SimpleNamespace(id="file_456")]
     monkeypatch.setattr(
         "openai_sdk_helpers.agent.files.FilesAPIManager",
         MagicMock(return_value=mock_manager),
@@ -82,7 +86,11 @@ def test_build_agent_input_messages_creates_manager_from_settings(
         openai_settings=settings,
     )
 
-    mock_manager.create.assert_called_once_with(str(file_path), purpose="user_data")
+    mock_manager.batch_upload.assert_called_once_with(
+        [str(file_path)],
+        purpose="user_data",
+        expires_after=86400,
+    )
     content = messages[0]["content"]
     assert content[1]["type"] == "input_file"
     assert content[1]["file_id"] == "file_456"

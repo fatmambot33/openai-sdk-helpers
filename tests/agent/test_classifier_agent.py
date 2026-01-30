@@ -434,10 +434,54 @@ async def test_classifier_run_async_delegates_to_run_agent() -> None:
     mock_run.assert_awaited_once_with(
         "Tax update",
         context={"source": "unit-test"},
+        file_ids=None,
         max_depth=1,
         confidence_threshold=0.4,
         single_class=True,
     )
+
+
+@pytest.mark.anyio
+async def test_classifier_attaches_file_ids_to_steps() -> None:
+    """Classifier should reuse file IDs across recursive steps."""
+    taxonomy = [
+        TaxonomyNode(
+            label="Root",
+            children=[TaxonomyNode(label="Child")],
+        )
+    ]
+    agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=taxonomy)
+    root_step, root_enum = _build_step(["Root"])
+    child_step, child_enum = _build_step(["Root > Child"])
+    steps = [
+        root_step(
+            selected_node=_enum_member(root_enum, "Root"),
+            selected_nodes=[_enum_member(root_enum, "Root")],
+            confidence=0.8,
+            stop_reason=ClassificationStopReason.CONTINUE,
+        ),
+        child_step(
+            selected_node=_enum_member(child_enum, "Root > Child"),
+            selected_nodes=[_enum_member(child_enum, "Root > Child")],
+            confidence=0.9,
+            stop_reason=ClassificationStopReason.STOP,
+        ),
+    ]
+    inputs: list[object] = []
+
+    async def fake_run_step(*, input, **kwargs) -> StructureBase:
+        inputs.append(input)
+        return steps[len(inputs) - 1]
+
+    with patch.object(agent, "_run_step_async", new=fake_run_step):
+        result = await agent.run_agent("Attach file", file_ids="file_123")
+
+    assert result.final_node is not None
+    assert [node.label for node in result.final_nodes or []] == ["Child"]
+    assert len(inputs) == 2
+    for payload in inputs:
+        assert isinstance(payload, list)
+        assert payload[0]["content"][1]["file_id"] == "file_123"
 
 
 def test_classifier_run_sync_delegates_to_run_agent() -> None:
@@ -461,6 +505,7 @@ def test_classifier_run_sync_delegates_to_run_agent() -> None:
     mock_run.assert_awaited_once_with(
         "Tax update",
         context={"source": "unit-test"},
+        file_ids=None,
         max_depth=2,
         confidence_threshold=0.5,
         single_class=False,
