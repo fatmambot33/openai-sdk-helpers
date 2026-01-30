@@ -10,6 +10,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Awaitable, Dict, Iterable, Optional, Sequence, cast
 
+from agents.model_settings import ModelSettings
+
 from ..structure import (
     ClassificationResult,
     ClassificationStep,
@@ -31,6 +33,8 @@ class TaxonomyClassifierAgent(AgentBase):
         Optional template file path for prompt rendering.
     model : str | None, default=None
         Model identifier to use for classification.
+    model_settings : ModelSettings | None, default=None
+        Optional model settings to apply to the classifier agent.
 
     Methods
     -------
@@ -57,6 +61,7 @@ class TaxonomyClassifierAgent(AgentBase):
         *,
         template_path: Path | str | None = None,
         model: str | None = None,
+        model_settings: ModelSettings | None = None,
         taxonomy: TaxonomyNode | Sequence[TaxonomyNode],
     ) -> None:
         """Initialize the taxonomy classifier agent configuration.
@@ -67,6 +72,8 @@ class TaxonomyClassifierAgent(AgentBase):
             Optional template file path for prompt rendering.
         model : str | None, default=None
             Model identifier to use for classification.
+        model_settings : ModelSettings | None, default=None
+            Optional model settings to apply to the classifier agent.
         taxonomy : TaxonomyNode | Sequence[TaxonomyNode]
             Root taxonomy node or list of root nodes.
 
@@ -91,6 +98,7 @@ class TaxonomyClassifierAgent(AgentBase):
             template_path=resolved_template_path,
             output_structure=ClassificationStep,
             model=model,
+            model_settings=model_settings,
         )
         super().__init__(configuration=configuration)
 
@@ -514,6 +522,7 @@ class TaxonomyClassifierAgent(AgentBase):
         sub_agent = TaxonomyClassifierAgent(
             template_path=self._template_path,
             model=self._model,
+            model_settings=self._model_settings,
             taxonomy=list(nodes),
         )
         sub_agent._run_step_async = self._run_step_async
