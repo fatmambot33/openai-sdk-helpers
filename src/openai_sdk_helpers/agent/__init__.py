@@ -14,6 +14,7 @@ from .validator import ValidatorAgent
 from .utils import run_coroutine_agent_sync
 from .search.vector import VectorAgentSearch
 from .search.web import WebAgentSearch
+from .files import build_agent_input_messages
 
 __all__ = [
     "AgentBase",
@@ -34,4 +35,5 @@ __all__ = [
     "ValidatorAgent",
     "VectorAgentSearch",
     "WebAgentSearch",
+    "build_agent_input_messages",
 ]
