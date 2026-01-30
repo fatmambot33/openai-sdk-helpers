@@ -307,6 +307,8 @@ class AgentConfiguration(DataclassJSONSerializable):
         ...     model="gpt-4o-mini",
         ... )
         >>> settings = configuration.to_openai_settings(api_key="sk-...")
+        >>> # Or rely on environment variables like OPENAI_API_KEY
+        >>> settings = configuration.to_openai_settings()
         """
         if self.model and "default_model" not in overrides:
             overrides["default_model"] = self.model
