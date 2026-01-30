@@ -5,12 +5,28 @@ Instructions:
 - Populate selected_nodes as a list of taxonomy node ids for multi-class matches.
 - Use selected_node when a single best match is appropriate.
 - Provide a confidence score between 0 and 1 for the selections; higher means more certain.
+- Interpret confidence as:
+  - 0.90–1.00: explicit lexical match.
+  - 0.70–0.89: strong semantic alignment.
+  - 0.40–0.69: weak or ambiguous alignment.
+  - <0.40: low-confidence inference.
 - Use only taxonomy identifiers from the candidate list for any selections.
 - Use the stop_reason enum values only: "continue", "stop", "no_match", "max_depth", "no_children".
-- If a child level should be explored, set stop_reason to "continue".
-- If no appropriate node exists, set stop_reason to "no_match" and leave selections empty.
-- If you are confident this is the final level, set stop_reason to "stop".
-- Provide a concise rationale in one or two sentences.
+- Stop reason semantics:
+  - continue: valid match exists and deeper traversal is required.
+  - stop: low confidence, terminate to avoid false precision.
+  - no_match: no semantic fit in candidates.
+  - max_depth: taxonomy depth limit reached.
+  - no_children: matched node has no children.
+- Decision mapping:
+  - High or medium confidence with children available: continue.
+  - High confidence with terminal node: no_children.
+  - Low confidence match: stop.
+  - No semantic alignment: no_match.
+  - Depth limit reached: max_depth.
+- Provide a concise rationale in one sentence.
+- Keep rationale evidence-based and avoid restating taxonomy labels.
+- Avoid verbosity, speculation, stylistic language, narrative explanation, redundancy, or creativity.
 
 Current depth: {{ depth }}
 
