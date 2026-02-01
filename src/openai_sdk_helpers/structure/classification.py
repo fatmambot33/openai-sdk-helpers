@@ -176,6 +176,7 @@ class TaxonomyNode(StructureBase):
             flattened.extend(node.flattened_nodes)
         return flattened
 
+
 class Taxonomy(StructureBase):
     """Represent a taxonomy with metadata and root nodes.
 
