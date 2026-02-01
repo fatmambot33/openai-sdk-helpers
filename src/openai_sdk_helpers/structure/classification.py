@@ -33,15 +33,15 @@ class TaxonomyNode(StructureBase):
     """
 
     label: str = spec_field(
-        "label", description="Human-readable label for the taxonomy node."
+        name="label", description="Human-readable label for the taxonomy node."
     )
     description: str | None = spec_field(
-        "description",
+        name="description",
         description="Optional description of the taxonomy node.",
         default=None,
     )
     children: list["TaxonomyNode"] = spec_field(
-        "children",
+        name="children",
         description="Child nodes in the taxonomy.",
         default_factory=list,
     )
@@ -113,6 +113,53 @@ class TaxonomyNode(StructureBase):
             (child for child in self.children if child.label == last_segment),
             None,
         )
+
+    @property
+    def path_identifier(self) -> str:
+        """Return the path identifier string for this node.
+
+        Returns
+        -------
+        str
+            Delimited path identifier.
+        """
+        delimiter = " > "
+        escape_token = "\\>"
+        escaped_labels = [
+            label.replace(delimiter, escape_token) for label in self.computed_path
+        ]
+        return delimiter.join(escaped_labels)
+
+    @property
+    def keywords(self) -> list[str]:
+        """Return a list of keywords for this node.
+
+        Returns
+        -------
+        list[str]
+            List of keywords derived from the label.
+        """
+        keywords = [self.label]
+        for child in self.children:
+            keywords.extend(child.keywords)
+        return keywords
+
+    @property
+    def computed_description(self) -> str:
+        """Return the computed description for this node.
+
+        Returns
+        -------
+        str
+            Node description or label if description is not set.
+        """
+        _description = f"{self.description}"
+        _keywords = ", ".join(self.keywords)
+        if _description:
+            _description += f"\n{_keywords})"
+        else:
+            _description = f"\n{_keywords})"
+        return _description
 
 
 class Taxonomy(StructureBase):
