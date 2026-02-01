@@ -14,6 +14,7 @@ from openai_sdk_helpers.agent.classifier import (
 from openai_sdk_helpers.structure import (
     ClassificationResult,
     ClassificationStopReason,
+    ClassificationStep,
     StructureBase,
     TaxonomyNode,
 )
@@ -35,7 +36,7 @@ def _enum_member(enum_cls: type[Enum], value: str) -> Enum:
     return enum_cls._value2member_map_[value]
 
 
-def _build_step(values: list[str]) -> tuple[type[StructureBase], type[Enum]]:
+def _build_step(values: list[str]) -> tuple[type[ClassificationStep], type[Enum]]:
     """Build a step structure and its enum class for provided values."""
     step_structure = _build_step_structure(values)
     enum_cls = step_structure._extract_enum_class(

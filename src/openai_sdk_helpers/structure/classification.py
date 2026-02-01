@@ -531,7 +531,6 @@ class ClassificationResult(StructureBase):
         return [identifier for identifier in identifiers if identifier]
 
 
-
 def taxonomy_enum_path(value: Enum | str | None) -> list[str]:
     """Return the taxonomy path segments for an enum value.
 
