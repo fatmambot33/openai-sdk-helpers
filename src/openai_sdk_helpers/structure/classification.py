@@ -161,6 +161,20 @@ class TaxonomyNode(StructureBase):
             _description = f"\n{_keywords})"
         return _description
 
+    @property
+    def flattened_nodes(self) -> list[TaxonomyNode]:
+        """Return a flattened list of all taxonomy nodes.
+
+        Returns
+        -------
+        list[TaxonomyNode]
+            Depth-first list of taxonomy nodes.
+        """
+        flattened: list[TaxonomyNode] = []
+        for node in self.children:
+            flattened.append(node)
+            flattened.extend(node.flattened_nodes)
+        return flattened
 
 class Taxonomy(StructureBase):
     """Represent a taxonomy with metadata and root nodes.
@@ -201,7 +215,11 @@ class Taxonomy(StructureBase):
         list[TaxonomyNode]
             Depth-first list of taxonomy nodes.
         """
-        return flatten_taxonomy(self.nodes)
+        flattened: list[TaxonomyNode] = []
+        for node in self.nodes:
+            flattened.append(node)
+            flattened.extend(node.flattened_nodes)
+        return flattened
 
 
 def _split_path_identifier(path: str) -> list[str]:
