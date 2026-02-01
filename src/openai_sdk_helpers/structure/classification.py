@@ -531,26 +531,6 @@ class ClassificationResult(StructureBase):
         return [identifier for identifier in identifiers if identifier]
 
 
-def flatten_taxonomy(nodes: Iterable[TaxonomyNode]) -> list[TaxonomyNode]:
-    """Return a flattened list of taxonomy nodes.
-
-    Parameters
-    ----------
-    nodes : Iterable[TaxonomyNode]
-        Root nodes to traverse.
-
-    Returns
-    -------
-    list[TaxonomyNode]
-        Depth-first ordered list of nodes.
-    """
-    flattened: list[TaxonomyNode] = []
-    for node in nodes:
-        flattened.append(node)
-        if node.children:
-            flattened.extend(flatten_taxonomy(node.children))
-    return flattened
-
 
 def taxonomy_enum_path(value: Enum | str | None) -> list[str]:
     """Return the taxonomy path segments for an enum value.
@@ -588,6 +568,5 @@ __all__ = [
     "ClassificationStopReason",
     "Taxonomy",
     "TaxonomyNode",
-    "flatten_taxonomy",
     "taxonomy_enum_path",
 ]

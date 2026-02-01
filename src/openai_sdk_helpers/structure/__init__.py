@@ -82,7 +82,6 @@ from .classification import (
     ClassificationStopReason,
     Taxonomy,
     TaxonomyNode,
-    flatten_taxonomy,
     taxonomy_enum_path,
 )
 from .extraction import (
@@ -112,7 +111,6 @@ __all__ = [
     "ClassificationStopReason",
     "Taxonomy",
     "TaxonomyNode",
-    "flatten_taxonomy",
     "taxonomy_enum_path",
     "TaskStructure",
     "PlanStructure",
