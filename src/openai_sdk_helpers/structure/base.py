@@ -151,9 +151,12 @@ def _ensure_schema_has_type(schema: dict[str, Any]) -> None:
         return
     if isinstance(any_of, list):
         inferred_types: set[str] = set()
+        has_ref_entry = False
         for entry in any_of:
             if not isinstance(entry, dict):
                 continue
+            if "$ref" in entry:
+                has_ref_entry = True
             entry_type = entry.get("type")
             if isinstance(entry_type, str):
                 inferred_types.add(entry_type)
@@ -161,6 +164,8 @@ def _ensure_schema_has_type(schema: dict[str, Any]) -> None:
                 inferred_types.update(
                     element for element in entry_type if isinstance(element, str)
                 )
+        if has_ref_entry:
+            return
         if inferred_types:
             schema["type"] = sorted(inferred_types)
             return
