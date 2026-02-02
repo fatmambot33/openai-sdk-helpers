@@ -76,7 +76,7 @@ async def test_classifier_traverses_taxonomy_levels():
         patch.object(agent, "_run_step_async", new_callable=AsyncMock) as mock_run,
     ):
         mock_run.side_effect = steps
-        result = await agent.run_agent("Tax update")
+        result = await agent.run_async("Tax update")
 
     assert isinstance(result, ClassificationResult)
     assert result.final_node is not None
@@ -129,7 +129,7 @@ async def test_classifier_traverses_multiple_branches():
         patch.object(agent, "_run_step_async", new_callable=AsyncMock) as mock_run,
     ):
         mock_run.side_effect = steps
-        result = await agent.run_agent("Culinary update")
+        result = await agent.run_async("Culinary update")
 
     assert result.final_nodes is not None
     assert [node.label for node in result.final_nodes] == ["Beef", "Carrot"]
@@ -171,7 +171,7 @@ async def test_classifier_avoids_duplicate_leaf_nodes() -> None:
         patch.object(agent, "_run_step_async", new_callable=AsyncMock) as mock_run,
     ):
         mock_run.side_effect = steps
-        result = await agent.run_agent("Mixed taxonomy")
+        result = await agent.run_async("Mixed taxonomy")
 
     assert result.final_nodes is not None
     assert [node.label for node in result.final_nodes] == ["Leaf", "Child"]
@@ -198,7 +198,7 @@ async def test_classifier_confidence_threshold_stops_branch():
         patch.object(agent, "_run_step_async", new_callable=AsyncMock) as mock_run,
     ):
         mock_run.return_value = step
-        result = await agent.run_agent("Low confidence", confidence_threshold=0.5)
+        result = await agent.run_async("Low confidence", confidence_threshold=0.5)
 
     assert result.stop_reason is ClassificationStopReason.NO_MATCH
     assert result.final_nodes is None
@@ -223,7 +223,7 @@ async def test_classifier_stops_when_no_children():
         patch.object(agent, "_run_step_async", new_callable=AsyncMock) as mock_run,
     ):
         mock_run.return_value = step
-        result = await agent.run_agent("Root only")
+        result = await agent.run_async("Root only")
 
     assert result.stop_reason is ClassificationStopReason.NO_CHILDREN
     assert result.final_node is not None
@@ -286,7 +286,7 @@ async def test_classifier_builds_sub_agents() -> None:
         ) as mock_build,
     ):
         mock_run.side_effect = steps
-        result = await agent.run_agent("delegate this")
+        result = await agent.run_async("delegate this")
 
     assert mock_build.call_count == 1
     assert mock_build.call_args.args[0] == taxonomy[0].children
@@ -319,13 +319,13 @@ def test_classifier_maps_enum_selections_to_identifiers() -> None:
 
 @pytest.mark.anyio
 async def test_classifier_run_async_delegates_to_run_agent() -> None:
-    """Classifier run_async should delegate to run_agent."""
+    """Classifier run_async should delegate to _run_agent."""
     agent = TaxonomyClassifierAgent(
         model="gpt-4o-mini", taxonomy=TaxonomyNode(label="Root")
     )
     expected = ClassificationResult(stop_reason=ClassificationStopReason.STOP)
 
-    with patch.object(agent, "run_agent", new_callable=AsyncMock) as mock_run:
+    with patch.object(agent, "_run_agent", new_callable=AsyncMock) as mock_run:
         mock_run.return_value = expected
         result = await agent.run_async(
             "Tax update",
@@ -375,7 +375,7 @@ async def test_classifier_attaches_file_ids_to_steps() -> None:
         return steps[len(inputs) - 1]
 
     with patch.object(agent, "_run_step_async", new=fake_run_step):
-        result = await agent.run_agent("Attach file", file_ids="file_123")
+        result = await agent.run_async("Attach file", file_ids="file_123")
 
     assert result.final_node is not None
     assert [node.label for node in result.final_nodes or []] == ["Child"]
@@ -386,13 +386,13 @@ async def test_classifier_attaches_file_ids_to_steps() -> None:
 
 
 def test_classifier_run_sync_delegates_to_run_agent() -> None:
-    """Classifier run_sync should delegate to run_agent."""
+    """Classifier run_sync should delegate to _run_agent."""
     agent = TaxonomyClassifierAgent(
         model="gpt-4o-mini", taxonomy=TaxonomyNode(label="Root")
     )
     expected = ClassificationResult(stop_reason=ClassificationStopReason.STOP)
 
-    with patch.object(agent, "run_agent", new_callable=AsyncMock) as mock_run:
+    with patch.object(agent, "_run_agent", new_callable=AsyncMock) as mock_run:
         mock_run.return_value = expected
         result = agent.run_sync(
             "Tax update",
@@ -418,7 +418,7 @@ async def test_classifier_run_sync_raises_thread_errors() -> None:
         model="gpt-4o-mini", taxonomy=TaxonomyNode(label="Root")
     )
 
-    with patch.object(agent, "run_agent", new_callable=AsyncMock) as mock_run:
+    with patch.object(agent, "_run_agent", new_callable=AsyncMock) as mock_run:
         mock_run.side_effect = ValueError("Boom")
         with pytest.raises(ValueError, match="Boom"):
             agent.run_sync("Tax update")

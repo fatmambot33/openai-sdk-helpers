@@ -38,8 +38,6 @@ class TaxonomyClassifierAgent(AgentBase):
 
     Methods
     -------
-    run_agent(text, taxonomy, context, max_depth, session)
-        Classify text by recursively walking the taxonomy tree.
     run_async(input, context, max_depth, confidence_threshold)
         Classify text asynchronously using taxonomy traversal.
     run_sync(input, context, max_depth, confidence_threshold)
@@ -102,7 +100,7 @@ class TaxonomyClassifierAgent(AgentBase):
         )
         super().__init__(configuration=configuration)
 
-    async def run_agent(
+    async def _run_agent(
         self,
         text: str,
         *,
@@ -212,7 +210,7 @@ class TaxonomyClassifierAgent(AgentBase):
         }
         if session is not None:
             kwargs["session"] = session
-        return await self.run_agent(input, **kwargs)
+        return await self._run_agent(input, **kwargs)
 
     def run_sync(
         self,
@@ -263,7 +261,7 @@ class TaxonomyClassifierAgent(AgentBase):
             kwargs["session"] = session
 
         async def runner() -> ClassificationResult:
-            return await self.run_agent(input, **kwargs)
+            return await self._run_agent(input, **kwargs)
 
         try:
             asyncio.get_running_loop()
