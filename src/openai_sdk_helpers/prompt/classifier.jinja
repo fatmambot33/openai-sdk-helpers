@@ -42,5 +42,5 @@ Candidate taxonomy nodes:
 {% for node in taxonomy_nodes %}
 - identifier: {{ node.identifier }}
   label: {{ node.label }}
-  description: {{ node.description or "None" }}
+  description: {{ node.computed_description }}
 {% endfor %}

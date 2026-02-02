@@ -30,6 +30,14 @@ class TaxonomyNode(StructureBase):
         Return True when the taxonomy node has no children.
     child_by_path(path)
         Return the child node matching the provided path.
+    path_identifier
+        Return the path identifier string for the node.
+    keywords
+        Return a list of keywords for the node.
+    computed_description
+        Return the computed description for the node.
+    flattened_nodes
+        Return a flattened list of all taxonomy nodes.
     """
 
     label: str = spec_field(
@@ -137,12 +145,12 @@ class TaxonomyNode(StructureBase):
         Returns
         -------
         list[str]
-            List of keywords derived from the label.
+            Unique list of keywords derived from the node and descendants.
         """
         keywords = [self.label]
         for child in self.children:
             keywords.extend(child.keywords)
-        return keywords
+        return list(dict.fromkeys(filter(None, keywords)))
 
     @property
     def computed_description(self) -> str:
@@ -151,12 +159,15 @@ class TaxonomyNode(StructureBase):
         Returns
         -------
         str
-            Node description or label if description is not set.
+            Node description with optional keyword context.
         """
-        keywords = ", ".join(self.keywords)
-        if self.description:
-            return f"{self.description}\nKeywords: {keywords}"
-        return f"{self.label}\nKeywords: {keywords}"
+        keywords = self.keywords
+        base = self.description or self.label
+        if len(keywords) == 1 and keywords[0] == self.label:
+            return base
+        if keywords:
+            return f"{base}\nKeywords: {', '.join(keywords)}"
+        return base
 
     @property
     def flattened_nodes(self) -> list[TaxonomyNode]:
@@ -188,6 +199,22 @@ class Taxonomy(TaxonomyNode):
 
     Methods
     -------
+    root(label, *children)
+        Create a taxonomy from root nodes.
+    build_path(parent_path)
+        Build a computed path using the provided parent path segments.
+    computed_path
+        Return the computed path for the node.
+    is_leaf
+        Return True when the taxonomy node has no children.
+    child_by_path(path)
+        Return the child node matching the provided path.
+    path_identifier
+        Return the path identifier string for the node.
+    keywords
+        Return a list of keywords for the node.
+    computed_description
+        Return the computed description for the node.
     flattened_nodes
         Return a flattened list of all taxonomy nodes.
     """
