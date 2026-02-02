@@ -174,50 +174,88 @@ class TaxonomyNode(StructureBase):
         return flattened
 
 
-class Taxonomy(StructureBase):
+class Taxonomy(TaxonomyNode):
     """Represent a taxonomy with metadata and root nodes.
 
     Attributes
     ----------
-    name : str
+    label : str
         Human-readable taxonomy name.
     description : str | None
         Optional description of the taxonomy.
-    nodes : list[TaxonomyNode]
+    children : list[TaxonomyNode]
         Root taxonomy nodes.
 
     Methods
     -------
     flattened_nodes
         Return a flattened list of all taxonomy nodes.
+    name
+        Return the taxonomy name.
+    nodes
+        Return the taxonomy root nodes.
     """
 
-    name: str = spec_field("name", description="Human-readable taxonomy name.")
-    description: str | None = spec_field(
-        "description",
-        description="Optional description of the taxonomy.",
-        default=None,
-    )
-    nodes: list[TaxonomyNode] = spec_field(
-        "nodes",
-        description="Root taxonomy nodes.",
-        default_factory=list,
-    )
+    def __init__(
+        self,
+        *,
+        name: str | None = None,
+        label: str | None = None,
+        description: str | None = None,
+        nodes: list[TaxonomyNode] | None = None,
+        children: list[TaxonomyNode] | None = None,
+    ) -> None:
+        """Initialize a taxonomy with name and root nodes.
+
+        Parameters
+        ----------
+        name : str or None, default=None
+            Human-readable taxonomy name. Falls back to ``label`` when provided.
+        label : str or None, default=None
+            Taxonomy name alias for ``name``.
+        description : str or None, default=None
+            Optional description of the taxonomy.
+        nodes : list[TaxonomyNode] or None, default=None
+            Root taxonomy nodes. Falls back to ``children`` when provided.
+        children : list[TaxonomyNode] or None, default=None
+            Root taxonomy nodes alias for ``nodes``.
+
+        Raises
+        ------
+        ValueError
+            If no taxonomy name is provided.
+        """
+        resolved_label = label or name
+        if not resolved_label:
+            raise ValueError("taxonomy name is required")
+        resolved_children = nodes if nodes is not None else children
+        super().__init__(
+            label=resolved_label,
+            description=description,
+            children=resolved_children or [],
+        )
 
     @property
-    def flattened_nodes(self) -> list[TaxonomyNode]:
-        """Return a flattened list of all taxonomy nodes.
+    def name(self) -> str:
+        """Return the taxonomy name.
+
+        Returns
+        -------
+        str
+            Human-readable taxonomy name.
+        """
+        return self.label
+
+    @property
+    def nodes(self) -> list[TaxonomyNode]:
+        """Return the taxonomy root nodes.
 
         Returns
         -------
         list[TaxonomyNode]
-            Depth-first list of taxonomy nodes.
+            Root taxonomy nodes.
         """
-        flattened: list[TaxonomyNode] = []
-        for node in self.nodes:
-            flattened.append(node)
-            flattened.extend(node.flattened_nodes)
-        return flattened
+        return self.children
 
 
 def _split_path_identifier(path: str) -> list[str]:
