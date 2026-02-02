@@ -7,9 +7,11 @@ import pytest
 
 from openai_sdk_helpers.agent.classifier import (
     TaxonomyClassifierAgent,
+    _build_input_payload,
     _build_node_path_map,
     _build_step_structure,
     _normalize_step_output,
+    _selected_nodes,
 )
 from openai_sdk_helpers.structure import (
     ClassificationResult,
@@ -326,6 +328,25 @@ def test_classifier_maps_enum_selections_to_identifiers() -> None:
     assert normalized.selected_nodes == [enum_member]
 
 
+def test_classifier_maps_enum_names_to_identifiers() -> None:
+    """Classifier should normalize enum member names into identifiers."""
+    node_paths = _build_node_path_map([TaxonomyNode(label="Billing")], [])
+    step_structure = _build_step_structure(list(node_paths.keys()))
+    enum_cls = step_structure._extract_enum_class(
+        step_structure.model_fields["selected_nodes"].annotation
+    )
+    assert enum_cls is not None
+    step = step_structure.model_construct(
+        selected_nodes=[list(enum_cls)[0].name],
+        confidence=0.7,
+        stop_reason=ClassificationStopReason.STOP,
+    )
+
+    selected_nodes = _selected_nodes(step)
+
+    assert selected_nodes == ["Billing"]
+
+
 @pytest.mark.anyio
 async def test_classifier_run_async_delegates_to_run_agent() -> None:
     """Classifier run_async should delegate to _run_agent."""
@@ -418,6 +439,18 @@ def test_classifier_run_sync_delegates_to_run_agent() -> None:
         max_depth=2,
         confidence_threshold=0.5,
     )
+
+
+def test_classifier_deduplicates_file_ids() -> None:
+    """Classifier should deduplicate file IDs while preserving order."""
+    payload = _build_input_payload("Attach", ["file_1", "file_1", "file_2"])
+
+    assert isinstance(payload, list)
+    attachments = payload[0]["content"][1:]
+    assert [attachment["file_id"] for attachment in attachments] == [
+        "file_1",
+        "file_2",
+    ]
 
 
 @pytest.mark.anyio

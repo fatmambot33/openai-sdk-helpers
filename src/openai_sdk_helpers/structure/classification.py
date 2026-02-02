@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Iterable, Optional, cast
+from typing import Any, Iterable, Optional, Sequence, cast
+
+PATH_DELIMITER = " > "
+PATH_ESCAPE_TOKEN = "\\>"
 
 from .base import StructureBase, spec_field
 
@@ -111,7 +114,7 @@ class TaxonomyNode(StructureBase):
         if path is None:
             return None
         if isinstance(path, str):
-            path_segments = _split_path_identifier(path)
+            path_segments = split_path_identifier(path)
         else:
             path_segments = list(path)
         last_segment = path_segments[-1] if path_segments else None
@@ -131,12 +134,7 @@ class TaxonomyNode(StructureBase):
         str
             Delimited path identifier.
         """
-        delimiter = " > "
-        escape_token = "\\>"
-        escaped_labels = [
-            label.replace(delimiter, escape_token) for label in self.computed_path
-        ]
-        return delimiter.join(escaped_labels)
+        return format_path_identifier(self.computed_path)
 
     @property
     def keywords(self) -> list[str]:
@@ -262,7 +260,7 @@ class Taxonomy(TaxonomyNode):
         return cls(label=label, children=list(children))
 
 
-def _split_path_identifier(path: str) -> list[str]:
+def split_path_identifier(path: str) -> list[str]:
     """Split a path identifier into label segments.
 
     Parameters
@@ -275,10 +273,27 @@ def _split_path_identifier(path: str) -> list[str]:
     list[str]
         Label segments extracted from the path identifier.
     """
-    delimiter = " > "
-    escape_token = "\\>"
-    segments = path.split(delimiter) if path else []
-    return [segment.replace(escape_token, delimiter) for segment in segments]
+    segments = path.split(PATH_DELIMITER) if path else []
+    return [segment.replace(PATH_ESCAPE_TOKEN, PATH_DELIMITER) for segment in segments]
+
+
+def format_path_identifier(path_segments: Sequence[str]) -> str:
+    """Format path segments into a safe identifier string.
+
+    Parameters
+    ----------
+    path_segments : Sequence[str]
+        Path segments to format.
+
+    Returns
+    -------
+    str
+        Escaped path identifier string.
+    """
+    escaped_segments = [
+        segment.replace(PATH_DELIMITER, PATH_ESCAPE_TOKEN) for segment in path_segments
+    ]
+    return PATH_DELIMITER.join(escaped_segments)
 
 
 class ClassificationStopReason(str, Enum):
@@ -578,7 +593,7 @@ def taxonomy_enum_path(value: Enum | str | None) -> list[str]:
         return []
     if not isinstance(normalized_value, str):
         normalized_value = str(normalized_value)
-    return _split_path_identifier(normalized_value)
+    return split_path_identifier(normalized_value)
 
 
 __all__ = [
@@ -587,5 +602,7 @@ __all__ = [
     "ClassificationStopReason",
     "Taxonomy",
     "TaxonomyNode",
+    "format_path_identifier",
+    "split_path_identifier",
     "taxonomy_enum_path",
 ]
