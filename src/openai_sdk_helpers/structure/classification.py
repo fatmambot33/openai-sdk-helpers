@@ -30,6 +30,14 @@ class TaxonomyNode(StructureBase):
         Return True when the taxonomy node has no children.
     child_by_path(path)
         Return the child node matching the provided path.
+    path_identifier
+        Return the path identifier string for the node.
+    keywords
+        Return a list of keywords for the node.
+    computed_description
+        Return the computed description for the node.
+    flattened_nodes
+        Return a flattened list of all taxonomy nodes.
     """
 
     label: str = spec_field(
@@ -137,12 +145,12 @@ class TaxonomyNode(StructureBase):
         Returns
         -------
         list[str]
-            List of keywords derived from the label.
+            Unique list of keywords derived from the node and descendants.
         """
         keywords = [self.label]
         for child in self.children:
             keywords.extend(child.keywords)
-        return keywords
+        return list(dict.fromkeys(filter(None, keywords)))
 
     @property
     def computed_description(self) -> str:
@@ -151,15 +159,15 @@ class TaxonomyNode(StructureBase):
         Returns
         -------
         str
-            Node description or label if description is not set.
+            Node description with optional keyword context.
         """
-        _description = f"{self.description}"
-        _keywords = ", ".join(self.keywords)
-        if _description:
-            _description += f"\n{_keywords})"
-        else:
-            _description = f"\n{_keywords})"
-        return _description
+        keywords = self.keywords
+        base = self.description or self.label
+        if len(keywords) == 1 and keywords[0] == self.label:
+            return base
+        if keywords:
+            return f"{base}\nKeywords: {', '.join(keywords)}"
+        return base
 
     @property
     def flattened_nodes(self) -> list[TaxonomyNode]:
@@ -177,50 +185,81 @@ class TaxonomyNode(StructureBase):
         return flattened
 
 
-class Taxonomy(StructureBase):
+class Taxonomy(TaxonomyNode):
     """Represent a taxonomy with metadata and root nodes.
 
     Attributes
     ----------
-    name : str
+    label : str
         Human-readable taxonomy name.
     description : str | None
         Optional description of the taxonomy.
-    nodes : list[TaxonomyNode]
+    children : list[TaxonomyNode]
         Root taxonomy nodes.
 
     Methods
     -------
+    root(label, *children)
+        Create a taxonomy from root nodes.
+    build_path(parent_path)
+        Build a computed path using the provided parent path segments.
+    computed_path
+        Return the computed path for the node.
+    is_leaf
+        Return True when the taxonomy node has no children.
+    child_by_path(path)
+        Return the child node matching the provided path.
+    path_identifier
+        Return the path identifier string for the node.
+    keywords
+        Return a list of keywords for the node.
+    computed_description
+        Return the computed description for the node.
     flattened_nodes
         Return a flattened list of all taxonomy nodes.
     """
 
-    name: str = spec_field("name", description="Human-readable taxonomy name.")
-    description: str | None = spec_field(
-        "description",
-        description="Optional description of the taxonomy.",
-        default=None,
-    )
-    nodes: list[TaxonomyNode] = spec_field(
-        "nodes",
-        description="Root taxonomy nodes.",
-        default_factory=list,
-    )
+    def __init__(
+        self,
+        *,
+        label: str,
+        description: str | None = None,
+        children: list[TaxonomyNode] | None = None,
+    ) -> None:
+        """Initialize a taxonomy with name and root nodes.
 
-    @property
-    def flattened_nodes(self) -> list[TaxonomyNode]:
-        """Return a flattened list of all taxonomy nodes.
+        Parameters
+        ----------
+        label : str
+            Human-readable taxonomy name.
+        description : str or None, default=None
+            Optional description of the taxonomy.
+        children : list[TaxonomyNode] or None, default=None
+            Root taxonomy nodes. Defaults to an empty list.
+        """
+        super().__init__(
+            label=label,
+            description=description,
+            children=children or [],
+        )
+
+    @classmethod
+    def root(cls, label: str, *children: TaxonomyNode) -> "Taxonomy":
+        """Create a taxonomy from root nodes.
+
+        Parameters
+        ----------
+        label : str
+            Human-readable taxonomy name.
+        *children : TaxonomyNode
+            Root taxonomy nodes.
 
         Returns
         -------
-        list[TaxonomyNode]
-            Depth-first list of taxonomy nodes.
+        Taxonomy
+            Taxonomy instance with provided root nodes.
         """
-        flattened: list[TaxonomyNode] = []
-        for node in self.nodes:
-            flattened.append(node)
-            flattened.extend(node.flattened_nodes)
-        return flattened
+        return cls(label=label, children=list(children))
 
 
 def _split_path_identifier(path: str) -> list[str]:
@@ -279,8 +318,6 @@ class ClassificationStep(StructureBase):
 
     Attributes
     ----------
-    selected_node : Enum or None
-        Enum value of the selected taxonomy node.
     selected_nodes : list[Enum] or None
         Enum values of selected taxonomy nodes for multi-class classification.
     confidence : float or None
@@ -312,11 +349,6 @@ class ClassificationStep(StructureBase):
     [<NodeEnum.BILLING: 'billing'>]
     """
 
-    selected_node: Enum | None = spec_field(
-        "selected_node",
-        description="Path identifier of the selected taxonomy node.",
-        default=None,
-    )
     selected_nodes: list[Enum] | None = spec_field(
         "selected_nodes",
         description="Path identifiers of selected taxonomy nodes.",
@@ -355,14 +387,8 @@ class ClassificationStep(StructureBase):
         """
         namespace: dict[str, Any] = {
             "__annotations__": {
-                "selected_node": enum_cls | None,
                 "selected_nodes": list[enum_cls] | None,
             },
-            "selected_node": spec_field(
-                "selected_node",
-                description="Path identifier of the selected taxonomy node.",
-                default=None,
-            ),
             "selected_nodes": spec_field(
                 "selected_nodes",
                 description="Path identifiers of selected taxonomy nodes.",
@@ -383,16 +409,14 @@ class ClassificationStep(StructureBase):
         --------
         >>> NodeEnum = Enum("NodeEnum", {"ROOT": "root"})
         >>> StepEnum = ClassificationStep.build_for_enum(NodeEnum)
-        >>> step = StepEnum(selected_node=NodeEnum.ROOT)
-        >>> step.as_summary()["selected_node"]
-        <NodeEnum.ROOT: 'root'>
+        >>> step = StepEnum(selected_nodes=[NodeEnum.ROOT])
+        >>> step.as_summary()["selected_nodes"]
+        [<NodeEnum.ROOT: 'root'>]
         """
-        selected_node = _normalize_enum_value(self.selected_node)
         selected_nodes = [
             _normalize_enum_value(item) for item in self.selected_nodes or []
         ]
         return {
-            "selected_node": selected_node,
             "selected_nodes": selected_nodes or None,
             "confidence": self.confidence,
             "stop_reason": self.stop_reason.value,
@@ -422,25 +446,25 @@ class ClassificationResult(StructureBase):
 
     Attributes
     ----------
-    final_node : TaxonomyNode or None
-        Resolved taxonomy node for the final selection.
     final_nodes : list[TaxonomyNode] or None
         Resolved taxonomy nodes for the final selections across branches.
     confidence : float or None
         Confidence score for the final selection.
     stop_reason : ClassificationStopReason
         Reason the traversal ended.
-    path : list[ClassificationStep]
+    steps : list[ClassificationStep]
         Ordered list of classification steps.
-    path_nodes : list[TaxonomyNode]
-        Resolved taxonomy nodes selected across the path.
 
     Methods
     -------
     depth
         Return the number of classification steps recorded.
-    path_identifiers
-        Return the identifiers selected at each step.
+    final_node
+        Return the first resolved taxonomy node, if available.
+    iter_selected_nodes
+        Yield selected identifiers across all steps.
+    selected_nodes
+        Return the selected identifiers across all steps.
 
     Examples
     --------
@@ -448,7 +472,6 @@ class ClassificationResult(StructureBase):
 
     >>> node = TaxonomyNode(label="Tax")
     >>> result = ClassificationResult(
-    ...     final_node=node,
     ...     final_nodes=[node],
     ...     confidence=0.91,
     ...     stop_reason=ClassificationStopReason.STOP,
@@ -457,11 +480,6 @@ class ClassificationResult(StructureBase):
     [TaxonomyNode(label='Tax', description=None, children=[])]
     """
 
-    final_node: TaxonomyNode | None = spec_field(
-        "final_node",
-        description="Resolved taxonomy node for the final selection.",
-        default=None,
-    )
     final_nodes: list[TaxonomyNode] | None = spec_field(
         "final_nodes",
         description="Resolved taxonomy nodes for the final selections.",
@@ -477,14 +495,9 @@ class ClassificationResult(StructureBase):
         description="Reason the traversal ended.",
         default=ClassificationStopReason.STOP,
     )
-    path: list[ClassificationStep] = spec_field(
-        "path",
+    steps: list[ClassificationStep] = spec_field(
+        "steps",
         description="Ordered list of classification steps.",
-        default_factory=list,
-    )
-    path_nodes: list[TaxonomyNode] = spec_field(
-        "path_nodes",
-        description="Resolved taxonomy nodes selected across the path.",
         default_factory=list,
     )
 
@@ -497,38 +510,45 @@ class ClassificationResult(StructureBase):
         int
             Count of classification steps.
         """
-        return len(self.path)
+        return len(self.steps)
 
     @property
-    def path_identifiers(self) -> list[str]:
-        """Return the identifiers selected at each step.
+    def final_node(self) -> TaxonomyNode | None:
+        """Return the first resolved taxonomy node.
+
+        Returns
+        -------
+        TaxonomyNode or None
+            First resolved taxonomy node, if available.
+        """
+        if not self.final_nodes:
+            return None
+        return self.final_nodes[0]
+
+    @property
+    def selected_nodes(self) -> list[str]:
+        """Return the selected identifiers across all steps.
 
         Returns
         -------
         list[str]
-            Identifiers selected at each classification step.
-
-        Examples
-        --------
-        >>> steps = [
-        ...     ClassificationStep(selected_node="Root"),
-        ...     ClassificationStep(selected_nodes=["Root > Leaf", "Root > Branch"]),
-        ... ]
-        >>> ClassificationResult(
-        ...     stop_reason=ClassificationStopReason.STOP,
-        ...     path=steps,
-        ... ).path_identifiers
-        ['Root', 'Root > Leaf', 'Root > Branch']
+            Selected identifiers in traversal order.
         """
-        identifiers: list[str] = []
-        for step in self.path:
-            if step.selected_nodes:
-                identifiers.extend(
-                    _normalize_enum_value(value) for value in step.selected_nodes
-                )
-            elif step.selected_node:
-                identifiers.append(_normalize_enum_value(step.selected_node))
-        return [identifier for identifier in identifiers if identifier]
+        return list(self.iter_selected_nodes())
+
+    def iter_selected_nodes(self) -> Iterable[str]:
+        """Yield selected identifiers across all steps.
+
+        Yields
+        ------
+        str
+            Selected identifier in traversal order.
+        """
+        for step in self.steps:
+            for value in step.selected_nodes or []:
+                normalized = _normalize_enum_value(value)
+                if normalized:
+                    yield normalized
 
 
 def taxonomy_enum_path(value: Enum | str | None) -> list[str]:
