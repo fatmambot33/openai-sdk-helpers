@@ -28,12 +28,12 @@ def test_taxonomy_flattened_nodes():
     leaf = TaxonomyNode(label="Leaf")
     branch = TaxonomyNode(label="Branch", children=[leaf])
     taxonomy = Taxonomy(
-        name="Support",
+        label="Support",
         description="Customer support taxonomy.",
-        nodes=[branch],
+        children=[branch],
     )
 
-    assert taxonomy.name == "Support"
+    assert taxonomy.label == "Support"
     assert taxonomy.description == "Customer support taxonomy."
     assert [node.label for node in taxonomy.flattened_nodes] == ["Branch", "Leaf"]
 

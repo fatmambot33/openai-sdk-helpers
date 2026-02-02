@@ -190,72 +190,49 @@ class Taxonomy(TaxonomyNode):
     -------
     flattened_nodes
         Return a flattened list of all taxonomy nodes.
-    name
-        Return the taxonomy name.
-    nodes
-        Return the taxonomy root nodes.
     """
 
     def __init__(
         self,
         *,
-        name: str | None = None,
-        label: str | None = None,
+        label: str,
         description: str | None = None,
-        nodes: list[TaxonomyNode] | None = None,
         children: list[TaxonomyNode] | None = None,
     ) -> None:
         """Initialize a taxonomy with name and root nodes.
 
         Parameters
         ----------
-        name : str or None, default=None
-            Human-readable taxonomy name. Falls back to ``label`` when provided.
-        label : str or None, default=None
-            Taxonomy name alias for ``name``.
+        label : str
+            Human-readable taxonomy name.
         description : str or None, default=None
             Optional description of the taxonomy.
-        nodes : list[TaxonomyNode] or None, default=None
-            Root taxonomy nodes. Falls back to ``children`` when provided.
         children : list[TaxonomyNode] or None, default=None
-            Root taxonomy nodes alias for ``nodes``.
-
-        Raises
-        ------
-        ValueError
-            If no taxonomy name is provided.
+            Root taxonomy nodes. Defaults to an empty list.
         """
-        resolved_label = label or name
-        if not resolved_label:
-            raise ValueError("taxonomy name is required")
-        resolved_children = nodes if nodes is not None else children
         super().__init__(
-            label=resolved_label,
+            label=label,
             description=description,
-            children=resolved_children or [],
+            children=children or [],
         )
 
-    @property
-    def name(self) -> str:
-        """Return the taxonomy name.
+    @classmethod
+    def root(cls, label: str, *children: TaxonomyNode) -> "Taxonomy":
+        """Create a taxonomy from root nodes.
 
-        Returns
-        -------
-        str
+        Parameters
+        ----------
+        label : str
             Human-readable taxonomy name.
-        """
-        return self.label
-
-    @property
-    def nodes(self) -> list[TaxonomyNode]:
-        """Return the taxonomy root nodes.
+        *children : TaxonomyNode
+            Root taxonomy nodes.
 
         Returns
         -------
-        list[TaxonomyNode]
-            Root taxonomy nodes.
+        Taxonomy
+            Taxonomy instance with provided root nodes.
         """
-        return self.children
+        return cls(label=label, children=list(children))
 
 
 def _split_path_identifier(path: str) -> list[str]:
