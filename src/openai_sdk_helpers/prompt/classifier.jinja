@@ -32,7 +32,7 @@ Current depth: {{ depth }}
 Previous steps:
 {% if steps %}
 {% for step in steps %}
-- {{ step.selected_nodes }} (confidence={{ step.confidence }}, stop_reason={{ step.stop_reason }})
+- {{ step.selected_nodes | map('string') | join(', ') }} (confidence={{ step.confidence }}, stop_reason={{ step.stop_reason }})
 {% endfor %}
 {% else %}
 - None
