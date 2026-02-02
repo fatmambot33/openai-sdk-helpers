@@ -174,68 +174,6 @@ def _ensure_schema_has_type(schema: dict[str, Any]) -> None:
     schema.update(_build_any_value_schema())
 
 
-def _hydrate_ref_types(schema: dict[str, Any]) -> None:
-    """Attach explicit types to $ref nodes when available.
-
-    Parameters
-    ----------
-    schema : dict[str, Any]
-        Schema dictionary to hydrate in place.
-    """
-    definitions = schema.get("$defs") or schema.get("definitions") or {}
-    if not isinstance(definitions, dict):
-        definitions = {}
-
-    def _infer_enum_type(values: list[Any]) -> list[str] | str | None:
-        type_map = {
-            str: "string",
-            int: "integer",
-            float: "number",
-            bool: "boolean",
-            type(None): "null",
-        }
-        inferred: set[str] = set()
-        for value in values:
-            inferred_type = type_map.get(type(value))
-            if inferred_type is not None:
-                inferred.add(inferred_type)
-        if not inferred:
-            return None
-        if len(inferred) == 1:
-            return next(iter(inferred))
-        return sorted(inferred)
-
-    def _resolve_ref_type(ref: str) -> list[str] | str | None:
-        prefixes = ("#/$defs/", "#/definitions/")
-        if not ref.startswith(prefixes):
-            return None
-        key = ref.split("/", maxsplit=2)[-1]
-        definition = definitions.get(key)
-        if not isinstance(definition, dict):
-            return None
-        ref_type = definition.get("type")
-        if isinstance(ref_type, (str, list)):
-            return ref_type
-        enum_values = definition.get("enum")
-        if isinstance(enum_values, list):
-            return _infer_enum_type(enum_values)
-        return None
-
-    def _walk(node: Any) -> None:
-        if isinstance(node, dict):
-            if "$ref" in node and "type" not in node:
-                ref_type = _resolve_ref_type(node["$ref"])
-                if ref_type is not None:
-                    node["type"] = ref_type
-            for value in node.values():
-                _walk(value)
-        elif isinstance(node, list):
-            for item in node:
-                _walk(item)
-
-    _walk(schema)
-
-
 class StructureBase(BaseModelJSONSerializable):
     """Base class for structured output models with schema generation.
 
@@ -545,7 +483,7 @@ class StructureBase(BaseModelJSONSerializable):
             if isinstance(obj, dict):
                 if "$ref" in obj:
                     for key in list(obj.keys()):
-                        if key not in {"$ref", "type"}:
+                        if key != "$ref":
                             obj.pop(key, None)
                 for v in obj.values():
                     clean_refs(v)
@@ -557,7 +495,6 @@ class StructureBase(BaseModelJSONSerializable):
         cleaned_schema = cast(dict[str, Any], clean_refs(schema))
 
         cleaned_schema = cast(dict[str, Any], cleaned_schema)
-        _hydrate_ref_types(cleaned_schema)
         _ensure_items_have_schema(cleaned_schema)
         _ensure_schema_has_type(cleaned_schema)
 
