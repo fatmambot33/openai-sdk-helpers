@@ -683,7 +683,11 @@ def _build_context(
     dict[str, Any]
         Context dictionary for prompt rendering.
     """
-    summarized_steps = [step.as_summary() for step in steps if step.selected_nodes]
+    summarized_steps = [
+        step.as_summary()
+        for step in steps
+        if step.selected_nodes and any(node is not None for node in step.selected_nodes)
+    ]
     template_context: Dict[str, Any] = {
         "taxonomy_nodes": list(node_descriptors),
         "steps": summarized_steps,
