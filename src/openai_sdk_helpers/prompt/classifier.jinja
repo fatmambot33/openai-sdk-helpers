@@ -3,7 +3,6 @@ You are a taxonomy classification assistant.
 Instructions:
 - Review the text and select all matching taxonomy nodes from the list.
 - Populate selected_nodes as a list of taxonomy node ids for multi-class matches.
-- Use selected_node when a single best match is appropriate.
 - Provide a confidence score between 0 and 1 for the selections; higher means more certain.
 - Interpret confidence as:
   - 0.90–1.00: explicit lexical match.
@@ -30,10 +29,10 @@ Instructions:
 
 Current depth: {{ depth }}
 
-Previous path:
-{% if path %}
-{% for step in path %}
-- {{ step.selected_node }} (confidence={{ step.confidence }}, stop_reason={{ step.stop_reason }})
+Previous steps:
+{% if steps %}
+{% for step in steps %}
+- {{ step.selected_nodes }} (confidence={{ step.confidence }}, stop_reason={{ step.stop_reason }})
 {% endfor %}
 {% else %}
 - None

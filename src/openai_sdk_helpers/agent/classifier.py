@@ -40,9 +40,9 @@ class TaxonomyClassifierAgent(AgentBase):
     -------
     run_agent(text, taxonomy, context, max_depth, session)
         Classify text by recursively walking the taxonomy tree.
-    run_async(input, context, max_depth, confidence_threshold, single_class)
+    run_async(input, context, max_depth, confidence_threshold)
         Classify text asynchronously using taxonomy traversal.
-    run_sync(input, context, max_depth, confidence_threshold, single_class)
+    run_sync(input, context, max_depth, confidence_threshold)
         Classify text synchronously using taxonomy traversal.
 
     Examples
@@ -110,7 +110,6 @@ class TaxonomyClassifierAgent(AgentBase):
         file_ids: str | Sequence[str] | None = None,
         max_depth: Optional[int] = None,
         confidence_threshold: float | None = None,
-        single_class: bool = False,
         session: Optional[Any] = None,
     ) -> ClassificationResult:
         """Classify ``text`` by recursively walking taxonomy levels.
@@ -127,8 +126,6 @@ class TaxonomyClassifierAgent(AgentBase):
             Maximum depth to traverse before stopping.
         confidence_threshold : float or None, default=None
             Minimum confidence required to accept a classification step.
-        single_class : bool, default=False
-            Whether to keep only the highest-priority selection per step.
         session : Session or None, default=None
             Optional session for maintaining conversation history across runs.
 
@@ -155,21 +152,17 @@ class TaxonomyClassifierAgent(AgentBase):
             file_ids=file_ids,
             max_depth=max_depth,
             confidence_threshold=confidence_threshold,
-            single_class=single_class,
             session=session,
             state=state,
         )
 
         final_nodes_value = state.final_nodes or None
-        final_node = state.final_nodes[0] if state.final_nodes else None
         stop_reason = _resolve_stop_reason(state)
         return ClassificationResult(
-            final_node=final_node,
             final_nodes=final_nodes_value,
             confidence=state.best_confidence,
             stop_reason=stop_reason,
-            path=state.path,
-            path_nodes=state.path_nodes,
+            steps=state.steps,
         )
 
     async def run_async(
@@ -182,7 +175,6 @@ class TaxonomyClassifierAgent(AgentBase):
         file_ids: str | Sequence[str] | None = None,
         max_depth: Optional[int] = None,
         confidence_threshold: float | None = None,
-        single_class: bool = False,
     ) -> ClassificationResult:
         """Classify ``input`` asynchronously with taxonomy traversal.
 
@@ -202,8 +194,6 @@ class TaxonomyClassifierAgent(AgentBase):
             Maximum depth to traverse before stopping.
         confidence_threshold : float or None, default=None
             Minimum confidence required to accept a classification step.
-        single_class : bool, default=False
-            Whether to keep only the highest-priority selection per step.
 
         Returns
         -------
@@ -219,7 +209,6 @@ class TaxonomyClassifierAgent(AgentBase):
             "file_ids": file_ids,
             "max_depth": max_depth,
             "confidence_threshold": confidence_threshold,
-            "single_class": single_class,
         }
         if session is not None:
             kwargs["session"] = session
@@ -235,7 +224,6 @@ class TaxonomyClassifierAgent(AgentBase):
         file_ids: str | Sequence[str] | None = None,
         max_depth: Optional[int] = None,
         confidence_threshold: float | None = None,
-        single_class: bool = False,
     ) -> ClassificationResult:
         """Classify ``input`` synchronously with taxonomy traversal.
 
@@ -255,8 +243,6 @@ class TaxonomyClassifierAgent(AgentBase):
             Maximum depth to traverse before stopping.
         confidence_threshold : float or None, default=None
             Minimum confidence required to accept a classification step.
-        single_class : bool, default=False
-            Whether to keep only the highest-priority selection per step.
 
         Returns
         -------
@@ -272,7 +258,6 @@ class TaxonomyClassifierAgent(AgentBase):
             "file_ids": file_ids,
             "max_depth": max_depth,
             "confidence_threshold": confidence_threshold,
-            "single_class": single_class,
         }
         if session is not None:
             kwargs["session"] = session
@@ -350,7 +335,6 @@ class TaxonomyClassifierAgent(AgentBase):
         file_ids: str | Sequence[str] | None,
         max_depth: Optional[int],
         confidence_threshold: float | None,
-        single_class: bool,
         session: Optional[Any],
         state: "_TraversalState",
     ) -> None:
@@ -372,8 +356,6 @@ class TaxonomyClassifierAgent(AgentBase):
             Maximum traversal depth before stopping.
         confidence_threshold : float or None
             Minimum confidence required to accept a classification step.
-        single_class : bool
-            Whether to keep only the highest-priority selection per step.
         session : Session or None
             Optional session for maintaining conversation history across runs.
         state : _TraversalState
@@ -388,7 +370,7 @@ class TaxonomyClassifierAgent(AgentBase):
         node_paths = _build_node_path_map(nodes, parent_path)
         template_context = _build_context(
             node_descriptors=_build_node_descriptors(node_paths),
-            path=state.path,
+            steps=state.steps,
             depth=depth,
             context=context,
         )
@@ -400,7 +382,7 @@ class TaxonomyClassifierAgent(AgentBase):
             session=session,
         )
         step = _normalize_step_output(raw_step, step_structure)
-        state.path.append(step)
+        state.steps.append(step)
 
         if (
             confidence_threshold is not None
@@ -410,10 +392,6 @@ class TaxonomyClassifierAgent(AgentBase):
             return
 
         resolved_nodes = _resolve_nodes(node_paths, step)
-        if resolved_nodes:
-            if single_class:
-                resolved_nodes = resolved_nodes[:1]
-            state.path_nodes.extend(resolved_nodes)
 
         if step.stop_reason.is_terminal:
             if resolved_nodes:
@@ -427,8 +405,7 @@ class TaxonomyClassifierAgent(AgentBase):
         if not resolved_nodes:
             return
 
-        base_path_len = len(state.path)
-        base_path_nodes_len = len(state.path_nodes)
+        base_steps_len = len(state.steps)
         child_tasks: list[tuple[Awaitable["_TraversalState"], int]] = []
         for node in resolved_nodes:
             if node.children:
@@ -447,7 +424,6 @@ class TaxonomyClassifierAgent(AgentBase):
                             file_ids=file_ids,
                             max_depth=max_depth,
                             confidence_threshold=confidence_threshold,
-                            single_class=single_class,
                             session=session,
                             state=sub_state,
                         ),
@@ -467,8 +443,7 @@ class TaxonomyClassifierAgent(AgentBase):
             for child_state, (_, base_final_nodes_len) in zip(
                 child_states, child_tasks, strict=True
             ):
-                state.path.extend(child_state.path[base_path_len:])
-                state.path_nodes.extend(child_state.path_nodes[base_path_nodes_len:])
+                state.steps.extend(child_state.steps[base_steps_len:])
                 state.final_nodes.extend(child_state.final_nodes[base_final_nodes_len:])
                 state.best_confidence = _max_confidence(
                     state.best_confidence, child_state.best_confidence
@@ -540,7 +515,6 @@ class TaxonomyClassifierAgent(AgentBase):
         file_ids: str | Sequence[str] | None,
         max_depth: Optional[int],
         confidence_threshold: float | None,
-        single_class: bool,
         session: Optional[Any],
         state: "_TraversalState",
     ) -> "_TraversalState":
@@ -566,8 +540,6 @@ class TaxonomyClassifierAgent(AgentBase):
             Maximum traversal depth before stopping.
         confidence_threshold : float or None
             Minimum confidence required to accept a classification step.
-        single_class : bool
-            Whether to keep only the highest-priority selection per step.
         session : Session or None
             Optional session for maintaining conversation history across runs.
         state : _TraversalState
@@ -587,7 +559,6 @@ class TaxonomyClassifierAgent(AgentBase):
             file_ids=file_ids,
             max_depth=max_depth,
             confidence_threshold=confidence_threshold,
-            single_class=single_class,
             session=session,
             state=state,
         )
@@ -598,8 +569,7 @@ class TaxonomyClassifierAgent(AgentBase):
 class _TraversalState:
     """Track recursive traversal state."""
 
-    path: list[ClassificationStep] = field(default_factory=list)
-    path_nodes: list[TaxonomyNode] = field(default_factory=list)
+    steps: list[ClassificationStep] = field(default_factory=list)
     final_nodes: list[TaxonomyNode] = field(default_factory=list)
     best_confidence: float | None = None
     saw_max_depth: bool = False
@@ -621,8 +591,7 @@ def _copy_traversal_state(state: _TraversalState) -> _TraversalState:
         Cloned traversal state with copied collections.
     """
     return _TraversalState(
-        path=list(state.path),
-        path_nodes=list(state.path_nodes),
+        steps=list(state.steps),
         final_nodes=list(state.final_nodes),
         best_confidence=state.best_confidence,
         saw_max_depth=state.saw_max_depth,
@@ -691,7 +660,7 @@ def _default_template_path() -> Path:
 def _build_context(
     *,
     node_descriptors: Iterable[dict[str, Any]],
-    path: Sequence[ClassificationStep],
+    steps: Sequence[ClassificationStep],
     depth: int,
     context: Optional[Dict[str, Any]],
 ) -> Dict[str, Any]:
@@ -701,7 +670,7 @@ def _build_context(
     ----------
     node_descriptors : Iterable[dict[str, Any]]
         Node descriptors available at the current taxonomy level.
-    path : Sequence[ClassificationStep]
+    steps : Sequence[ClassificationStep]
         Steps recorded so far in the traversal.
     depth : int
         Current traversal depth.
@@ -713,9 +682,10 @@ def _build_context(
     dict[str, Any]
         Context dictionary for prompt rendering.
     """
+    summarized_steps = [step.as_summary() for step in steps if step.selected_nodes]
     template_context: Dict[str, Any] = {
         "taxonomy_nodes": list(node_descriptors),
-        "path": [step.as_summary() for step in path],
+        "steps": summarized_steps,
         "depth": depth,
     }
     if context:
@@ -1047,17 +1017,12 @@ def _selected_nodes(step: ClassificationStep) -> list[str]:
     list[str]
         Selected identifiers in priority order.
     """
-    if step.selected_nodes is not None:
-        selected_nodes = [
-            str(_normalize_enum_value(selected_node, Enum))
-            for selected_node in step.selected_nodes
-            if selected_node
-        ]
-        if selected_nodes:
-            return selected_nodes
-    if step.selected_node:
-        return [str(_normalize_enum_value(step.selected_node, Enum))]
-    return []
+    selected_nodes = [
+        str(_normalize_enum_value(selected_node, Enum))
+        for selected_node in step.selected_nodes or []
+        if selected_node
+    ]
+    return selected_nodes
 
 
 def _max_confidence(

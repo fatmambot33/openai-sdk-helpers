@@ -41,7 +41,6 @@ def test_taxonomy_flattened_nodes():
 def test_classification_result_properties():
     """ClassificationResult should expose computed properties."""
 
-    root_node = TaxonomyNode(label="Root")
     leaf_node = TaxonomyNode(label="Leaf")
     branch_node = TaxonomyNode(label="Branch")
 
@@ -56,13 +55,11 @@ def test_classification_result_properties():
     Step = ClassificationStep.build_for_enum(step_enum)
     steps = [
         Step(
-            selected_node=step_enum.ROOT,
             selected_nodes=[step_enum.ROOT],
             confidence=0.8,
             stop_reason=ClassificationStopReason.CONTINUE,
         ),
         Step(
-            selected_node=step_enum.ROOT_LEAF,
             selected_nodes=[step_enum.ROOT_LEAF, step_enum.ROOT_BRANCH],
             confidence=0.9,
             stop_reason=ClassificationStopReason.STOP,
@@ -70,23 +67,16 @@ def test_classification_result_properties():
     ]
 
     result = ClassificationResult(
-        final_node=leaf_node,
         final_nodes=[leaf_node, branch_node],
         confidence=0.9,
         stop_reason=ClassificationStopReason.STOP,
-        path=steps,
-        path_nodes=[root_node, leaf_node, branch_node],
+        steps=steps,
     )
 
     assert result.depth == 2
-    assert result.path_identifiers == ["Root", "Root > Leaf", "Root > Branch"]
+    assert result.selected_nodes == ["Root", "Root > Leaf", "Root > Branch"]
     assert result.final_node == leaf_node
     assert result.final_nodes == [leaf_node, branch_node]
-    assert [node.label for node in result.path_nodes] == [
-        "Root",
-        "Leaf",
-        "Branch",
-    ]
 
 
 def test_stop_reason_is_terminal_property():

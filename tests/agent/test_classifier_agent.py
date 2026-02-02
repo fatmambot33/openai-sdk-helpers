@@ -40,7 +40,7 @@ def _build_step(values: list[str]) -> tuple[type[ClassificationStep], type[Enum]
     """Build a step structure and its enum class for provided values."""
     step_structure = _build_step_structure(values)
     enum_cls = step_structure._extract_enum_class(
-        step_structure.model_fields["selected_node"].annotation
+        step_structure.model_fields["selected_nodes"].annotation
     )
     assert enum_cls is not None
     return step_structure, enum_cls
@@ -60,13 +60,11 @@ async def test_classifier_traverses_taxonomy_levels():
     tax_step, tax_enum = _build_step(["Finance > Tax"])
     steps = [
         root_step(
-            selected_node=_enum_member(root_enum, "Finance"),
             selected_nodes=[_enum_member(root_enum, "Finance")],
             confidence=0.7,
             stop_reason=ClassificationStopReason.CONTINUE,
         ),
         tax_step(
-            selected_node=_enum_member(tax_enum, "Finance > Tax"),
             selected_nodes=[_enum_member(tax_enum, "Finance > Tax")],
             confidence=0.9,
             stop_reason=ClassificationStopReason.STOP,
@@ -85,9 +83,8 @@ async def test_classifier_traverses_taxonomy_levels():
     assert result.final_node.label == "Tax"
     assert result.final_nodes is not None
     assert [node.label for node in result.final_nodes] == ["Tax"]
-    assert [node.label for node in result.path_nodes] == ["Finance", "Tax"]
     assert result.stop_reason is ClassificationStopReason.STOP
-    assert len(result.path) == 2
+    assert len(result.steps) == 2
 
 
 @pytest.mark.anyio
@@ -136,13 +133,7 @@ async def test_classifier_traverses_multiple_branches():
 
     assert result.final_nodes is not None
     assert [node.label for node in result.final_nodes] == ["Beef", "Carrot"]
-    assert [node.label for node in result.path_nodes] == [
-        "Meat",
-        "Vegetables",
-        "Beef",
-        "Carrot",
-    ]
-    assert result.path[-1].selected_nodes == [
+    assert result.steps[-1].selected_nodes == [
         _enum_member(veg_enum, "Vegetables > Carrot")
     ]
 
@@ -187,49 +178,6 @@ async def test_classifier_avoids_duplicate_leaf_nodes() -> None:
 
 
 @pytest.mark.anyio
-async def test_classifier_single_class_limits_branches():
-    """Classifier should limit traversal to a single branch when enabled."""
-    meat = TaxonomyNode(
-        label="Meat",
-        children=[TaxonomyNode(label="Beef")],
-    )
-    vegetables = TaxonomyNode(
-        label="Vegetables",
-        children=[TaxonomyNode(label="Carrot")],
-    )
-    agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[meat, vegetables])
-
-    root_step, root_enum = _build_step(["Meat", "Vegetables"])
-    meat_step, meat_enum = _build_step(["Meat > Beef"])
-    steps = [
-        root_step(
-            selected_nodes=[
-                _enum_member(root_enum, "Meat"),
-                _enum_member(root_enum, "Vegetables"),
-            ],
-            confidence=0.7,
-            stop_reason=ClassificationStopReason.CONTINUE,
-        ),
-        meat_step(
-            selected_nodes=[_enum_member(meat_enum, "Meat > Beef")],
-            confidence=0.9,
-            stop_reason=ClassificationStopReason.STOP,
-        ),
-    ]
-
-    with (
-        patch.object(agent, "get_agent", return_value=MagicMock()),
-        patch.object(agent, "_run_step_async", new_callable=AsyncMock) as mock_run,
-    ):
-        mock_run.side_effect = steps
-        result = await agent.run_agent("Culinary update", single_class=True)
-
-    assert result.final_nodes is not None
-    assert [node.label for node in result.final_nodes] == ["Beef"]
-    assert [node.label for node in result.path_nodes] == ["Meat", "Beef"]
-
-
-@pytest.mark.anyio
 async def test_classifier_confidence_threshold_stops_branch():
     """Classifier should stop a branch when confidence is below the threshold."""
     root = TaxonomyNode(
@@ -265,7 +213,6 @@ async def test_classifier_stops_when_no_children():
 
     root_step, root_enum = _build_step(["Root"])
     step = root_step(
-        selected_node=_enum_member(root_enum, "Root"),
         selected_nodes=[_enum_member(root_enum, "Root")],
         confidence=0.6,
         stop_reason=ClassificationStopReason.CONTINUE,
@@ -281,45 +228,6 @@ async def test_classifier_stops_when_no_children():
     assert result.stop_reason is ClassificationStopReason.NO_CHILDREN
     assert result.final_node is not None
     assert result.final_node.label == "Root"
-
-
-@pytest.mark.anyio
-async def test_classifier_falls_back_when_selected_nodes_empty():
-    """Classifier should fall back to selected_node when selected_nodes is empty."""
-
-    root = TaxonomyNode(
-        label="Finance",
-        children=[TaxonomyNode(label="Tax")],
-    )
-    agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[root])
-
-    root_step, root_enum = _build_step(["Finance"])
-    tax_step, tax_enum = _build_step(["Finance > Tax"])
-    steps = [
-        root_step(
-            selected_node=_enum_member(root_enum, "Finance"),
-            selected_nodes=[],
-            confidence=0.7,
-            stop_reason=ClassificationStopReason.CONTINUE,
-        ),
-        tax_step(
-            selected_node=_enum_member(tax_enum, "Finance > Tax"),
-            selected_nodes=[_enum_member(tax_enum, "Finance > Tax")],
-            confidence=0.9,
-            stop_reason=ClassificationStopReason.STOP,
-        ),
-    ]
-
-    with (
-        patch.object(agent, "get_agent", return_value=MagicMock()),
-        patch.object(agent, "_run_step_async", new_callable=AsyncMock) as mock_run,
-    ):
-        mock_run.side_effect = steps
-        result = await agent.run_agent("Tax update")
-
-    assert result.stop_reason is ClassificationStopReason.STOP
-    assert result.final_node is not None
-    assert result.final_node.label == "Tax"
 
 
 @pytest.mark.anyio
@@ -356,13 +264,11 @@ async def test_classifier_builds_sub_agents() -> None:
     child_step, child_enum = _build_step(["Root > Child"])
     steps = [
         root_step(
-            selected_node=_enum_member(root_enum, "Root"),
             selected_nodes=[_enum_member(root_enum, "Root")],
             confidence=0.8,
             stop_reason=ClassificationStopReason.CONTINUE,
         ),
         child_step(
-            selected_node=_enum_member(child_enum, "Root > Child"),
             selected_nodes=[_enum_member(child_enum, "Root > Child")],
             confidence=0.9,
             stop_reason=ClassificationStopReason.STOP,
@@ -395,13 +301,12 @@ def test_classifier_maps_enum_selections_to_identifiers() -> None:
     node_paths = _build_node_path_map(nodes, [])
     step_structure = _build_step_structure(list(node_paths.keys()))
     enum_cls = step_structure._extract_enum_class(
-        step_structure.model_fields["selected_node"].annotation
+        step_structure.model_fields["selected_nodes"].annotation
     )
     assert enum_cls is not None
     enum_member = list(enum_cls)[0]
     assert enum_member.value == "Billing"
     raw_step = step_structure(
-        selected_node=enum_member,
         selected_nodes=[enum_member],
         confidence=0.7,
         stop_reason=ClassificationStopReason.STOP,
@@ -409,7 +314,6 @@ def test_classifier_maps_enum_selections_to_identifiers() -> None:
 
     normalized = _normalize_step_output(raw_step, step_structure)
 
-    assert normalized.selected_node == enum_member
     assert normalized.selected_nodes == [enum_member]
 
 
@@ -428,7 +332,6 @@ async def test_classifier_run_async_delegates_to_run_agent() -> None:
             context={"source": "unit-test"},
             max_depth=1,
             confidence_threshold=0.4,
-            single_class=True,
         )
 
     assert result is expected
@@ -438,7 +341,6 @@ async def test_classifier_run_async_delegates_to_run_agent() -> None:
         file_ids=None,
         max_depth=1,
         confidence_threshold=0.4,
-        single_class=True,
     )
 
 
@@ -456,13 +358,11 @@ async def test_classifier_attaches_file_ids_to_steps() -> None:
     child_step, child_enum = _build_step(["Root > Child"])
     steps = [
         root_step(
-            selected_node=_enum_member(root_enum, "Root"),
             selected_nodes=[_enum_member(root_enum, "Root")],
             confidence=0.8,
             stop_reason=ClassificationStopReason.CONTINUE,
         ),
         child_step(
-            selected_node=_enum_member(child_enum, "Root > Child"),
             selected_nodes=[_enum_member(child_enum, "Root > Child")],
             confidence=0.9,
             stop_reason=ClassificationStopReason.STOP,
@@ -499,7 +399,6 @@ def test_classifier_run_sync_delegates_to_run_agent() -> None:
             context={"source": "unit-test"},
             max_depth=2,
             confidence_threshold=0.5,
-            single_class=False,
         )
 
     assert result is expected
@@ -509,7 +408,6 @@ def test_classifier_run_sync_delegates_to_run_agent() -> None:
         file_ids=None,
         max_depth=2,
         confidence_threshold=0.5,
-        single_class=False,
     )
 
 
