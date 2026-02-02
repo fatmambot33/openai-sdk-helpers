@@ -17,6 +17,7 @@ from ..structure import (
     ClassificationStep,
     ClassificationStopReason,
     StructureBase,
+    Taxonomy,
     TaxonomyNode,
 )
 from ..utils import ensure_list
@@ -639,6 +640,8 @@ def _normalize_roots(
     list[TaxonomyNode]
         Normalized list of root nodes.
     """
+    if isinstance(taxonomy, Taxonomy):
+        return [node for node in taxonomy.children if node is not None]
     if isinstance(taxonomy, TaxonomyNode):
         return [taxonomy]
     return [node for node in taxonomy if node is not None]

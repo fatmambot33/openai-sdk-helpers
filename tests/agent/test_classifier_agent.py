@@ -16,6 +16,7 @@ from openai_sdk_helpers.structure import (
     ClassificationStopReason,
     ClassificationStep,
     StructureBase,
+    Taxonomy,
     TaxonomyNode,
 )
 
@@ -236,6 +237,14 @@ async def test_classifier_requires_taxonomy_nodes():
 
     with pytest.raises(ValueError, match="taxonomy must include at least one node"):
         TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[])
+
+
+def test_classifier_uses_taxonomy_children_as_roots() -> None:
+    """Classifier should treat Taxonomy children as root nodes."""
+    taxonomy = Taxonomy(label="Root", children=[TaxonomyNode(label="Leaf")])
+    agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=taxonomy)
+
+    assert [node.label for node in agent.root_nodes] == ["Leaf"]
 
 
 def test_classifier_path_map_disambiguates_duplicate_labels() -> None:
