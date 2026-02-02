@@ -19,6 +19,8 @@ from ..structure import (
     StructureBase,
     Taxonomy,
     TaxonomyNode,
+    format_path_identifier,
+    split_path_identifier,
 )
 from ..utils import ensure_list
 from .base import AgentBase
@@ -738,7 +740,7 @@ def _build_node_path_map(
     path_map: dict[str, TaxonomyNode] = {}
     seen: dict[str, int] = {}
     for node in nodes:
-        base_path = _format_path_identifier([*parent_path, node.label])
+        base_path = format_path_identifier([*parent_path, node.label])
         count = seen.get(base_path, 0) + 1
         seen[base_path] = count
         path = f"{base_path} ({count})" if count > 1 else base_path
@@ -773,27 +775,6 @@ def _build_node_descriptors(
     return descriptors
 
 
-def _format_path_identifier(path_segments: Sequence[str]) -> str:
-    """Format path segments into a safe identifier string.
-
-    Parameters
-    ----------
-    path_segments : Sequence[str]
-        Path segments to format.
-
-    Returns
-    -------
-    str
-        Escaped path identifier string.
-    """
-    delimiter = " > "
-    escape_token = "\\>"
-    escaped_segments = [
-        segment.replace(delimiter, escape_token) for segment in path_segments
-    ]
-    return delimiter.join(escaped_segments)
-
-
 def _build_taxonomy_enum(name: str, values: Sequence[str]) -> type[Enum]:
     """Build a safe Enum from taxonomy node values.
 
@@ -818,25 +799,6 @@ def _build_taxonomy_enum(name: str, values: Sequence[str]) -> type[Enum]:
     return cast(type[Enum], Enum(name, members))
 
 
-def _split_taxonomy_path(value: str) -> list[str]:
-    """Split a taxonomy identifier into its path segments.
-
-    Parameters
-    ----------
-    value : str
-        Taxonomy path identifier to split.
-
-    Returns
-    -------
-    list[str]
-        Path segments with escaped delimiters restored.
-    """
-    delimiter = " > "
-    escape_token = "\\>"
-    segments = value.split(delimiter)
-    return [segment.replace(escape_token, delimiter) for segment in segments]
-
-
 def _sanitize_enum_member(
     value: str,
     index: int,
@@ -859,7 +821,7 @@ def _sanitize_enum_member(
         Sanitized enum member name.
     """
     normalized_segments: list[str] = []
-    for segment in _split_taxonomy_path(value):
+    for segment in split_path_identifier(value):
         normalized = re.sub(r"[^0-9a-zA-Z]+", "_", segment).strip("_").upper()
         if not normalized:
             normalized = "VALUE"
@@ -917,7 +879,9 @@ def _build_input_payload(
     str or list[dict[str, Any]]
         Input payload suitable for the Agents SDK.
     """
-    normalized_file_ids = [file_id for file_id in ensure_list(file_ids) if file_id]
+    normalized_file_ids = [
+        file_id for file_id in dict.fromkeys(ensure_list(file_ids)) if file_id
+    ]
     if not normalized_file_ids:
         return text
     attachments = [
@@ -1022,8 +986,16 @@ def _selected_nodes(step: ClassificationStep) -> list[str]:
     list[str]
         Selected identifiers in priority order.
     """
+    enum_cls: type[Enum] | None = None
+    step_cls = step.__class__
+    if hasattr(step_cls, "model_fields"):
+        field = step_cls.model_fields.get("selected_nodes")
+        if field is not None:
+            enum_cls = step_cls._extract_enum_class(field.annotation)
+    if enum_cls is None:
+        enum_cls = Enum
     selected_nodes = [
-        str(_normalize_enum_value(selected_node, Enum))
+        str(_normalize_enum_value(selected_node, enum_cls))
         for selected_node in step.selected_nodes or []
         if selected_node
     ]
