@@ -153,13 +153,10 @@ class TaxonomyNode(StructureBase):
         str
             Node description or label if description is not set.
         """
-        _description = f"{self.description}"
-        _keywords = ", ".join(self.keywords)
-        if _description:
-            _description += f"\n{_keywords})"
-        else:
-            _description = f"\n{_keywords})"
-        return _description
+        keywords = ", ".join(self.keywords)
+        if self.description:
+            return f"{self.description}\nKeywords: {keywords}"
+        return f"{self.label}\nKeywords: {keywords}"
 
     @property
     def flattened_nodes(self) -> list[TaxonomyNode]:

@@ -762,7 +762,7 @@ def _build_node_descriptors(
             {
                 "identifier": path_id,
                 "label": node.label,
-                "description": node.description,
+                "description": node.computed_description,
             }
         )
     return descriptors
