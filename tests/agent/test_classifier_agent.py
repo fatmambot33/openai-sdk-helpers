@@ -208,6 +208,78 @@ async def test_classifier_confidence_threshold_stops_branch():
 
 
 @pytest.mark.anyio
+async def test_classifier_overrides_stop_with_high_confidence_children():
+    """Classifier should continue when a stop reason contradicts child nodes."""
+    root = TaxonomyNode(
+        label="Root",
+        children=[TaxonomyNode(label="Child")],
+    )
+    agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[root])
+
+    root_step, root_enum = _build_step(["Root"])
+    child_step, child_enum = _build_step(["Root > Child"])
+    steps = [
+        root_step(
+            selected_nodes=[_enum_member(root_enum, "Root")],
+            confidence=0.95,
+            stop_reason=ClassificationStopReason.STOP,
+        ),
+        child_step(
+            selected_nodes=[_enum_member(child_enum, "Root > Child")],
+            confidence=0.88,
+            stop_reason=ClassificationStopReason.STOP,
+        ),
+    ]
+
+    with (
+        patch.object(agent, "get_agent", return_value=MagicMock()),
+        patch.object(agent, "_run_step_async", new_callable=AsyncMock) as mock_run,
+    ):
+        mock_run.side_effect = steps
+        result = await agent.run_async("Child classification")
+
+    assert result.final_node is not None
+    assert result.final_node.label == "Child"
+    assert result.steps[0].stop_reason is ClassificationStopReason.CONTINUE
+
+
+@pytest.mark.anyio
+async def test_classifier_falls_back_to_parent_when_children_no_match():
+    """Classifier should retain parent when child traversal yields no matches."""
+    root = TaxonomyNode(
+        label="Root",
+        children=[TaxonomyNode(label="Child")],
+    )
+    agent = TaxonomyClassifierAgent(model="gpt-4o-mini", taxonomy=[root])
+
+    root_step, root_enum = _build_step(["Root"])
+    child_step, _child_enum = _build_step(["Root > Child"])
+    steps = [
+        root_step(
+            selected_nodes=[_enum_member(root_enum, "Root")],
+            confidence=0.91,
+            stop_reason=ClassificationStopReason.STOP,
+        ),
+        child_step(
+            selected_nodes=None,
+            confidence=0.2,
+            stop_reason=ClassificationStopReason.NO_MATCH,
+        ),
+    ]
+
+    with (
+        patch.object(agent, "get_agent", return_value=MagicMock()),
+        patch.object(agent, "_run_step_async", new_callable=AsyncMock) as mock_run,
+    ):
+        mock_run.side_effect = steps
+        result = await agent.run_async("Fallback classification")
+
+    assert result.final_node is not None
+    assert result.final_node.label == "Root"
+    assert result.steps[0].stop_reason is ClassificationStopReason.CONTINUE
+
+
+@pytest.mark.anyio
 async def test_classifier_stops_when_no_children():
     """Classifier should stop when a selected node has no children."""
 
