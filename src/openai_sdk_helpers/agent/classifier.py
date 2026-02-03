@@ -396,7 +396,8 @@ class TaxonomyClassifierAgent(AgentBase):
 
         resolved_nodes = _resolve_nodes(node_paths, step)
 
-        if _should_continue_from_stop(step, resolved_nodes):
+        should_continue = _should_continue_from_stop(step, resolved_nodes)
+        if should_continue:
             step = step.model_copy(
                 update={"stop_reason": ClassificationStopReason.CONTINUE}
             )
@@ -415,7 +416,7 @@ class TaxonomyClassifierAgent(AgentBase):
             return
 
         base_steps_len = len(state.steps)
-        child_tasks: list[tuple[Awaitable["_TraversalState"], int]] = []
+        child_tasks: list[tuple[Awaitable["_TraversalState"], int, TaxonomyNode]] = []
         for node in resolved_nodes:
             if node.children:
                 sub_agent = self._build_sub_agent(list(node.children))
@@ -437,6 +438,7 @@ class TaxonomyClassifierAgent(AgentBase):
                             state=sub_state,
                         ),
                         base_final_nodes_len,
+                        node,
                     )
                 )
             else:
@@ -447,13 +449,19 @@ class TaxonomyClassifierAgent(AgentBase):
                 )
         if child_tasks:
             child_states = await asyncio.gather(
-                *(child_task for child_task, _ in child_tasks)
+                *(child_task for child_task, _, _ in child_tasks)
             )
-            for child_state, (_, base_final_nodes_len) in zip(
+            for child_state, (_, base_final_nodes_len, parent_node) in zip(
                 child_states, child_tasks, strict=True
             ):
                 state.steps.extend(child_state.steps[base_steps_len:])
-                state.final_nodes.extend(child_state.final_nodes[base_final_nodes_len:])
+                child_final_nodes = child_state.final_nodes[base_final_nodes_len:]
+                state.final_nodes.extend(child_final_nodes)
+                if should_continue and not child_final_nodes:
+                    state.final_nodes.append(parent_node)
+                    state.best_confidence = _max_confidence(
+                        state.best_confidence, step.confidence
+                    )
                 state.best_confidence = _max_confidence(
                     state.best_confidence, child_state.best_confidence
                 )
