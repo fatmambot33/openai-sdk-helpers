@@ -102,6 +102,9 @@ class ResponseConfiguration(DataclassJSONSerializable, Generic[TIn, TOut]):
     system_vector_store : list[str], optional
         Optional list of vector store names to attach as system context.
         Default is None.
+    save_messages : bool, optional
+        Default behavior for persisting message history on response runs
+        and close calls. Default is True.
     add_output_instructions : bool, optional
         Whether to append output structure instructions to the prompt.
         Default is False.
@@ -114,6 +117,7 @@ class ResponseConfiguration(DataclassJSONSerializable, Generic[TIn, TOut]):
         If name is not a non-empty string.
         If instructions is not a string or Path.
         If tools is provided and is not a sequence.
+        If save_messages is not a bool.
         If input_structure or output_structure is not a class.
         If input_structure or output_structure does not subclass StructureBase.
     ValueError
@@ -158,6 +162,7 @@ class ResponseConfiguration(DataclassJSONSerializable, Generic[TIn, TOut]):
     input_structure: Optional[Type[TIn]]
     output_structure: Optional[Type[TOut]]
     system_vector_store: Optional[list[str]] = None
+    save_messages: bool = True
     add_output_instructions: bool = False
     add_web_search_tool: bool = False
 
@@ -204,6 +209,8 @@ class ResponseConfiguration(DataclassJSONSerializable, Generic[TIn, TOut]):
 
         if self.tools is not None and not isinstance(self.tools, Sequence):
             raise TypeError("Configuration.tools must be a Sequence or None")
+        if not isinstance(self.save_messages, bool):
+            raise TypeError("Configuration.save_messages must be a bool")
 
     @property
     def get_resolved_instructions(self) -> str:
@@ -274,6 +281,7 @@ class ResponseConfiguration(DataclassJSONSerializable, Generic[TIn, TOut]):
             data_path=data_path,
             tool_handlers=tool_handlers,
             openai_settings=openai_settings,
+            save_messages=self.save_messages,
         )
 
 

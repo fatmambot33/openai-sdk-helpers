@@ -50,6 +50,14 @@ def test_close(response_base):
     response_base._user_vector_storage.delete.assert_called_once()
 
 
+def test_close_respects_save_messages_default(response_base):
+    """Allow close() to skip saving messages by configuration."""
+    response_base._save_messages = False
+    with patch.object(response_base, "save") as mock_save:
+        response_base.close()
+    mock_save.assert_not_called()
+
+
 def test_close_skips_external_stores(response_base):
     """Ensure externally managed vector stores are preserved."""
     response_base._user_vector_storage = MagicMock()

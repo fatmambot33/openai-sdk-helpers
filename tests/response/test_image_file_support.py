@@ -183,7 +183,6 @@ def test_run_sync_with_files(response_base, tmp_path):
     sig = signature(response_base.run_sync)
     assert "files" in sig.parameters
     assert "use_vector_store" in sig.parameters
-    assert "save_messages" in sig.parameters
 
 
 def test_run_async_with_files(response_base, tmp_path):
@@ -194,4 +193,3 @@ def test_run_async_with_files(response_base, tmp_path):
     sig = signature(response_base.run_async)
     assert "files" in sig.parameters
     assert "use_vector_store" in sig.parameters
-    assert "save_messages" in sig.parameters
