@@ -981,7 +981,7 @@ class ResponseBase(Generic[T]):
         """
         self.close()
 
-    def close(self) -> None:
+    def close(self, save_messages: bool = True) -> None:
         """Clean up session resources including vector stores and uploaded files.
 
         Saves the current message history, deletes managed vector stores, and
@@ -994,6 +994,11 @@ class ResponseBase(Generic[T]):
         context manager. Always call close() or use a with statement to
         ensure proper resource cleanup.
 
+        Parameters
+        ----------
+        save_messages : bool, default True
+            When True, persist the message history before cleanup.
+
         Examples
         --------
         >>> response = ResponseBase(...)
@@ -1003,7 +1008,8 @@ class ResponseBase(Generic[T]):
         ...     response.close()
         """
         log(f"Closing session {self.uuid} for {self.__class__.__name__}")
-        self.save()
+        if save_messages:
+            self.save()
 
         # Clean up tracked Files API uploads
         try:
