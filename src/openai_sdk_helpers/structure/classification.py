@@ -480,6 +480,8 @@ class ClassificationResult(StructureBase):
         Yield selected identifiers across all steps.
     selected_nodes
         Return the selected identifiers across all steps.
+    to_lightweight_summary
+        Return a lightweight summary of selected node paths.
 
     Examples
     --------
@@ -565,6 +567,50 @@ class ClassificationResult(StructureBase):
                 if normalized:
                     yield normalized
 
+    def to_lightweight_summary(self) -> "ClassificationSummary":
+        """Return a lightweight summary of selected node paths.
+
+        Returns
+        -------
+        ClassificationSummary
+            Summary containing the ``full_paths`` of selected nodes, or None
+            when no selections exist.
+
+        Examples
+        --------
+        >>> result = ClassificationResult(steps=[])
+        >>> result.to_lightweight_summary().full_paths is None
+        True
+        """
+        full_paths = [
+            format_path_identifier(taxonomy_enum_path(node))
+            for node in self.selected_nodes
+        ]
+        return ClassificationSummary(full_paths=full_paths or None)
+
+
+class ClassificationSummary(StructureBase):
+    """Represent a lightweight summary of selected taxonomy paths.
+
+    Attributes
+    ----------
+    full_paths : list[str] or None
+        Selected taxonomy paths including parent segments.
+
+    Methods
+    -------
+    to_json()
+        Serialize the summary to a JSON-compatible dictionary.
+    from_json(data)
+        Construct a summary instance from JSON-compatible data.
+    """
+
+    full_paths: list[str] | None = spec_field(
+        "full_paths",
+        description="Selected taxonomy paths including parent segments.",
+        default=None,
+    )
+
 
 def taxonomy_enum_path(value: Enum | str | None) -> list[str]:
     """Return the taxonomy path segments for an enum value.
@@ -598,6 +644,7 @@ def taxonomy_enum_path(value: Enum | str | None) -> list[str]:
 
 __all__ = [
     "ClassificationResult",
+    "ClassificationSummary",
     "ClassificationStep",
     "ClassificationStopReason",
     "Taxonomy",
