@@ -539,6 +539,7 @@ class ResponseBase(Generic[T]):
         use_vector_store : bool, default False
             If True, non-image files are uploaded to a vector store
             for RAG-enabled search instead of inline base64 encoding.
+
         Returns
         -------
         T or str
@@ -713,6 +714,7 @@ class ResponseBase(Generic[T]):
         use_vector_store : bool, default False
             If True, non-image files are uploaded to a vector store
             for RAG-enabled search instead of inline base64 encoding.
+
         Returns
         -------
         T or str
