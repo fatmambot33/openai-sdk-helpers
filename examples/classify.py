@@ -44,7 +44,6 @@ async def main():
     # Async run_agent
     result_async = await agent.run_async(text)
 
-
     print_result(result_async, "run_agent (async)")
 
 
