@@ -36,16 +36,15 @@ import asyncio
 
 def print_result(result: ClassificationResult, label):
     print(f"\n--- {label} ---")
-    print("Classification path:")
-    print(f"Full path: {getattr(result, 'path_labels', [])}")
-    print(f"Confidence: {getattr(result, 'confidence', None)}")
-    print(f"Stop reason: {getattr(result, 'stop_reason', None)}")
-    print(f"Raw result: {result}\n")
+    print(f"Classification path:{result.to_lightweight_summary()}")
+    print(f"Raw result:\n{result}")
 
 
 async def main():
     # Async run_agent
     result_async = await agent.run_async(text)
+
+
     print_result(result_async, "run_agent (async)")
 
 
