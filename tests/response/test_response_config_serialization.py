@@ -31,6 +31,7 @@ def test_response_config_to_json() -> None:
     assert json_data["input_structure"] is None
     assert json_data["output_structure"] is None
     assert json_data["system_vector_store"] == ["store1", "store2"]
+    assert json_data["save_messages"] is True
     assert json_data["add_output_instructions"] is False
 
 
@@ -44,6 +45,7 @@ def test_response_config_to_json_file(tmp_path: Path) -> None:
         output_structure=None,
         system_vector_store=["store1"],
         add_output_instructions=True,
+        save_messages=False,
     )
 
     json_file = tmp_path / "configuration.json"
@@ -59,6 +61,7 @@ def test_response_config_to_json_file(tmp_path: Path) -> None:
     assert loaded_data["name"] == "test_config"
     assert loaded_data["instructions"] == "Test instructions"
     assert loaded_data["system_vector_store"] == ["store1"]
+    assert loaded_data["save_messages"] is False
 
 
 def test_response_config_json_serialization_with_none_fields() -> None:
@@ -75,6 +78,7 @@ def test_response_config_json_serialization_with_none_fields() -> None:
 
     assert json_data["name"] == "minimal_config"
     assert json_data["system_vector_store"] is None
+    assert json_data["save_messages"] is True
     assert json_data["add_output_instructions"] is False
     assert json_data["add_web_search_tool"] is False
 
@@ -89,6 +93,7 @@ def test_response_config_from_json() -> None:
         "output_structure": None,
         "system_vector_store": ["store1", "store2"],
         "add_output_instructions": False,
+        "save_messages": False,
     }
 
     configuration = ResponseConfiguration.from_json(json_data)
@@ -100,6 +105,7 @@ def test_response_config_from_json() -> None:
     assert configuration.output_structure is None
     assert configuration.system_vector_store == ["store1", "store2"]
     assert configuration.add_output_instructions is False
+    assert configuration.save_messages is False
 
 
 def test_response_config_from_json_file(tmp_path: Path) -> None:
@@ -112,6 +118,7 @@ def test_response_config_from_json_file(tmp_path: Path) -> None:
         "output_structure": None,
         "system_vector_store": ["store1"],
         "add_output_instructions": True,
+        "save_messages": True,
     }
 
     json_file = tmp_path / "configuration.json"
@@ -124,6 +131,7 @@ def test_response_config_from_json_file(tmp_path: Path) -> None:
     assert configuration.instructions == "Test instructions"
     assert configuration.system_vector_store == ["store1"]
     assert configuration.add_output_instructions is True
+    assert configuration.save_messages is True
 
 
 def test_response_config_round_trip_serialization() -> None:
@@ -136,6 +144,7 @@ def test_response_config_round_trip_serialization() -> None:
         output_structure=None,
         system_vector_store=["store1", "store2"],
         add_output_instructions=False,
+        save_messages=False,
     )
 
     # Serialize to JSON
@@ -155,6 +164,7 @@ def test_response_config_round_trip_serialization() -> None:
         restored_config.add_output_instructions
         == original_config.add_output_instructions
     )
+    assert restored_config.save_messages == original_config.save_messages
 
 
 def test_response_config_from_json_file_not_found() -> None:

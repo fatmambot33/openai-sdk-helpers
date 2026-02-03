@@ -103,6 +103,9 @@ class ResponseBase(Generic[T]):
     openai_settings : OpenAISettings or None, default None
         Fully configured OpenAI settings with API key and default model.
         Required for normal operation.
+    save_messages : bool, default True
+        Default behavior for persisting message history on response runs
+        and close calls.
 
     Attributes
     ----------
@@ -169,6 +172,7 @@ class ResponseBase(Generic[T]):
         data_path: Path | str | None = None,
         tool_handlers: dict[str, ToolHandlerRegistration] | None = None,
         openai_settings: OpenAISettings | None = None,
+        save_messages: bool = True,
     ) -> None:
         """Initialize a response session with OpenAI configuration.
 
@@ -204,6 +208,9 @@ class ResponseBase(Generic[T]):
         openai_settings : OpenAISettings or None, default None
             Fully configured OpenAI settings with API key and default model.
             Required for normal operation.
+        save_messages : bool, default True
+            Default behavior for persisting message history on response runs
+            and close calls.
 
         Raises
         ------
@@ -247,6 +254,7 @@ class ResponseBase(Generic[T]):
             self._data_path = get_data_path(self.__class__.__name__)
 
         self._instructions = instructions
+        self._save_messages = save_messages
         self._tools: list[dict[str, Any]] | None = None
         if tools is not None:
             self._tools = [
@@ -314,7 +322,7 @@ class ResponseBase(Generic[T]):
 
         self.messages = ResponseMessages()
         self.messages.add_system_message(content=system_content)
-        if self._data_path is not None:
+        if self._data_path is not None and self._save_messages:
             self.save()
 
     @property
@@ -509,7 +517,7 @@ class ResponseBase(Generic[T]):
         content: str | list[str],
         files: str | list[str] | None = None,
         use_vector_store: bool = False,
-        save_messages: bool = True,
+        save_messages: bool | None = None,
     ) -> T | str:
         """Generate a response asynchronously from the OpenAI API.
 
@@ -532,9 +540,9 @@ class ResponseBase(Generic[T]):
         use_vector_store : bool, default False
             If True, non-image files are uploaded to a vector store
             for RAG-enabled search instead of inline base64 encoding.
-        save_messages : bool, default True
+        save_messages : bool or None, default None
             When True, persist the message history after each response or
-            tool call.
+            tool call. When None, use the session default.
 
         Returns
         -------
@@ -567,6 +575,9 @@ class ResponseBase(Generic[T]):
         """
         log(f"{self.__class__.__name__}::run_response")
         parsed_result: T | None = None
+        resolved_save_messages = (
+            self._save_messages if save_messages is None else save_messages
+        )
 
         try:
             self._build_input(
@@ -625,7 +636,7 @@ class ResponseBase(Generic[T]):
                         self.messages.add_tool_message(
                             content=response_output, output=tool_output
                         )
-                        if save_messages:
+                        if resolved_save_messages:
                             self.save()
                     except Exception as exc:
                         log(
@@ -651,7 +662,7 @@ class ResponseBase(Generic[T]):
                     self.messages.add_assistant_message(
                         response_output, metadata=kwargs
                     )
-                    if save_messages:
+                    if resolved_save_messages:
                         self.save()
                     if hasattr(response, "output_text") and response.output_text:
                         raw_text = response.output_text
@@ -688,7 +699,7 @@ class ResponseBase(Generic[T]):
         *,
         files: str | list[str] | None = None,
         use_vector_store: bool = False,
-        save_messages: bool = True,
+        save_messages: bool | None = None,
     ) -> T | str:
         """Execute run_async synchronously with proper event loop handling.
 
@@ -711,9 +722,9 @@ class ResponseBase(Generic[T]):
         use_vector_store : bool, default False
             If True, non-image files are uploaded to a vector store
             for RAG-enabled search instead of inline base64 encoding.
-        save_messages : bool, default True
+        save_messages : bool or None, default None
             When True, persist the message history after each response or
-            tool call.
+            tool call. When None, use the session default.
 
         Returns
         -------
@@ -981,7 +992,7 @@ class ResponseBase(Generic[T]):
         """
         self.close()
 
-    def close(self, save_messages: bool = True) -> None:
+    def close(self, save_messages: bool | None = None) -> None:
         """Clean up session resources including vector stores and uploaded files.
 
         Saves the current message history, deletes managed vector stores, and
@@ -996,8 +1007,9 @@ class ResponseBase(Generic[T]):
 
         Parameters
         ----------
-        save_messages : bool, default True
-            When True, persist the message history before cleanup.
+        save_messages : bool or None, default None
+            When True, persist the message history before cleanup. When None,
+            use the session default.
 
         Examples
         --------
@@ -1008,7 +1020,10 @@ class ResponseBase(Generic[T]):
         ...     response.close()
         """
         log(f"Closing session {self.uuid} for {self.__class__.__name__}")
-        if save_messages:
+        resolved_save_messages = (
+            self._save_messages if save_messages is None else save_messages
+        )
+        if resolved_save_messages:
             self.save()
 
         # Clean up tracked Files API uploads

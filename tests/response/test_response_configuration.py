@@ -123,3 +123,19 @@ def test_no_output_structure_ignores_add_output_instructions(
     # Both should produce the same result: just the base instructions
     assert response_with_flag._instructions == config_true.get_resolved_instructions
     assert response_without_flag._instructions == config_false.get_resolved_instructions
+
+
+def test_save_messages_is_applied_to_response(openai_settings) -> None:
+    """Test that save_messages defaults are passed to ResponseBase."""
+    configuration = ResponseConfiguration(
+        name="unit",
+        instructions="Base instructions",
+        tools=None,
+        input_structure=None,
+        output_structure=None,
+        save_messages=False,
+    )
+
+    response = configuration.gen_response(openai_settings=openai_settings)
+
+    assert response._save_messages is False
