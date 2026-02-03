@@ -50,6 +50,7 @@ def test_classification_result_properties():
             "ROOT": "Root",
             "ROOT_LEAF": "Root > Leaf",
             "ROOT_BRANCH": "Root > Branch",
+            "ROOT_ESCAPED": "Root > Leaf\\>Branch",
         },
     )
     Step = ClassificationStep.build_for_enum(step_enum)
@@ -60,7 +61,11 @@ def test_classification_result_properties():
             stop_reason=ClassificationStopReason.CONTINUE,
         ),
         Step(
-            selected_nodes=[step_enum.ROOT_LEAF, step_enum.ROOT_BRANCH],
+            selected_nodes=[
+                step_enum.ROOT_LEAF,
+                step_enum.ROOT_BRANCH,
+                step_enum.ROOT_ESCAPED,
+            ],
             confidence=0.9,
             stop_reason=ClassificationStopReason.STOP,
         ),
@@ -74,9 +79,28 @@ def test_classification_result_properties():
     )
 
     assert result.depth == 2
-    assert result.selected_nodes == ["Root", "Root > Leaf", "Root > Branch"]
+    assert result.selected_nodes == [
+        "Root",
+        "Root > Leaf",
+        "Root > Branch",
+        "Root > Leaf\\>Branch",
+    ]
     assert result.final_node == leaf_node
     assert result.final_nodes == [leaf_node, branch_node]
+    summary = result.to_lightweight_summary()
+    assert summary is not None
+    assert summary.full_paths == [
+        "Root",
+        "Root > Leaf",
+        "Root > Branch",
+        "Root > Leaf\\>Branch",
+    ]
+    assert summary.to_json() == {
+        "full_paths": ["Root", "Root > Leaf", "Root > Branch", "Root > Leaf\\>Branch"]
+    }
+
+    empty_summary = ClassificationResult(steps=[]).to_lightweight_summary()
+    assert empty_summary is None
 
 
 def test_stop_reason_is_terminal_property():
