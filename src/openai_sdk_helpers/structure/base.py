@@ -174,6 +174,70 @@ def _ensure_schema_has_type(schema: dict[str, Any]) -> None:
     schema.update(_build_any_value_schema())
 
 
+def _strip_ref_types(schema: dict[str, Any]) -> None:
+    """Remove type entries from enum $ref nodes when non-nullable.
+
+    Parameters
+    ----------
+    schema : dict[str, Any]
+        Root schema to clean in place.
+    """
+
+    def _resolve_ref(ref: str) -> dict[str, Any] | None:
+        if not ref.startswith("#/"):
+            return None
+        pointer = ref.removeprefix("#/")
+        current: Any = schema
+        for part in pointer.split("/"):
+            if not isinstance(current, dict):
+                return None
+            current = current.get(part)
+        if isinstance(current, dict):
+            return current
+        return None
+
+    def _is_enum_ref(ref: str) -> bool:
+        ref_target = _resolve_ref(ref)
+        if not isinstance(ref_target, dict):
+            return False
+        return "enum" in ref_target
+
+    def _is_null_schema(entry: Any) -> bool:
+        if not isinstance(entry, dict):
+            return False
+        entry_type = entry.get("type")
+        if entry_type == "null":
+            return True
+        if isinstance(entry_type, list) and "null" in entry_type:
+            return True
+        return False
+
+    def _walk(
+        node: Any,
+        *,
+        nullable_context: bool = False,
+    ) -> None:
+        if isinstance(node, dict):
+            ref = node.get("$ref")
+            if isinstance(ref, str) and _is_enum_ref(ref) and not nullable_context:
+                node.pop("type", None)
+            for key, value in node.items():
+                if key == "anyOf" and isinstance(value, list):
+                    anyof_nullable = any(_is_null_schema(entry) for entry in value)
+                    for entry in value:
+                        _walk(
+                            entry,
+                            nullable_context=anyof_nullable or nullable_context,
+                        )
+                    continue
+                _walk(value, nullable_context=nullable_context)
+        elif isinstance(node, list):
+            for item in node:
+                _walk(item, nullable_context=nullable_context)
+
+    _walk(schema)
+
+
 def _hydrate_ref_types(schema: dict[str, Any]) -> None:
     """Attach explicit types to $ref nodes when available.
 
@@ -560,6 +624,7 @@ class StructureBase(BaseModelJSONSerializable):
         _hydrate_ref_types(cleaned_schema)
         _ensure_items_have_schema(cleaned_schema)
         _ensure_schema_has_type(cleaned_schema)
+        _strip_ref_types(cleaned_schema)
 
         nullable_fields = {
             name
