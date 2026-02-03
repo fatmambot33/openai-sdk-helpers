@@ -517,7 +517,6 @@ class ResponseBase(Generic[T]):
         content: str | list[str],
         files: str | list[str] | None = None,
         use_vector_store: bool = False,
-        save_messages: bool | None = None,
     ) -> T | str:
         """Generate a response asynchronously from the OpenAI API.
 
@@ -540,10 +539,6 @@ class ResponseBase(Generic[T]):
         use_vector_store : bool, default False
             If True, non-image files are uploaded to a vector store
             for RAG-enabled search instead of inline base64 encoding.
-        save_messages : bool or None, default None
-            When True, persist the message history after each response or
-            tool call. When None, use the session default.
-
         Returns
         -------
         T or str
@@ -575,9 +570,6 @@ class ResponseBase(Generic[T]):
         """
         log(f"{self.__class__.__name__}::run_response")
         parsed_result: T | None = None
-        resolved_save_messages = (
-            self._save_messages if save_messages is None else save_messages
-        )
 
         try:
             self._build_input(
@@ -636,7 +628,7 @@ class ResponseBase(Generic[T]):
                         self.messages.add_tool_message(
                             content=response_output, output=tool_output
                         )
-                        if resolved_save_messages:
+                        if self._save_messages:
                             self.save()
                     except Exception as exc:
                         log(
@@ -662,7 +654,7 @@ class ResponseBase(Generic[T]):
                     self.messages.add_assistant_message(
                         response_output, metadata=kwargs
                     )
-                    if resolved_save_messages:
+                    if self._save_messages:
                         self.save()
                     if hasattr(response, "output_text") and response.output_text:
                         raw_text = response.output_text
@@ -699,7 +691,6 @@ class ResponseBase(Generic[T]):
         *,
         files: str | list[str] | None = None,
         use_vector_store: bool = False,
-        save_messages: bool | None = None,
     ) -> T | str:
         """Execute run_async synchronously with proper event loop handling.
 
@@ -722,10 +713,6 @@ class ResponseBase(Generic[T]):
         use_vector_store : bool, default False
             If True, non-image files are uploaded to a vector store
             for RAG-enabled search instead of inline base64 encoding.
-        save_messages : bool or None, default None
-            When True, persist the message history after each response or
-            tool call. When None, use the session default.
-
         Returns
         -------
         T or str
@@ -760,7 +747,6 @@ class ResponseBase(Generic[T]):
                 content=content,
                 files=files,
                 use_vector_store=use_vector_store,
-                save_messages=save_messages,
             )
 
         try:
@@ -992,7 +978,7 @@ class ResponseBase(Generic[T]):
         """
         self.close()
 
-    def close(self, save_messages: bool | None = None) -> None:
+    def close(self) -> None:
         """Clean up session resources including vector stores and uploaded files.
 
         Saves the current message history, deletes managed vector stores, and
@@ -1005,12 +991,6 @@ class ResponseBase(Generic[T]):
         context manager. Always call close() or use a with statement to
         ensure proper resource cleanup.
 
-        Parameters
-        ----------
-        save_messages : bool or None, default None
-            When True, persist the message history before cleanup. When None,
-            use the session default.
-
         Examples
         --------
         >>> response = ResponseBase(...)
@@ -1020,10 +1000,7 @@ class ResponseBase(Generic[T]):
         ...     response.close()
         """
         log(f"Closing session {self.uuid} for {self.__class__.__name__}")
-        resolved_save_messages = (
-            self._save_messages if save_messages is None else save_messages
-        )
-        if resolved_save_messages:
+        if self._save_messages:
             self.save()
 
         # Clean up tracked Files API uploads
