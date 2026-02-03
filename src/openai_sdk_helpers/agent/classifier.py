@@ -26,6 +26,8 @@ from ..utils import ensure_list
 from .base import AgentBase
 from .configuration import AgentConfiguration
 
+_CONTINUE_CONFIDENCE_THRESHOLD = 0.7
+
 
 class TaxonomyClassifierAgent(AgentBase):
     """Classify text by recursively traversing a taxonomy.
@@ -394,6 +396,12 @@ class TaxonomyClassifierAgent(AgentBase):
 
         resolved_nodes = _resolve_nodes(node_paths, step)
 
+        if _should_continue_from_stop(step, resolved_nodes):
+            step = step.model_copy(
+                update={"stop_reason": ClassificationStopReason.CONTINUE}
+            )
+            state.steps[-1] = step
+
         if step.stop_reason.is_terminal:
             if resolved_nodes:
                 state.final_nodes.extend(resolved_nodes)
@@ -625,6 +633,34 @@ def _resolve_stop_reason(state: _TraversalState) -> ClassificationStopReason:
     if state.saw_no_children:
         return ClassificationStopReason.NO_CHILDREN
     return ClassificationStopReason.NO_MATCH
+
+
+def _should_continue_from_stop(
+    step: ClassificationStep,
+    resolved_nodes: Sequence[TaxonomyNode],
+    threshold: float = _CONTINUE_CONFIDENCE_THRESHOLD,
+) -> bool:
+    """Return True when a stop reason should continue traversal.
+
+    Parameters
+    ----------
+    step : ClassificationStep
+        Classification step to evaluate.
+    resolved_nodes : Sequence[TaxonomyNode]
+        Resolved taxonomy nodes from the classification step.
+    threshold : float, default=0.7
+        Confidence threshold for overriding a stop reason.
+
+    Returns
+    -------
+    bool
+        True when traversal should proceed despite a stop reason.
+    """
+    if step.stop_reason is not ClassificationStopReason.STOP:
+        return False
+    if step.confidence is None or step.confidence < threshold:
+        return False
+    return any(node.children for node in resolved_nodes)
 
 
 def _normalize_roots(
