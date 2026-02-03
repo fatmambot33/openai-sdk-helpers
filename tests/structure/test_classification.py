@@ -88,6 +88,7 @@ def test_classification_result_properties():
     assert result.final_node == leaf_node
     assert result.final_nodes == [leaf_node, branch_node]
     summary = result.to_lightweight_summary()
+    assert summary is not None
     assert summary.full_paths == [
         "Root",
         "Root > Leaf",
@@ -97,6 +98,9 @@ def test_classification_result_properties():
     assert summary.to_json() == {
         "full_paths": ["Root", "Root > Leaf", "Root > Branch", "Root > Leaf\\>Branch"]
     }
+
+    empty_summary = ClassificationResult(steps=[]).to_lightweight_summary()
+    assert empty_summary is None
 
 
 def test_stop_reason_is_terminal_property():

@@ -567,26 +567,28 @@ class ClassificationResult(StructureBase):
                 if normalized:
                     yield normalized
 
-    def to_lightweight_summary(self) -> "ClassificationSummary":
+    def to_lightweight_summary(self) -> "ClassificationSummary | None":
         """Return a lightweight summary of selected node paths.
 
         Returns
         -------
-        ClassificationSummary
+        ClassificationSummary or None
             Summary containing the ``full_paths`` of selected nodes, or None
             when no selections exist.
 
         Examples
         --------
         >>> result = ClassificationResult(steps=[])
-        >>> result.to_lightweight_summary().full_paths is None
+        >>> result.to_lightweight_summary() is None
         True
         """
         full_paths = [
             format_path_identifier(taxonomy_enum_path(node))
             for node in self.selected_nodes
         ]
-        return ClassificationSummary(full_paths=full_paths or None)
+        if not full_paths:
+            return None
+        return ClassificationSummary(full_paths=full_paths)
 
 
 class ClassificationSummary(StructureBase):
