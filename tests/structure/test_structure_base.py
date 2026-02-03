@@ -206,10 +206,27 @@ def test_anyof_entries_include_types():
         ]
     }
 
-    _ensure_schema_has_type(schema)
+    _ensure_schema_has_type(schema, root_schema=schema)
 
     any_of_entry = schema["anyOf"][0]
     assert any_of_entry["type"] == "object"
+
+
+def test_anyof_with_ref_infers_parent_type():
+    """Ensure $ref entries contribute to parent type inference."""
+    schema = {
+        "$defs": {
+            "Color": {"type": "string", "enum": ["red", "green", "blue"]},
+        },
+        "anyOf": [
+            {"$ref": "#/$defs/Color"},
+            {"type": "null"},
+        ],
+    }
+
+    _ensure_schema_has_type(schema, root_schema=schema)
+
+    assert schema["type"] == ["null", "string"]
 
 
 def test_spec_field():

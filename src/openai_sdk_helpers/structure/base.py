@@ -116,7 +116,9 @@ def _build_any_value_schema(depth: int = 0) -> dict[str, Any]:
     return {"anyOf": any_of}
 
 
-def _ensure_items_have_schema(target: Any) -> None:
+def _ensure_items_have_schema(
+    target: Any, *, root_schema: dict[str, Any] | None = None
+) -> None:
     """Ensure array item schemas include type information."""
     if isinstance(target, dict):
         items = target.get("items")
@@ -124,39 +126,72 @@ def _ensure_items_have_schema(target: Any) -> None:
             if not items:
                 target["items"] = _build_any_value_schema()
             else:
-                _ensure_schema_has_type(items)
+                _ensure_schema_has_type(items, root_schema=root_schema)
         for value in target.values():
-            _ensure_items_have_schema(value)
+            _ensure_items_have_schema(value, root_schema=root_schema)
     elif isinstance(target, list):
         for item in target:
-            _ensure_items_have_schema(item)
+            _ensure_items_have_schema(item, root_schema=root_schema)
 
 
-def _ensure_schema_has_type(schema: dict[str, Any]) -> None:
+def _resolve_ref_type(
+    ref: str, *, root_schema: dict[str, Any]
+) -> str | list[str] | None:
+    """Resolve a local $ref into its declared type value."""
+    if not ref.startswith("#/"):
+        return None
+    path = ref.lstrip("#/").split("/")
+    if not path:
+        return None
+    current: Any = root_schema
+    for segment in path:
+        if not isinstance(current, dict) or segment not in current:
+            return None
+        current = current[segment]
+    if not isinstance(current, dict):
+        return None
+    return current.get("type")
+
+
+def _ensure_schema_has_type(
+    schema: dict[str, Any], *, root_schema: dict[str, Any] | None = None
+) -> None:
     """Ensure a schema dictionary includes a type entry when possible."""
+    if root_schema is None:
+        root_schema = schema
     any_of = schema.get("anyOf")
     if isinstance(any_of, list):
         for entry in any_of:
             if isinstance(entry, dict):
-                _ensure_schema_has_type(entry)
+                _ensure_schema_has_type(entry, root_schema=root_schema)
     properties = schema.get("properties")
     if isinstance(properties, dict):
         for value in properties.values():
             if isinstance(value, dict):
-                _ensure_schema_has_type(value)
+                _ensure_schema_has_type(value, root_schema=root_schema)
     items = schema.get("items")
     if isinstance(items, dict):
-        _ensure_schema_has_type(items)
+        _ensure_schema_has_type(items, root_schema=root_schema)
     if "type" in schema or "$ref" in schema:
         return
     if isinstance(any_of, list):
         inferred_types: set[str] = set()
         has_ref_entry = False
+        has_unresolved_ref = False
         for entry in any_of:
             if not isinstance(entry, dict):
                 continue
             if "$ref" in entry:
                 has_ref_entry = True
+                ref_type = _resolve_ref_type(entry["$ref"], root_schema=root_schema)
+                if isinstance(ref_type, str):
+                    inferred_types.add(ref_type)
+                elif isinstance(ref_type, list):
+                    inferred_types.update(
+                        element for element in ref_type if isinstance(element, str)
+                    )
+                else:
+                    has_unresolved_ref = True
             entry_type = entry.get("type")
             if isinstance(entry_type, str):
                 inferred_types.add(entry_type)
@@ -164,9 +199,7 @@ def _ensure_schema_has_type(schema: dict[str, Any]) -> None:
                 inferred_types.update(
                     element for element in entry_type if isinstance(element, str)
                 )
-        if has_ref_entry:
-            return
-        if inferred_types:
+        if inferred_types and not (has_ref_entry and has_unresolved_ref):
             schema["type"] = sorted(inferred_types)
             return
     if "properties" in schema:
@@ -500,8 +533,8 @@ class StructureBase(BaseModelJSONSerializable):
         cleaned_schema = cast(dict[str, Any], clean_refs(schema))
 
         cleaned_schema = cast(dict[str, Any], cleaned_schema)
-        _ensure_items_have_schema(cleaned_schema)
-        _ensure_schema_has_type(cleaned_schema)
+        _ensure_items_have_schema(cleaned_schema, root_schema=cleaned_schema)
+        _ensure_schema_has_type(cleaned_schema, root_schema=cleaned_schema)
 
         nullable_fields = {
             name
