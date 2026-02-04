@@ -16,6 +16,7 @@ from ..structure import (
     ClassificationResult,
     ClassificationStep,
     ClassificationStopReason,
+    ClassificationSummary,
     StructureBase,
     Taxonomy,
     TaxonomyNode,
@@ -40,6 +41,8 @@ class TaxonomyClassifierAgent(AgentBase):
         Model identifier to use for classification.
     model_settings : ModelSettings | None, default=None
         Optional model settings to apply to the classifier agent.
+    return_summary : bool, default=False
+        Return a ClassificationSummary from the final run methods.
 
     Methods
     -------
@@ -65,6 +68,7 @@ class TaxonomyClassifierAgent(AgentBase):
         template_path: Path | str | None = None,
         model: str | None = None,
         model_settings: ModelSettings | None = None,
+        return_summary: bool = False,
         taxonomy: TaxonomyNode | Sequence[TaxonomyNode],
     ) -> None:
         """Initialize the taxonomy classifier agent configuration.
@@ -77,6 +81,8 @@ class TaxonomyClassifierAgent(AgentBase):
             Model identifier to use for classification.
         model_settings : ModelSettings | None, default=None
             Optional model settings to apply to the classifier agent.
+        return_summary : bool, default=False
+            Return a ClassificationSummary from the final run methods.
         taxonomy : TaxonomyNode | Sequence[TaxonomyNode]
             Root taxonomy node or list of root nodes.
 
@@ -91,6 +97,7 @@ class TaxonomyClassifierAgent(AgentBase):
         """
         self._taxonomy = taxonomy
         self._root_nodes = _normalize_roots(taxonomy)
+        self._return_summary = return_summary
         if not self._root_nodes:
             raise ValueError("taxonomy must include at least one node")
         resolved_template_path = template_path or _default_template_path()
@@ -178,7 +185,7 @@ class TaxonomyClassifierAgent(AgentBase):
         file_ids: str | Sequence[str] | None = None,
         max_depth: Optional[int] = None,
         confidence_threshold: float | None = None,
-    ) -> ClassificationResult:
+    ) -> ClassificationResult | ClassificationSummary:
         """Classify ``input`` asynchronously with taxonomy traversal.
 
         Parameters
@@ -200,8 +207,9 @@ class TaxonomyClassifierAgent(AgentBase):
 
         Returns
         -------
-        ClassificationResult
-            Structured classification result describing the traversal.
+        ClassificationResult or ClassificationSummary
+            Structured classification result describing the traversal,
+            or a lightweight summary when configured.
         """
         _ = output_structure
         if not isinstance(input, str):
@@ -215,7 +223,8 @@ class TaxonomyClassifierAgent(AgentBase):
         }
         if session is not None:
             kwargs["session"] = session
-        return await self._run_agent(input, **kwargs)
+        result = await self._run_agent(input, **kwargs)
+        return self._finalize_result(result)
 
     def run_sync(
         self,
@@ -227,7 +236,7 @@ class TaxonomyClassifierAgent(AgentBase):
         file_ids: str | Sequence[str] | None = None,
         max_depth: Optional[int] = None,
         confidence_threshold: float | None = None,
-    ) -> ClassificationResult:
+    ) -> ClassificationResult | ClassificationSummary:
         """Classify ``input`` synchronously with taxonomy traversal.
 
         Parameters
@@ -249,8 +258,9 @@ class TaxonomyClassifierAgent(AgentBase):
 
         Returns
         -------
-        ClassificationResult
-            Structured classification result describing the traversal.
+        ClassificationResult or ClassificationSummary
+            Structured classification result describing the traversal,
+            or a lightweight summary when configured.
         """
         _ = output_structure
         if not isinstance(input, str):
@@ -292,7 +302,7 @@ class TaxonomyClassifierAgent(AgentBase):
         if result is None:
             msg = "Classification did not return a result"
             raise RuntimeError(msg)
-        return result
+        return self._finalize_result(result)
 
     async def _run_step_async(
         self,
@@ -515,6 +525,7 @@ class TaxonomyClassifierAgent(AgentBase):
             template_path=self._template_path,
             model=self._model,
             model_settings=self._model_settings,
+            return_summary=False,
             taxonomy=list(nodes),
         )
         sub_agent._run_step_async = self._run_step_async
@@ -580,6 +591,28 @@ class TaxonomyClassifierAgent(AgentBase):
             state=state,
         )
         return state
+
+    def _finalize_result(
+        self, result: ClassificationResult
+    ) -> ClassificationResult | ClassificationSummary:
+        """Return the final classification output.
+
+        Parameters
+        ----------
+        result : ClassificationResult
+            Full traversal result to convert when needed.
+
+        Returns
+        -------
+        ClassificationResult or ClassificationSummary
+            Full result or a lightweight summary depending on configuration.
+        """
+        if not self._return_summary:
+            return result
+        summary = result.to_lightweight_summary()
+        if summary is None:
+            return ClassificationSummary(full_paths=[])
+        return summary
 
 
 @dataclass
