@@ -109,6 +109,11 @@ class AgentConfigurationProtocol(Protocol):
         """Session."""
         ...
 
+    @property
+    def data_path(self) -> Optional[str | Path]:
+        """Optional base path for storing agent data."""
+        ...
+
 
 class AgentBase(DataclassJSONSerializable):
     """Factory for creating and configuring specialized agents.
@@ -209,7 +214,8 @@ class AgentBase(DataclassJSONSerializable):
         run_context_wrapper : RunContextWrapper or None, default=None
             Optional wrapper providing runtime context for prompt rendering.
         data_path : Path | str | None, default=None
-            Optional base path for storing agent data.
+            Optional base path for storing agent data. If not provided,
+            uses ``configuration.data_path`` when available.
         """
         self._configuration = configuration
         self.uuid = uuid.uuid4()
@@ -236,6 +242,8 @@ class AgentBase(DataclassJSONSerializable):
 
         # Resolve data_path with class name appended
         class_name = self.__class__.__name__
+        if data_path is None:
+            data_path = getattr(configuration, "data_path", None)
         if data_path is not None:
             data_path_obj = Path(data_path)
             if data_path_obj.name == class_name:

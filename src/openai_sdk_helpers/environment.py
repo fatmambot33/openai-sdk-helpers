@@ -18,6 +18,7 @@ get_data_path(name)
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -33,7 +34,8 @@ def get_data_path(name: str) -> Path:
     """Return a writable data directory for the given module name.
 
     Creates a module-specific directory under ~/.openai-sdk-helpers/ for
-    storing data, logs, or other persistent files.
+    storing data, logs, or other persistent files. Override the base
+    directory by setting ``DATA_PATH``.
 
     Parameters
     ----------
@@ -43,7 +45,7 @@ def get_data_path(name: str) -> Path:
     Returns
     -------
     Path
-        Directory path under ~/openai-sdk-helpers specific to name.
+        Directory path under ~/.openai-sdk-helpers specific to name.
         The directory is created if it does not exist.
 
     Examples
@@ -53,8 +55,11 @@ def get_data_path(name: str) -> Path:
     >>> path.exists()
     True
     """
-    # Use the workspace 'data' directory, with a subdirectory for the module name
-    base = Path(__file__).parent.parent.parent / "data"
+    base_dir = os.getenv("DATA_PATH")
+    if base_dir:
+        base = Path(base_dir)
+    else:
+        base = Path.home() / ".openai-sdk-helpers"
     path = base / name
     return ensure_directory(path)
 

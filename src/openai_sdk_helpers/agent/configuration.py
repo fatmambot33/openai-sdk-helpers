@@ -142,6 +142,9 @@ class AgentConfiguration(DataclassJSONSerializable):
     session : Session, optional
         Session configuration for automatically maintaining conversation
         history across agent runs. Default is None.
+    data_path : str or Path, optional
+        Base path for storing agent data such as messages and error logs.
+        Default is None.
 
     Methods
     -------
@@ -190,6 +193,7 @@ class AgentConfiguration(DataclassJSONSerializable):
     input_guardrails: list[InputGuardrail] | None = None
     output_guardrails: list[OutputGuardrail] | None = None
     session: Session | None = None
+    data_path: str | Path | None = None
     add_output_instructions: bool = False
     add_web_search_tool: bool = False
 
@@ -250,6 +254,9 @@ class AgentConfiguration(DataclassJSONSerializable):
                 # We don't raise here because template_path might be relative
                 # and resolved later with prompt_dir
                 pass
+
+        if self.data_path is not None and not isinstance(self.data_path, (str, Path)):
+            raise TypeError("AgentConfiguration.data_path must be a str, Path, or None")
 
     @property
     def instructions_text(self) -> str:
@@ -365,6 +372,7 @@ class AgentConfiguration(DataclassJSONSerializable):
         return AgentBase(
             configuration=self,
             run_context_wrapper=run_context_wrapper,
+            data_path=self.data_path,
         )
 
     def replace(self, **changes: Any) -> AgentConfiguration:

@@ -78,6 +78,7 @@ from .agent_blueprint import AgentBlueprint
 from .base import *
 from .classification import (
     ClassificationResult,
+    ClassificationSummary,
     ClassificationStep,
     ClassificationStopReason,
     Taxonomy,
@@ -109,6 +110,7 @@ __all__ = [
     "AgentBlueprint",
     "AgentEnum",
     "ClassificationResult",
+    "ClassificationSummary",
     "ClassificationStep",
     "ClassificationStopReason",
     "Taxonomy",
