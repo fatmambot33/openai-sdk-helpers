@@ -11,6 +11,7 @@ from .classifier import TaxonomyClassifierAgent
 from .summarizer import SummarizerAgent
 from .translator import TranslatorAgent
 from .validator import ValidatorAgent
+from .extractor import ExtractorAgent
 from .utils import run_coroutine_agent_sync
 from .search.vector import VectorAgentSearch
 from .search.web import WebAgentSearch
@@ -33,6 +34,7 @@ __all__ = [
     "SummarizerAgent",
     "TranslatorAgent",
     "ValidatorAgent",
+    "ExtractorAgent",
     "VectorAgentSearch",
     "WebAgentSearch",
     "build_agent_input_messages",
