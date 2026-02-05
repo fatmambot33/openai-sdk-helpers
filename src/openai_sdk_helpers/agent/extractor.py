@@ -28,6 +28,8 @@ class ExtractorAgent:
         Optional Jinja template path for rendering the prompt description.
     template_context : dict[str, object] | None, default=None
         Optional context values for rendering template_path.
+    template_base_dir : Path | str | None, default=None
+        Optional base directory for resolving relative template paths.
     include_env : bool, default=True
         Whether to include environment variables in the template context.
     examples : Sequence[ExampleDataStructure]
@@ -55,6 +57,7 @@ class ExtractorAgent:
         *,
         template_path: Path | str | None = None,
         template_context: dict[str, object] | None = None,
+        template_base_dir: Path | str | None = None,
         include_env: bool = True,
         max_workers: int = 1,
     ) -> None:
@@ -73,6 +76,8 @@ class ExtractorAgent:
             Optional Jinja template path for rendering the prompt description.
         template_context : dict[str, object] or None, default=None
             Optional context values for rendering template_path.
+        template_base_dir : Path | str | None, default=None
+            Optional base directory for resolving relative template paths.
         include_env : bool, default=True
             Whether to include environment variables in the template context.
         max_workers : int, default=1
@@ -95,6 +100,7 @@ class ExtractorAgent:
             prompt_description = self._render_template(
                 template_path,
                 context=template_context,
+                base_dir=template_base_dir,
                 include_env=include_env,
             )
         if not prompt_description:
@@ -113,6 +119,7 @@ class ExtractorAgent:
         template_path: Path | str,
         *,
         context: dict[str, object] | None = None,
+        base_dir: Path | str | None = None,
         include_env: bool = True,
     ) -> str:
         """Render a prompt template for the extractor.
@@ -123,6 +130,8 @@ class ExtractorAgent:
             Path to the Jinja template to render.
         context : dict[str, object] or None, default=None
             Context values supplied to the template.
+        base_dir : Path | str | None, default=None
+            Base directory for resolving relative template paths.
         include_env : bool, default=True
             Whether to include environment variables in the template context.
 
@@ -131,13 +140,19 @@ class ExtractorAgent:
         str
             Rendered prompt description.
         """
-        renderer = PromptRenderer()
+        resolved_base_dir = Path(base_dir).expanduser().resolve() if base_dir else None
+        renderer = PromptRenderer(base_dir=resolved_base_dir)
         rendered_context: dict[str, Any] = {}
         if include_env:
             rendered_context["env"] = dict(os.environ)
         if context:
             rendered_context.update(context)
-        return renderer.render(str(template_path), context=rendered_context)
+        path = Path(template_path).expanduser()
+        if not path.is_absolute():
+            resolved_path = (Path.cwd() / path).resolve()
+            if resolved_path.exists():
+                path = resolved_path
+        return renderer.render(str(path), context=rendered_context)
 
     @classmethod
     def from_config(

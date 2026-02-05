@@ -82,3 +82,29 @@ def test_extractor_agent_renders_prompt_template_with_env(tmp_path, monkeypatch)
         model_id="gpt-4o-mini",
         max_workers=1,
     )
+
+
+def test_extractor_agent_resolves_relative_template_path(tmp_path, monkeypatch):
+    """Ensure ExtractorAgent resolves relative template paths from cwd."""
+
+    template_path = tmp_path / "prompt.jinja"
+    template_path.write_text("Extract {{ resource }}")
+    monkeypatch.chdir(tmp_path)
+
+    with patch(
+        "openai_sdk_helpers.agent.extractor.DocumentExtractor"
+    ) as mock_extractor:
+        ExtractorAgent(
+            prompt_description=None,
+            examples=[ExampleDataStructure(text="Example text")],
+            model="gpt-4o-mini",
+            template_path="prompt.jinja",
+            template_context={"resource": "invoices"},
+        )
+
+    mock_extractor.assert_called_once_with(
+        prompt_description="Extract invoices",
+        examples=[ExampleDataStructure(text="Example text")],
+        model_id="gpt-4o-mini",
+        max_workers=1,
+    )
