@@ -33,6 +33,7 @@ process_files
 from __future__ import annotations
 
 from .base import ResponseBase
+from .classifier import TaxonomyClassifierResponse, classify_taxonomy_response
 from .configuration import ResponseConfiguration, ResponseRegistry, get_default_registry
 from .files import process_files
 from .messages import ResponseMessage, ResponseMessages
@@ -52,4 +53,6 @@ __all__ = [
     "ResponseToolCall",
     "attach_vector_store",
     "process_files",
+    "TaxonomyClassifierResponse",
+    "classify_taxonomy_response",
 ]

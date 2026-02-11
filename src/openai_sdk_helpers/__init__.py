@@ -74,6 +74,8 @@ from .response import (
     ResponseRegistry,
     get_default_registry,
     attach_vector_store,
+    TaxonomyClassifierResponse,
+    classify_taxonomy_response,
 )
 from .tools import (
     tool_handler_factory,
@@ -173,6 +175,8 @@ __all__ = [
     "ResponseRegistry",
     "get_default_registry",
     "attach_vector_store",
+    "TaxonomyClassifierResponse",
+    "classify_taxonomy_response",
     "tool_handler_factory",
     "StructureType",
     "ToolHandler",
