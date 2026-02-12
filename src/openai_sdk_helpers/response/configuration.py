@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Generic, Optional, Sequence, Type, TypeVar
+from typing import Generic, Optional, Type, TypeVar
 
 from ..settings import OpenAISettings
 from ..structure.base import StructureBase
@@ -90,8 +91,11 @@ class ResponseConfiguration(DataclassJSONSerializable, Generic[TIn, TOut]):
     instructions : str or Path
         Plain text instructions or a path to a Jinja template file whose
         contents are loaded at runtime.
-    tools : Sequence[object], optional
-        Tool definitions associated with the configuration. Default is None.
+    tools : Sequence[Mapping[str, object]], optional
+        Tool definitions associated with the configuration. Each item must be a
+        mapping compatible with the OpenAI Responses API ``tools`` payload shape.
+        String-like containers (for example, ``"abc"`` or ``b"abc"``) are
+        rejected. Default is None.
     input_structure : Type[StructureBase], optional
         Structure class used to parse or validate input. Must subclass
         StructureBase. Default is None.
@@ -158,7 +162,7 @@ class ResponseConfiguration(DataclassJSONSerializable, Generic[TIn, TOut]):
 
     name: str
     instructions: str | Path
-    tools: Optional[list]
+    tools: Optional[Sequence[Mapping[str, object]]]
     input_structure: Optional[Type[TIn]]
     output_structure: Optional[Type[TOut]]
     system_vector_store: Optional[list[str]] = None
@@ -207,10 +211,25 @@ class ResponseConfiguration(DataclassJSONSerializable, Generic[TIn, TOut]):
             if not issubclass(cls, StructureBase):
                 raise TypeError(f"Configuration.{attr} must subclass StructureBase")
 
-        if self.tools is not None and not isinstance(self.tools, Sequence):
-            raise TypeError("Configuration.tools must be a Sequence or None")
+        if self.tools is not None:
+            if isinstance(self.tools, (str, bytes, bytearray)):
+                raise TypeError(
+                    "Configuration.tools must be a non-string sequence of tool mappings"
+                )
+            if not isinstance(self.tools, Sequence):
+                raise TypeError("Configuration.tools must be a Sequence or None")
+            for index, tool in enumerate(self.tools):
+                if not isinstance(tool, Mapping):
+                    raise TypeError(
+                        "Configuration.tools items must be mappings; "
+                        f"item at index {index} has type {type(tool).__name__}"
+                    )
         if not isinstance(self.save_messages, bool):
             raise TypeError("Configuration.save_messages must be a bool")
+        if not isinstance(self.add_web_search_tool, bool):
+            raise TypeError("Configuration.add_web_search_tool must be a bool")
+        if not isinstance(self.add_output_instructions, bool):
+            raise TypeError("Configuration.add_output_instructions must be a bool")
 
     @property
     def get_resolved_instructions(self) -> str:
@@ -233,7 +252,7 @@ class ResponseConfiguration(DataclassJSONSerializable, Generic[TIn, TOut]):
         return resolved_instructions
 
     @property
-    def get_resolved_tools(self) -> list:
+    def get_resolved_tools(self) -> list[dict[str, object]]:
         """Return the complete list of tools, including optional web search tool.
 
         Returns
@@ -241,7 +260,7 @@ class ResponseConfiguration(DataclassJSONSerializable, Generic[TIn, TOut]):
         list
             List of tool definitions, including web search tool if enabled.
         """
-        tools = self.tools or []
+        tools = [dict(tool) for tool in self.tools] if self.tools else []
         if self.add_web_search_tool:
             tools = tools + [{"type": "web_search"}]
         return tools

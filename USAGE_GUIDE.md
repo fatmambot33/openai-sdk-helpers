@@ -313,3 +313,43 @@ def run_agent_sync(agent, query):
 5. **Use run_coroutine_with_fallback** instead of manual event loop handling
 6. **Log with context** using LoggerFactory for consistency
 """
+
+---
+
+## 6. Response Configuration (Strict Tool Validation)
+
+### Import
+```python
+from openai_sdk_helpers.response.configuration import ResponseConfiguration
+```
+
+### Valid Tool Configuration
+```python
+configuration = ResponseConfiguration(
+    name="web_assistant",
+    instructions="Use web search when needed.",
+    tools=[{"type": "file_search", "vector_store_ids": ["vs_123"]}],
+    input_structure=None,
+    output_structure=None,
+    add_web_search_tool=True,
+)
+```
+
+`add_web_search_tool=True` appends `{"type": "web_search"}` to the resolved tool list used by `gen_response()`.
+
+### Invalid Tool Configuration (Now Rejected)
+```python
+# ❌ Invalid: tools must not be a string-like container
+ResponseConfiguration(
+    name="invalid",
+    instructions="Base instructions",
+    tools="abc",
+    input_structure=None,
+    output_structure=None,
+)
+```
+
+The constructor raises `TypeError` immediately when:
+- `tools` is a string-like value (`str`, `bytes`, `bytearray`)
+- any `tools` item is not a mapping (`dict`-like)
+

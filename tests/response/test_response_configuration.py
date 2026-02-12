@@ -125,6 +125,69 @@ def test_no_output_structure_ignores_add_output_instructions(
     assert response_without_flag._instructions == config_false.get_resolved_instructions
 
 
+def test_invalid_string_tools_container_raises_type_error() -> None:
+    """Reject string tool containers during configuration initialization."""
+    with pytest.raises(TypeError, match="non-string sequence"):
+        ResponseConfiguration(
+            name="unit",
+            instructions="Base instructions",
+            tools=cast(Any, "abc"),
+            input_structure=None,
+            output_structure=None,
+        )
+
+
+def test_invalid_bytes_tools_container_raises_type_error() -> None:
+    """Reject byte-string tool containers during configuration initialization."""
+    with pytest.raises(TypeError, match="non-string sequence"):
+        ResponseConfiguration(
+            name="unit",
+            instructions="Base instructions",
+            tools=cast(Any, b"abc"),
+            input_structure=None,
+            output_structure=None,
+        )
+
+
+def test_invalid_tool_item_type_raises_type_error() -> None:
+    """Reject non-mapping tool definitions during configuration initialization."""
+    with pytest.raises(TypeError, match="items must be mappings"):
+        ResponseConfiguration(
+            name="unit",
+            instructions="Base instructions",
+            tools=cast(Any, [123]),
+            input_structure=None,
+            output_structure=None,
+        )
+
+
+def test_add_web_search_tool_runs_end_to_end(
+    openai_settings, mock_openai_client
+) -> None:
+    """Include the web_search tool definition when configured."""
+    mock_openai_client.responses.create.return_value = cast(
+        Any,
+        type("Response", (), {"output": [object()], "output_text": "ok"})(),
+    )
+
+    configuration = ResponseConfiguration(
+        name="unit",
+        instructions="Base instructions",
+        tools=None,
+        input_structure=None,
+        output_structure=None,
+        add_web_search_tool=True,
+    )
+
+    response = configuration.gen_response(openai_settings=openai_settings)
+    result = response.run_sync("hello")
+
+    assert result == "ok"
+    create_kwargs = mock_openai_client.responses.create.call_args.kwargs
+    assert create_kwargs["tools"] == [{"type": "web_search"}]
+    assert create_kwargs["tool_choice"] == "auto"
+
+
 def test_save_messages_is_applied_to_response(openai_settings) -> None:
     """Test that save_messages defaults are passed to ResponseBase."""
     configuration = ResponseConfiguration(

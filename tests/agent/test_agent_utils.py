@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from openai_sdk_helpers.agent import utils
 
@@ -22,7 +22,9 @@ def test_run_coro_sync():
 @patch("asyncio.get_running_loop")
 def test_run_coro_sync_with_running_loop(mock_get_running_loop):
     """Test the run_coro_sync function when an event loop is running."""
-    mock_loop = mock_get_running_loop.return_value
+    mock_loop = MagicMock()
     mock_loop.is_running.return_value = True
+    mock_get_running_loop.return_value = mock_loop
+
     result = utils.run_coroutine_agent_sync(sample_coro())
     assert result == "test result"
