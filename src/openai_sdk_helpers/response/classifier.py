@@ -40,6 +40,8 @@ class TaxonomyClassifierResponse:
         Root taxonomy nodes or enum-backed taxonomy values.
     model : str
         Model identifier used for classification requests.
+    temperature : float | None, default=0
+        Sampling temperature for classification requests.
     return_summary : bool, default=False
         Return ``ClassificationSummary`` instead of ``ClassificationResult``.
     data_path : Path | None, default=None
@@ -58,6 +60,7 @@ class TaxonomyClassifierResponse:
         *,
         taxonomy: list[TaxonomyNode] | type[Enum],
         model: str,
+        temperature: float | None = 0,
         return_summary: bool = False,
         data_path: Path | None = None,
     ) -> None:
@@ -69,6 +72,8 @@ class TaxonomyClassifierResponse:
             Root taxonomy nodes or enum-backed taxonomy values.
         model : str
             Model identifier used for classification requests.
+        temperature : float | None, default=0
+            Sampling temperature for classification requests.
         return_summary : bool, default=False
             Return ``ClassificationSummary`` instead of ``ClassificationResult``.
         data_path : Path | None, default=None
@@ -82,6 +87,7 @@ class TaxonomyClassifierResponse:
         self._root_nodes = _normalize_taxonomy_input(taxonomy)
         self._taxonomy = taxonomy
         self._model = model
+        self._temperature = temperature
         self._return_summary = return_summary
         self._data_path = data_path
         self._renderer = PromptRenderer()
@@ -362,6 +368,7 @@ class TaxonomyClassifierResponse:
             model=self._model,
             input=payload,
             text=output_structure.response_format(),
+            temperature=self._temperature,
         )
         output_text = getattr(response, "output_text", None)
         if not output_text:
@@ -401,6 +408,7 @@ def classify_taxonomy_response(
     content: str,
     taxonomy: list[TaxonomyNode] | type[Enum],
     model: str,
+    temperature: float | None = 0,
     max_depth: int | None = None,
     confidence_threshold: float = 0.6,
     return_summary: bool = False,
@@ -416,6 +424,8 @@ def classify_taxonomy_response(
         Root taxonomy nodes or enum-backed taxonomy values.
     model : str
         Model identifier used for classification requests.
+    temperature : float | None, default=0
+        Sampling temperature for classification requests.
     max_depth : int | None, default=None
         Maximum depth to traverse before stopping.
     confidence_threshold : float, default=0.6
@@ -433,6 +443,7 @@ def classify_taxonomy_response(
     classifier = TaxonomyClassifierResponse(
         taxonomy=taxonomy,
         model=model,
+        temperature=temperature,
         return_summary=return_summary,
         data_path=data_path,
     )

@@ -144,3 +144,80 @@ def test_classify_taxonomy_response_function_builder() -> None:
         max_depth=1,
         confidence_threshold=0.7,
     )
+
+
+def test_taxonomy_classifier_response_passes_temperature_to_responses_api() -> None:
+    """Response classifier should forward temperature in API step calls."""
+    taxonomy = [TaxonomyNode(label="Support")]
+    classifier = TaxonomyClassifierResponse(
+        taxonomy=taxonomy,
+        model="gpt-4o-mini",
+        temperature=0,
+    )
+
+    fake_client = MagicMock()
+    fake_client.responses.create.return_value = _response_with_output(
+        {
+            "selected_nodes": ["Support"],
+            "confidence": 0.88,
+            "stop_reason": "stop",
+            "rationale": "Support issue detected.",
+        }
+    )
+
+    with patch.object(classifier, "_get_client", return_value=fake_client):
+        classifier.run_sync("Need customer support")
+
+    _, kwargs = fake_client.responses.create.call_args
+    assert kwargs["temperature"] == 0
+
+
+def test_classify_taxonomy_response_forwards_temperature() -> None:
+    """Top-level helper should pass temperature into the response class."""
+    taxonomy = [TaxonomyNode(label="Support")]
+    expected = ClassificationResult(stop_reason=ClassificationStopReason.STOP)
+
+    with patch(
+        "openai_sdk_helpers.response.classifier.TaxonomyClassifierResponse.run_sync"
+    ) as mock_run:
+        mock_run.return_value = expected
+        result = classify_taxonomy_response(
+            content="Need support",
+            taxonomy=taxonomy,
+            model="gpt-4o-mini",
+            temperature=0,
+            max_depth=1,
+            confidence_threshold=0.7,
+        )
+
+    assert result is expected
+    mock_run.assert_called_once_with(
+        "Need support",
+        max_depth=1,
+        confidence_threshold=0.7,
+    )
+
+
+def test_taxonomy_classifier_response_defaults_temperature_to_zero() -> None:
+    """Response classifier should default temperature to zero."""
+    taxonomy = [TaxonomyNode(label="Support")]
+    classifier = TaxonomyClassifierResponse(
+        taxonomy=taxonomy,
+        model="gpt-4o-mini",
+    )
+
+    fake_client = MagicMock()
+    fake_client.responses.create.return_value = _response_with_output(
+        {
+            "selected_nodes": ["Support"],
+            "confidence": 0.88,
+            "stop_reason": "stop",
+            "rationale": "Support issue detected.",
+        }
+    )
+
+    with patch.object(classifier, "_get_client", return_value=fake_client):
+        classifier.run_sync("Need customer support")
+
+    _, kwargs = fake_client.responses.create.call_args
+    assert kwargs["temperature"] == 0
