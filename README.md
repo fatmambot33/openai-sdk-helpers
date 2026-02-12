@@ -200,6 +200,17 @@ print(translation)
 classification = classifier.run_sync("I need help with my invoice")
 print(classification.final_node)
 
+# Equivalent Responses API classification (no app-side parsing glue)
+from openai_sdk_helpers.response import classify_taxonomy_response
+
+response_classification = classify_taxonomy_response(
+    content="I need help with my invoice",
+    taxonomy=[TaxonomyNode(label="Billing"), TaxonomyNode(label="Support")],
+    model="gpt-4o-mini",
+    return_summary=True,
+)
+print(response_classification.full_paths)
+
 # Validate against guardrails
 validation = validator.run_sync(
     "Share meeting notes with names removed",
