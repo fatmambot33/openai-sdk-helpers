@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 
 
@@ -209,7 +210,13 @@ def cmd_registry_inspect(args: argparse.Namespace) -> int:
     if configuration.tools:
         print("\nTool names:")
         for tool in configuration.tools:
-            tool_name = tool.get("function", {}).get("name", "unknown")
+            tool_name = "unknown"
+            if isinstance(tool, Mapping):
+                function_value = tool.get("function")
+                if isinstance(function_value, Mapping):
+                    name_value = function_value.get("name")
+                    if isinstance(name_value, str) and name_value:
+                        tool_name = name_value
             print(f"  - {tool_name}")
 
     return 0
