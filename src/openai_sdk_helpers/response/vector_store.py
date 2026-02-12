@@ -88,8 +88,15 @@ def attach_vector_store(
         )
         return resolved_ids
 
-    existing_ids = ensure_list(file_search_tool.get("vector_store_ids", []))
-    combined_ids = existing_ids.copy()
+    existing_value = file_search_tool.get("vector_store_ids", [])
+    if isinstance(existing_value, str):
+        existing_ids = [existing_value]
+    elif isinstance(existing_value, Sequence):
+        existing_ids = [entry for entry in existing_value if isinstance(entry, str)]
+    else:
+        existing_ids = []
+
+    combined_ids: list[str] = existing_ids.copy()
     for vector_store_id in resolved_ids:
         if vector_store_id not in combined_ids:
             combined_ids.append(vector_store_id)

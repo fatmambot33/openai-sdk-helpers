@@ -16,12 +16,12 @@ import threading
 import traceback
 import uuid
 from pathlib import Path
+from collections.abc import Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
     Generic,
-    Sequence,
     TypeVar,
     cast,
 )
@@ -82,8 +82,9 @@ class ResponseBase(Generic[T]):
         and naming vector stores.
     instructions : str
         System instructions provided to the OpenAI API for context.
-    tools : list[ToolHandlerRegistration] or None
-        Tool handler registrations for the OpenAI API request. Pass None for
+    tools : Sequence[Mapping[str, object] | ToolHandlerRegistration] or None
+        Tool definitions for the OpenAI API request. Each item can be either a
+        raw tool definition mapping or a ToolHandlerRegistration. Pass None for
         no tools.
     output_structure : type[StructureBase] or None
         Structure class used to parse tool call outputs. When provided,
@@ -166,7 +167,7 @@ class ResponseBase(Generic[T]):
         *,
         name: str,
         instructions: str,
-        tools: list[ToolHandlerRegistration] | None,
+        tools: Sequence[Mapping[str, object] | ToolHandlerRegistration] | None,
         output_structure: type[T] | None,
         system_vector_store: list[str] | None = None,
         data_path: Path | str | None = None,
@@ -187,8 +188,9 @@ class ResponseBase(Generic[T]):
             and naming vector stores.
         instructions : str
             System instructions provided to the OpenAI API for context.
-        tools : list[ToolHandlerRegistration] or None
-            Tool handler registrations for the OpenAI API request. Pass None for
+        tools : Sequence[Mapping[str, object] | ToolHandlerRegistration] or None
+            Tool definitions for the OpenAI API request. Each item can be either a
+            raw tool definition mapping or a ToolHandlerRegistration. Pass None for
             no tools.
         output_structure : type[StructureBase] or None
             Structure class used to parse tool call outputs. When provided,
@@ -255,11 +257,21 @@ class ResponseBase(Generic[T]):
 
         self._instructions = instructions
         self._save_messages = save_messages
-        self._tools: list[dict[str, Any]] | None = None
+        self._tools: list[dict[str, object]] | None = None
         if tools is not None:
-            self._tools = [
-                tool_handler.tool_spec.as_tool_definition() for tool_handler in tools
-            ]
+            resolved_tools: list[dict[str, object]] = []
+            for index, tool in enumerate(tools):
+                if isinstance(tool, ToolHandlerRegistration):
+                    resolved_tools.append(tool.tool_spec.as_tool_definition())
+                    continue
+                if isinstance(tool, Mapping):
+                    resolved_tools.append(dict(tool))
+                    continue
+                raise TypeError(
+                    "tools items must be mappings or ToolHandlerRegistration; "
+                    f"item at index {index} has type {type(tool).__name__}"
+                )
+            self._tools = resolved_tools
 
         self._output_structure = output_structure
         self._system_vector_store = system_vector_store
@@ -358,7 +370,7 @@ class ResponseBase(Generic[T]):
         return self._instructions
 
     @property
-    def tools(self) -> list[dict[str, Any]] | None:
+    def tools(self) -> list[dict[str, object]] | None:
         """Return the tool definitions for this response.
 
         Returns

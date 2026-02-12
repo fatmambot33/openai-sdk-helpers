@@ -292,6 +292,30 @@ response.close()
 - **Agent Module**: Higher-level abstraction with automatic tool handling and agent-specific workflows
 - **Response Module**: Lower-level control with manual message management, custom tool handlers, and direct API access
 
+### ResponseConfiguration Tool Validation (Strict)
+
+`ResponseConfiguration` now validates tool configuration eagerly at construction time:
+
+- `tools` must be a non-string sequence of mapping objects (for example `[{"type": "web_search"}]`).
+- String-like containers such as `"abc"`, `b"abc"`, and `bytearray(b"abc")` are invalid.
+- Each item in `tools` must be a mapping (`dict`-like). Invalid item types raise `TypeError` immediately.
+- When `add_web_search_tool=True`, `gen_response()` appends the OpenAI Responses API tool definition `{"type": "web_search"}`.
+
+Now invalid (fails fast during configuration initialization):
+
+```python
+from openai_sdk_helpers.response.configuration import ResponseConfiguration
+
+# ❌ Invalid: string containers are not tool sequences
+ResponseConfiguration(
+    name="bad_tools",
+    instructions="Use tools",
+    tools="abc",
+    input_structure=None,
+    output_structure=None,
+)
+```
+
 ## Advanced Usage
 
 ### Image and File Analysis
