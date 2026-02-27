@@ -573,6 +573,10 @@ These modules use the standard `openai` SDK for direct API interactions with fin
   Convenience functions for executing response workflows with automatic cleanup
   in both synchronous and asynchronous contexts.
 
+- **`openai_sdk_helpers.response.websocket.open_websocket_connection`**  
+  Opens OpenAI websocket-mode sessions while reusing `OpenAISettings`.
+  This helper wraps `client.responses.connect()` for the Responses WebSocket API.
+
 ### Configuration and Data Structures (Shared)
 
 - **`openai_sdk_helpers.settings.OpenAISettings`**  
@@ -648,6 +652,92 @@ See `AGENTS.md` for detailed contributing guidelines and conventions.
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 for details.
+
+
+### WebSocket Mode (Responses API)
+
+WebSocket mode keeps a persistent connection to `/v1/responses` and lets you
+continue each turn by sending only incremental input plus
+`previous_response_id`.
+
+Why use WebSocket mode:
+- Lower continuation overhead for long tool-call chains.
+- Better end-to-end latency for agentic loops with many model/tool round trips.
+- Compatible with both `store=False` and Zero Data Retention workflows.
+
+```python
+from openai_sdk_helpers import (
+    OpenAISettings,
+    open_websocket_connection,
+    send_response_create,
+)
+
+settings = OpenAISettings.from_env()
+
+with open_websocket_connection(openai_settings=settings) as connection:
+    # First turn
+    first_event = send_response_create(
+        connection,
+        model="gpt-5.2",
+        store=False,
+        input_items=[
+            {
+                "type": "message",
+                "role": "user",
+                "content": [{"type": "input_text", "text": "Find fizz_buzz()"}],
+            }
+        ],
+        tools=[],
+    )
+
+    # Optional warmup turn (no generation)
+    send_response_create(
+        connection,
+        model="gpt-5.2",
+        store=False,
+        generate=False,
+        input_items=[
+            {
+                "type": "message",
+                "role": "user",
+                "content": [{"type": "input_text", "text": "Prepare tool state"}],
+            }
+        ],
+        tools=[],
+    )
+
+    # Continuation turn: send only new input items + previous_response_id
+    send_response_create(
+        connection,
+        model="gpt-5.2",
+        store=False,
+        previous_response_id="resp_123",
+        input_items=[
+            {
+                "type": "function_call_output",
+                "call_id": "call_123",
+                "output": "tool result",
+            },
+            {
+                "type": "message",
+                "role": "user",
+                "content": [{"type": "input_text", "text": "Now optimize it."}],
+            },
+        ],
+        tools=[],
+    )
+
+    for event in connection:
+        print(event)
+```
+
+Operational notes:
+- Events and ordering match the Responses streaming event model.
+- One connection processes `response.create` calls sequentially (no multiplexing).
+- Connection duration is limited (typically 60 minutes), so reconnect and
+  continue with `previous_response_id` when possible.
+- Handle `previous_response_not_found` by starting a new chain and sending the
+  full context (or compacted context from `/responses/compact`).
 
 ## CLI Tool
 
