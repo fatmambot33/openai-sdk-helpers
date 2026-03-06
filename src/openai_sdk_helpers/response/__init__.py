@@ -28,6 +28,12 @@ attach_vector_store
     Attach vector stores to a response's file_search tool.
 process_files
     Process file attachments with automatic type detection.
+open_websocket_connection
+    Open a websocket-mode connection using OpenAI settings.
+build_response_create_event
+    Build a ``response.create`` websocket event payload.
+send_response_create
+    Build and send a ``response.create`` event.
 """
 
 from __future__ import annotations
@@ -38,6 +44,11 @@ from .configuration import ResponseConfiguration, ResponseRegistry, get_default_
 from .files import process_files
 from .messages import ResponseMessage, ResponseMessages
 from .runner import run_async, run_sync
+from .websocket import (
+    build_response_create_event,
+    open_websocket_connection,
+    send_response_create,
+)
 from .tool_call import ResponseToolCall
 from .vector_store import attach_vector_store
 
@@ -50,6 +61,9 @@ __all__ = [
     "ResponseMessages",
     "run_sync",
     "run_async",
+    "open_websocket_connection",
+    "build_response_create_event",
+    "send_response_create",
     "ResponseToolCall",
     "attach_vector_store",
     "process_files",

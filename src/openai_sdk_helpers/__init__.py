@@ -77,6 +77,9 @@ from .response import (
     attach_vector_store,
     TaxonomyClassifierResponse,
     classify_taxonomy_response,
+    open_websocket_connection,
+    build_response_create_event,
+    send_response_create,
 )
 from .tools import (
     tool_handler_factory,
@@ -179,6 +182,9 @@ __all__ = [
     "attach_vector_store",
     "TaxonomyClassifierResponse",
     "classify_taxonomy_response",
+    "open_websocket_connection",
+    "build_response_create_event",
+    "send_response_create",
     "tool_handler_factory",
     "StructureType",
     "ToolHandler",
