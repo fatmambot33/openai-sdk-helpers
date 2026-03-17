@@ -74,11 +74,13 @@ async def test_classifier_traverses_taxonomy_levels():
         ),
     ]
 
+    async def _run_step(*args, **kwargs):
+        return steps.pop(0)
+
     with (
         patch.object(agent, "get_agent", return_value=MagicMock()),
-        patch.object(agent, "_run_step_async", new_callable=AsyncMock) as mock_run,
+        patch.object(agent, "_run_step_async", new=_run_step),
     ):
-        mock_run.side_effect = steps
         result = await agent.run_async("Tax update")
 
     assert isinstance(result, ClassificationResult)
@@ -127,11 +129,13 @@ async def test_classifier_traverses_multiple_branches():
         ),
     ]
 
+    async def _run_step(*args, **kwargs):
+        return steps.pop(0)
+
     with (
         patch.object(agent, "get_agent", return_value=MagicMock()),
-        patch.object(agent, "_run_step_async", new_callable=AsyncMock) as mock_run,
+        patch.object(agent, "_run_step_async", new=_run_step),
     ):
-        mock_run.side_effect = steps
         result = await agent.run_async("Culinary update")
 
     assert result.final_nodes is not None
@@ -169,11 +173,13 @@ async def test_classifier_avoids_duplicate_leaf_nodes() -> None:
         ),
     ]
 
+    async def _run_step(*args, **kwargs):
+        return steps.pop(0)
+
     with (
         patch.object(agent, "get_agent", return_value=MagicMock()),
-        patch.object(agent, "_run_step_async", new_callable=AsyncMock) as mock_run,
+        patch.object(agent, "_run_step_async", new=_run_step),
     ):
-        mock_run.side_effect = steps
         result = await agent.run_async("Mixed taxonomy")
 
     assert result.final_nodes is not None
@@ -196,11 +202,13 @@ async def test_classifier_confidence_threshold_stops_branch():
         stop_reason=ClassificationStopReason.CONTINUE,
     )
 
+    async def _run_step(*args, **kwargs):
+        return step
+
     with (
         patch.object(agent, "get_agent", return_value=MagicMock()),
-        patch.object(agent, "_run_step_async", new_callable=AsyncMock) as mock_run,
+        patch.object(agent, "_run_step_async", new=_run_step),
     ):
-        mock_run.return_value = step
         result = await agent.run_async("Low confidence", confidence_threshold=0.5)
 
     assert result.stop_reason is ClassificationStopReason.NO_MATCH
@@ -231,11 +239,13 @@ async def test_classifier_overrides_stop_with_high_confidence_children():
         ),
     ]
 
+    async def _run_step(*args, **kwargs):
+        return steps.pop(0)
+
     with (
         patch.object(agent, "get_agent", return_value=MagicMock()),
-        patch.object(agent, "_run_step_async", new_callable=AsyncMock) as mock_run,
+        patch.object(agent, "_run_step_async", new=_run_step),
     ):
-        mock_run.side_effect = steps
         result = await agent.run_async("Child classification")
 
     assert result.final_node is not None
@@ -267,11 +277,13 @@ async def test_classifier_falls_back_to_parent_when_children_no_match():
         ),
     ]
 
+    async def _run_step(*args, **kwargs):
+        return steps.pop(0)
+
     with (
         patch.object(agent, "get_agent", return_value=MagicMock()),
-        patch.object(agent, "_run_step_async", new_callable=AsyncMock) as mock_run,
+        patch.object(agent, "_run_step_async", new=_run_step),
     ):
-        mock_run.side_effect = steps
         result = await agent.run_async("Fallback classification")
 
     assert result.final_node is not None
