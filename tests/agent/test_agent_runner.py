@@ -30,7 +30,12 @@ def test_run_async_returns_coroutine(mock_runner_run, mock_agent):
 def test_run_sync(mock_runner_run, mock_run_coroutine, mock_agent):
     """Test the run_sync function."""
     mock_result = MagicMock()
-    mock_run_coroutine.return_value = mock_result
+
+    def _mock_fallback(coro):
+        coro.close()
+        return mock_result
+
+    mock_run_coroutine.side_effect = _mock_fallback
 
     runner.run_sync(mock_agent, input="test_input")
 
