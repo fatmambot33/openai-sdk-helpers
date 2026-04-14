@@ -98,6 +98,10 @@ class TranslatorResponse:
                 "role": "user",
                 "content": [
                     {"type": "input_text", "text": prompt},
+                    {
+                        "type": "input_text",
+                        "text": f"Target language: {target_language}",
+                    },
                     {"type": "input_text", "text": f"Text to translate:\n{content}"},
                 ],
             }

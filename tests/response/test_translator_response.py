@@ -47,6 +47,29 @@ def test_translator_response_forwards_temperature() -> None:
     assert kwargs["temperature"] == 0.2
 
 
+def test_translator_response_includes_target_language_in_payload() -> None:
+    """TranslatorResponse should include target language in request payload."""
+    translator = TranslatorResponse(model="gpt-4o-mini")
+
+    fake_client = MagicMock()
+    fake_client.responses.create.return_value = _response_with_output(
+        {"text": "Hallo Welt"}
+    )
+
+    with patch.object(translator, "_get_client", return_value=fake_client):
+        translator.run_sync("Hello world", target_language="German")
+
+    _, kwargs = fake_client.responses.create.call_args
+    content = kwargs["input"][0]["content"]
+    target_language_lines = [
+        item["text"]
+        for item in content
+        if item.get("type") == "input_text"
+        and item.get("text", "").startswith("Target language:")
+    ]
+    assert target_language_lines == ["Target language: German"]
+
+
 def test_translate_response_builder() -> None:
     """Helper should build TranslatorResponse and execute synchronously."""
     with patch(
