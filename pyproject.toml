@@ -32,7 +32,7 @@ dependencies = [
     # OpenAI functionality
     # Baseline aligned with the July 2026 OpenAI Python SDK generation.
     "openai>=2.45.0,<3.0.0",
-    "openai-agents>=0.18.0,<1.0.0",
+    "openai-agents>=0.18.1,<1.0.0",
 
     # Language extraction
     "langextract",
