@@ -19,23 +19,21 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-
     # Template rendering
     "jinja2",
-
 
     # Data modeling
     "pydantic>=2.7,<3",
     "typing_extensions>=4.15.0,<5",
 
-
     # Environment variable management
     "python-dotenv",
 
+    # OpenAI functionality
+    # Baseline aligned with the July 2026 OpenAI Python SDK generation.
+    "openai>=2.45.0,<3.0.0",
+    "openai-agents>=0.18.1,<1.0.0",
 
-    # OpenAI functionality (tested with openai==2.14.0, openai-agents==0.6.4)
-    "openai>=2.14.0,<3.0.0",
-    "openai-agents>=0.6.4,<1.0.0",
     # Language extraction
     "langextract",
 

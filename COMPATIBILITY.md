@@ -4,27 +4,36 @@ This document tracks tested and supported versions of the OpenAI SDKs.
 
 ## Supported SDK Versions
 
-| openai-sdk-helpers | openai  | openai-agents | Python | Status |
-|-------------------|---------|---------------|--------|--------|
-| 0.1.x             | ≥1.0    | ≥0.1          | 3.10+  | Active |
+| openai-sdk-helpers | openai | openai-agents | Python | Status |
+|---|---:|---:|---:|---|
+| 0.7.x | >=2.45.0,<3 | >=0.18.1,<1 | 3.10-3.13 | Active |
 
 ## SDK Version Details
 
-### OpenAI SDK (`openai`)
+### OpenAI Python SDK (`openai`)
 
-The `openai` SDK is used by the `response` module for direct API interactions.
+The `openai` package powers direct Responses API interactions, structured
+outputs, tools, streaming, files, and vector stores.
 
-**Minimum Version**: 1.0.0
-**Tested Version**: 2.14.0
-**Breaking Changes**: None documented
+- **Minimum supported version:** 2.45.0
+- **Supported major version:** 2.x
+- **Primary API:** Responses API
+
+The baseline includes the current 2.x response schemas and the newer client
+transport behavior available in the July 2026 SDK generation.
 
 ### OpenAI Agents SDK (`openai-agents`)
 
-The `openai-agents` SDK is used by the `agent` module for high-level agent workflows.
+The `openai-agents` package powers higher-level agent workflows.
 
-**Minimum Version**: 0.1.0
-**Tested Version**: 0.6.4
-**Breaking Changes**: API is in beta, expect changes
+- **Minimum supported version:** 0.18.1
+- **Supported pre-1.0 range:** 0.18.1 and later, below 1.0
+
+Version 0.18.0 is intentionally excluded because its default usage model can
+fail during `RunContextWrapper` construction with supported Pydantic releases.
+The Agents SDK is pre-1.0 and may introduce public API changes in minor
+releases. Application code should set models explicitly when reproducible
+behavior matters instead of relying on SDK defaults.
 
 ## Version Constraints
 
@@ -32,36 +41,46 @@ Current constraints in `pyproject.toml`:
 
 ```toml
 dependencies = [
-    "openai>=2.14.0,<3.0.0",
-    "openai-agents>=0.6.4,<1.0.0",
+    "openai>=2.45.0,<3.0.0",
+    "openai-agents>=0.18.1,<1.0.0",
 ]
 ```
 
 ## Testing Strategy
 
-- CI runs tests against multiple Python versions (3.10, 3.11, 3.12, 3.13)
-- SDK versions are tested with latest stable releases
-- Breaking changes are documented in release notes
+Compatibility CI runs two dependency modes:
 
-## Known Issues
+1. **Minimum:** installs the declared minimum OpenAI SDK versions.
+2. **Latest:** installs the newest versions allowed by the declared upper bounds.
 
-### OpenAI SDK
+The normal test matrix covers Python 3.10 through 3.13. Tests must remain
+network-free unless explicitly marked as integration tests.
 
-- No known compatibility issues
+## Release-note Alignment
 
-### OpenAI Agents SDK
+The compatibility baseline accounts for:
 
-- API is evolving; expect breaking changes in minor versions
-- Monitor: https://github.com/openai/openai-agents-python
+- OpenAI Python SDK 2.x Responses API evolution and WebSocket transport work.
+- OpenAI Agents SDK Responses transport improvements.
+- Agents SDK Realtime default model updates.
+- The OpenAI SDK ecosystem minimum runtime of Python 3.10 or later.
 
-## Migration Guides
+Features from upstream SDKs are exposed through their native typed interfaces
+unless a reusable helper abstraction is justified by multiple project use
+cases. This avoids duplicating fast-moving SDK APIs.
 
-See [USAGE_GUIDE.md](USAGE_GUIDE.md) for SDK-specific usage patterns.
+## Known Compatibility Notes
+
+- Explicitly configure the model; upstream SDK defaults can change.
+- Pin a narrower `openai-agents` range in applications that require strict
+  behavioral reproducibility.
+- Use the minimum dependency CI job before raising either lower bound.
 
 ## Reporting Issues
 
-If you encounter compatibility issues:
+When reporting a compatibility problem, include:
 
-1. Check this document for known issues
-2. Verify your SDK versions: `pip list | grep openai`
-3. Open an issue with version details
+1. Python version.
+2. `openai-sdk-helpers` version.
+3. `openai` and `openai-agents` versions.
+4. A minimal reproduction that does not require credentials where possible.
