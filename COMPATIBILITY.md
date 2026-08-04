@@ -6,7 +6,7 @@ This document tracks tested and supported versions of the OpenAI SDKs.
 
 | openai-sdk-helpers | openai | openai-agents | Python | Status |
 |---|---:|---:|---:|---|
-| 0.7.x | >=2.45.0,<3 | >=0.18.0,<1 | 3.10-3.13 | Active |
+| 0.7.x | >=2.45.0,<3 | >=0.18.1,<1 | 3.10-3.13 | Active |
 
 ## SDK Version Details
 
@@ -26,9 +26,11 @@ transport behavior available in the July 2026 SDK generation.
 
 The `openai-agents` package powers higher-level agent workflows.
 
-- **Minimum supported version:** 0.18.0
-- **Supported pre-1.0 range:** 0.18.x and later, below 1.0
+- **Minimum supported version:** 0.18.1
+- **Supported pre-1.0 range:** 0.18.1 and later, below 1.0
 
+Version 0.18.0 is intentionally excluded because its default usage model can
+fail during `RunContextWrapper` construction with supported Pydantic releases.
 The Agents SDK is pre-1.0 and may introduce public API changes in minor
 releases. Application code should set models explicitly when reproducible
 behavior matters instead of relying on SDK defaults.
@@ -40,7 +42,7 @@ Current constraints in `pyproject.toml`:
 ```toml
 dependencies = [
     "openai>=2.45.0,<3.0.0",
-    "openai-agents>=0.18.0,<1.0.0",
+    "openai-agents>=0.18.1,<1.0.0",
 ]
 ```
 
