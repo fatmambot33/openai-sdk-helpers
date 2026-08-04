@@ -1,0 +1,74 @@
+name: OpenAI SDK compatibility
+
+on:
+  pull_request:
+    paths:
+      - "pyproject.toml"
+      - "src/**"
+      - "tests/**"
+      - ".github/workflows/openai-sdk-compatibility.yml"
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compatibility:
+    name: Python ${{ matrix.python }} / ${{ matrix.dependencies }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12", "3.13"]
+        dependencies: [minimum, latest]
+        exclude:
+          - python: "3.11"
+            dependencies: minimum
+          - python: "3.12"
+            dependencies: minimum
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      - name: Upgrade packaging tools
+        run: python -m pip install --upgrade pip build
+
+      - name: Install minimum OpenAI SDK versions
+        if: matrix.dependencies == 'minimum'
+        run: |
+          python -m pip install "openai==2.45.0" "openai-agents==0.18.0"
+          python -m pip install -e ".[dev]" --no-deps
+          python -m pip install jinja2 "pydantic>=2.7,<3" "typing_extensions>=4.15.0,<5" python-dotenv langextract streamlit pytest pytest-asyncio pytest-cov pyright pydocstyle black
+
+      - name: Install latest compatible dependencies
+        if: matrix.dependencies == 'latest'
+        run: python -m pip install -e ".[dev]"
+
+      - name: Show resolved versions
+        run: |
+          python -c "import openai; print('openai', openai.__version__)"
+          python -c "import importlib.metadata as m; print('openai-agents', m.version('openai-agents'))"
+          python --version
+
+      - name: Run tests
+        run: python -m pytest
+
+      - name: Run type checks
+        run: pyright
+
+      - name: Run docstring checks
+        run: pydocstyle src/openai_sdk_helpers
+
+      - name: Build distributions
+        run: python -m build
