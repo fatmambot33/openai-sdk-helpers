@@ -32,19 +32,16 @@ class CodexPluginRegistry:
     @property
     def plugin_names(self) -> tuple[str, ...]:
         """Return registered plugin names in registration order."""
-
         return tuple(self._plugins)
 
     @property
     def command_names(self) -> tuple[str, ...]:
         """Return registered command names in registration order."""
-
         return tuple(self._commands)
 
     @property
     def started(self) -> bool:
         """Return whether plugin startup hooks have completed."""
-
         return self._started
 
     def register(self, plugin: CodexPlugin) -> CodexPlugin:
@@ -69,7 +66,6 @@ class CodexPluginRegistry:
         RuntimeError
             If registration is attempted after startup.
         """
-
         if self._started:
             raise RuntimeError("Plugins cannot be registered after startup.")
         if not isinstance(plugin, CodexPlugin):
@@ -93,7 +89,6 @@ class CodexPluginRegistry:
 
     def get_plugin(self, name: str) -> CodexPlugin:
         """Return a registered plugin by name."""
-
         return self._plugins[name]
 
     def run(self, command: str, /, *args: Any, **kwargs: Any) -> Any:
@@ -103,7 +98,6 @@ class CodexPluginRegistry:
         caller wants one API that supports both synchronous and asynchronous
         commands.
         """
-
         try:
             handler = self._commands[command]
         except KeyError as exc:
@@ -112,7 +106,6 @@ class CodexPluginRegistry:
 
     async def run_async(self, command: str, /, *args: Any, **kwargs: Any) -> Any:
         """Execute a command and await its result when necessary."""
-
         result = self.run(command, *args, **kwargs)
         if inspect.isawaitable(result):
             return await result
@@ -120,7 +113,6 @@ class CodexPluginRegistry:
 
     async def startup(self) -> None:
         """Run optional plugin startup hooks in registration order."""
-
         if self._started:
             return
         for plugin in self._plugins.values():
@@ -129,7 +121,6 @@ class CodexPluginRegistry:
 
     async def shutdown(self) -> None:
         """Run optional plugin shutdown hooks in reverse registration order."""
-
         if not self._started:
             return
         for plugin in reversed(tuple(self._plugins.values())):
@@ -138,18 +129,15 @@ class CodexPluginRegistry:
 
     async def __aenter__(self) -> CodexPluginRegistry:
         """Start plugins and return this registry."""
-
         await self.startup()
         return self
 
     async def __aexit__(self, *_: object) -> None:
         """Shut plugins down when leaving an async context."""
-
         await self.shutdown()
 
     def discover(self, group: str = CODEX_PLUGIN_ENTRY_POINT) -> tuple[CodexPlugin, ...]:
         """Load and register plugins exposed through package entry points."""
-
         discovered = entry_points().select(group=group)
         return self.load_entry_points(discovered)
 
@@ -161,7 +149,6 @@ class CodexPluginRegistry:
         This separate method keeps discovery easy to test without installed
         distributions.
         """
-
         loaded: list[CodexPlugin] = []
         for entry_point in entry_point_values:
             candidate = entry_point.load()
