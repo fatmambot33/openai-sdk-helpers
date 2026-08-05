@@ -14,18 +14,18 @@ Every roadmap item must support `PRODUCT.md` and preserve a small, typed, predic
 - [x] Add atomic rollback when plugin setup fails.
 - [x] Add a runnable first-plugin example and packaging guide.
 
-## Next — production hardening
+## Completed — production hardening
 
-- [ ] Define plugin compatibility and deprecation policy.
-- [ ] Add isolated discovery failure reporting.
-- [ ] Add structured plugin metadata and capability inspection.
-- [ ] Add CLI commands to list plugins and commands.
-- [ ] Test installed entry-point discovery end to end.
-- [ ] Add migration guidance before the next minor release.
+- [x] Define plugin compatibility and deprecation policy.
+- [x] Add isolated discovery failure reporting.
+- [x] Add structured plugin metadata and capability inspection.
+- [x] Add CLI commands to list plugins and commands.
+- [x] Test installed entry-point discovery end to end.
+- [x] Add migration guidance before the next minor release.
 
-## Later — official integrations
+## Next — official integrations
 
-Official integrations should remain optional and use the same plugin contract:
+Official integrations remain optional and use the same plugin contract. They should be proposed only when a concrete user workflow justifies them:
 
 - Responses
 - Agents
