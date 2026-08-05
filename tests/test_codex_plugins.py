@@ -30,6 +30,79 @@ def test_register_and_run_plugin_command() -> None:
     assert registry.run("greet", "Codex") == "hi Codex"
 
 
+@pytest.mark.asyncio
+async def test_run_async_supports_sync_and_async_commands() -> None:
+    registry = CodexPluginRegistry()
+
+    class MixedPlugin:
+        name = "mixed"
+
+        def setup(self, context: CodexPluginContext) -> None:
+            context.add_command("sync", lambda value: value + 1)
+
+            async def async_command(value: int) -> int:
+                return value + 2
+
+            context.add_command("async", async_command)
+
+    registry.register(MixedPlugin())
+
+    assert await registry.run_async("sync", 1) == 2
+    assert await registry.run_async("async", 1) == 3
+
+
+@pytest.mark.asyncio
+async def test_lifecycle_hooks_and_context_manager() -> None:
+    events: list[str] = []
+    registry = CodexPluginRegistry()
+
+    class LifecyclePlugin:
+        name = "lifecycle"
+
+        def setup(self, context: CodexPluginContext) -> None:
+            context.add_command("status", lambda: "ready")
+
+        async def startup(self) -> None:
+            events.append("start")
+
+        def shutdown(self) -> None:
+            events.append("stop")
+
+    registry.register(LifecyclePlugin())
+
+    async with registry:
+        assert registry.started is True
+        assert registry.run("status") == "ready"
+
+    assert registry.started is False
+    assert events == ["start", "stop"]
+
+
+def test_failed_setup_rolls_back_registered_commands() -> None:
+    registry = CodexPluginRegistry()
+
+    class BrokenPlugin:
+        name = "broken"
+
+        def setup(self, context: CodexPluginContext) -> None:
+            context.add_command("temporary", lambda: None)
+            raise RuntimeError("setup failed")
+
+    with pytest.raises(RuntimeError, match="setup failed"):
+        registry.register(BrokenPlugin())
+
+    assert registry.plugin_names == ()
+    assert registry.command_names == ()
+
+
+def test_registration_after_startup_is_rejected() -> None:
+    registry = CodexPluginRegistry()
+    registry._started = True
+
+    with pytest.raises(RuntimeError, match="after startup"):
+        registry.register(GreetingPlugin())
+
+
 def test_duplicate_plugin_is_rejected() -> None:
     registry = CodexPluginRegistry()
     registry.register(GreetingPlugin())

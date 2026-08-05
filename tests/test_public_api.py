@@ -4,8 +4,12 @@ from __future__ import annotations
 
 import openai_sdk_helpers
 
-
 EXPECTED_PUBLIC_API = (
+    "CODEX_PLUGIN_ENTRY_POINT",
+    "CodexCommand",
+    "CodexPlugin",
+    "CodexPluginContext",
+    "CodexPluginRegistry",
     "get_data_path",
     "run_coroutine_thread_safe",
     "run_coroutine_with_fallback",
@@ -115,7 +119,9 @@ def test_package_root_exports_are_explicit_and_stable() -> None:
 def test_every_public_export_is_importable() -> None:
     """Ensure every declared public name exists on the package root."""
     missing = [
-        name for name in openai_sdk_helpers.__all__ if not hasattr(openai_sdk_helpers, name)
+        name
+        for name in openai_sdk_helpers.__all__
+        if not hasattr(openai_sdk_helpers, name)
     ]
 
     assert missing == []

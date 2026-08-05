@@ -2,25 +2,26 @@
 
 Every roadmap item must support `PRODUCT.md` and preserve a small, typed, predictable public API.
 
-## Now — Codex plugin foundation
+## Completed — Codex plugin foundation
 
 - [x] Define the minimal typed plugin protocol.
 - [x] Add deterministic plugin and command registration.
 - [x] Support package discovery through `openai_sdk_helpers.codex` entry points.
 - [x] Add focused registry tests.
-- [ ] Export the stable Codex surface from the package root.
-- [ ] Add lifecycle hooks for startup and shutdown.
-- [ ] Add async command support without duplicating the synchronous API.
-- [ ] Add a runnable first-plugin example and packaging guide.
+- [x] Export the stable Codex surface from the package root.
+- [x] Add lifecycle hooks for startup and shutdown.
+- [x] Add async command support without duplicating the synchronous API.
+- [x] Add atomic rollback when plugin setup fails.
+- [x] Add a runnable first-plugin example and packaging guide.
 
 ## Next — production hardening
 
 - [ ] Define plugin compatibility and deprecation policy.
-- [ ] Add isolated plugin failure reporting.
+- [ ] Add isolated discovery failure reporting.
 - [ ] Add structured plugin metadata and capability inspection.
 - [ ] Add CLI commands to list plugins and commands.
 - [ ] Test installed entry-point discovery end to end.
-- [ ] Add documentation and migration guidance.
+- [ ] Add migration guidance before the next minor release.
 
 ## Later — official integrations
 

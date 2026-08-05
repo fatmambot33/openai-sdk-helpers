@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+from .codex import (
+    CODEX_PLUGIN_ENTRY_POINT,
+    CodexCommand,
+    CodexPlugin,
+    CodexPluginContext,
+    CodexPluginRegistry,
+)
 from .environment import get_data_path
 from .utils.async_utils import run_coroutine_thread_safe, run_coroutine_with_fallback
 
@@ -114,6 +121,12 @@ from .extract import (
 )
 
 __all__ = [
+    # Codex plugins
+    "CODEX_PLUGIN_ENTRY_POINT",
+    "CodexCommand",
+    "CodexPlugin",
+    "CodexPluginContext",
+    "CodexPluginRegistry",
     # Environment utilities
     "get_data_path",
     # Async utilities
