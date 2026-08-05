@@ -247,9 +247,7 @@ class CodexPluginRegistry:
         return self.register(plugin)
 
     @staticmethod
-    def _resolve_metadata(
-        plugin: CodexPlugin, name: str
-    ) -> CodexPluginMetadata:
+    def _resolve_metadata(plugin: CodexPlugin, name: str) -> CodexPluginMetadata:
         raw_metadata = getattr(plugin, "metadata", None)
         if raw_metadata is None:
             return CodexPluginMetadata(name=name)
