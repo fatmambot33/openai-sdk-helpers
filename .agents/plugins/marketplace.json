@@ -1,0 +1,20 @@
+{
+  "name": "fatmambot33-openai-sdk-helpers",
+  "interface": {
+    "displayName": "OpenAI SDK Helpers"
+  },
+  "plugins": [
+    {
+      "name": "openai-sdk-helpers",
+      "source": {
+        "source": "local",
+        "path": "./plugins/openai-sdk-helpers"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}
