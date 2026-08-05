@@ -19,54 +19,37 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    # Template rendering
     "jinja2",
-
-    # Data modeling
     "pydantic>=2.7,<3",
     "typing_extensions>=4.15.0,<5",
-
-    # Environment variable management
     "python-dotenv",
-
-    # OpenAI functionality
-    # Baseline aligned with the July 2026 OpenAI Python SDK generation.
     "openai>=2.45.0,<3.0.0",
     "openai-agents>=0.18.1,<1.0.0",
-
-    # Language extraction
     "langextract",
-
-    # Web UI
     "streamlit",
 ]
 
 [project.optional-dependencies]
 dev = [
-    # Linting and docstring style checks
     "pydocstyle",
     "pyright",
-
-    # Formatting
     "black",
     "black[jupyter]",
-
-    # Testing
     "pytest-cov",
     "pytest",
     "pytest-asyncio",
 ]
-extract = [
-    "langextract",
-]
+extract = ["langextract"]
+
+[project.scripts]
+openai-helpers = "openai_sdk_helpers.cli:main"
+openai-helpers-credentials = "openai_sdk_helpers.credential_cli:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build]
-# Ship the entire package tree so Python modules are included alongside the
-# bundled prompt templates.
 include = ["src/openai_sdk_helpers"]
 
 [tool.hatch.build.targets.wheel]
@@ -83,6 +66,3 @@ convention = "numpy"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-
-[project.scripts]
-openai-helpers = "openai_sdk_helpers.cli:main"
