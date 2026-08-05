@@ -58,6 +58,9 @@ packages = ["src/openai_sdk_helpers"]
 [tool.hatch.build.targets.sdist]
 include = ["src/openai_sdk_helpers"]
 
+[tool.black]
+extend-exclude = "scripts/validate_ai_native_platform.py"
+
 [tool.pyright]
 extraPaths = ["src"]
 
