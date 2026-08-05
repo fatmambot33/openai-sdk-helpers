@@ -120,9 +120,7 @@ def test_package_root_exports_are_explicit_and_stable() -> None:
 def test_every_public_export_is_importable() -> None:
     """Ensure every declared public name exists on the package root."""
     missing = [
-        name
-        for name in openai_sdk_helpers.__all__
-        if not hasattr(openai_sdk_helpers, name)
+        name for name in openai_sdk_helpers.__all__ if not hasattr(openai_sdk_helpers, name)
     ]
 
     assert missing == []
