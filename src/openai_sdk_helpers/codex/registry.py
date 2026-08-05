@@ -136,7 +136,9 @@ class CodexPluginRegistry:
         """Shut plugins down when leaving an async context."""
         await self.shutdown()
 
-    def discover(self, group: str = CODEX_PLUGIN_ENTRY_POINT) -> tuple[CodexPlugin, ...]:
+    def discover(
+        self, group: str = CODEX_PLUGIN_ENTRY_POINT
+    ) -> tuple[CodexPlugin, ...]:
         """Load and register plugins exposed through package entry points."""
         discovered = entry_points().select(group=group)
         return self.load_entry_points(discovered)
