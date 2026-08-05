@@ -40,7 +40,6 @@ class CodexPluginContext:
         TypeError
             If ``command`` is not callable.
         """
-
         normalized = name.strip()
         if not normalized:
             raise ValueError("Command name must not be empty.")
