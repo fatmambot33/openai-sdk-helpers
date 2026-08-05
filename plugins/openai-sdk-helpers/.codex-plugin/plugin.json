@@ -1,0 +1,29 @@
+{
+  "name": "openai-sdk-helpers",
+  "version": "0.7.4",
+  "description": "Build OpenAI SDK workflows with reusable typed helpers in Codex.",
+  "author": {
+    "name": "openai-sdk-helpers maintainers",
+    "url": "https://github.com/fatmambot33"
+  },
+  "homepage": "https://github.com/fatmambot33/openai-sdk-helpers",
+  "repository": "https://github.com/fatmambot33/openai-sdk-helpers",
+  "license": "MIT",
+  "keywords": ["openai", "sdk", "agents", "responses", "codex", "python"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "OpenAI SDK Helpers",
+    "shortDescription": "Typed OpenAI SDK workflows for Codex",
+    "longDescription": "Install openai-sdk-helpers from Git and use its typed prompts, agents, response helpers, validation, storage, and Codex command registry.",
+    "developerName": "openai-sdk-helpers maintainers",
+    "category": "Developer Tools",
+    "capabilities": ["Read", "Write", "Interactive"],
+    "websiteURL": "https://github.com/fatmambot33/openai-sdk-helpers",
+    "defaultPrompt": [
+      "Build a typed Responses API workflow.",
+      "Create and validate an agent plan.",
+      "Inspect the available Codex commands."
+    ],
+    "brandColor": "#10A37F"
+  }
+}
