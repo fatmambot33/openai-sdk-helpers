@@ -1,18 +1,7 @@
 """Command-line interface for openai-sdk-helpers development.
 
-Provides CLI commands for testing agents, validating templates,
-and inspecting the response registry.
-
-Commands
---------
-agent test
-    Test an agent locally with sample inputs.
-template validate
-    Validate Jinja2 templates for syntax errors.
-registry list
-    List all registered response configurations.
-registry inspect
-    Inspect a specific configuration.
+Provides CLI commands for testing agents, validating templates, inspecting
+response configurations, and inspecting installed Codex plugins.
 """
 
 from __future__ import annotations
@@ -28,22 +17,13 @@ def cmd_agent_test(args: argparse.Namespace) -> int:
 
     Parameters
     ----------
-    args : argparse.Namespace
-        Command arguments containing agent_name and input.
+    args
+        Command arguments containing ``agent_name`` and ``input``.
 
     Returns
     -------
     int
-        Exit code (0 for success).
-
-    Raises
-    ------
-    NotImplementedError
-        As the function is not yet implemented.
-
-    Examples
-    --------
-    >>> cmd_agent_test(argparse.Namespace(agent_name="test", input="hello"))
+        Exit code.
     """
     print(f"Testing agent: {args.agent_name}")
     print(f"Input: {args.input}")
@@ -56,37 +36,25 @@ def cmd_template_validate(args: argparse.Namespace) -> int:
 
     Parameters
     ----------
-    args : argparse.Namespace
-        Command arguments containing template_path.
+    args
+        Command arguments containing ``template_path``.
 
     Returns
     -------
     int
-        Exit code (0 for success, 1 for validation errors).
-
-    Raises
-    ------
-    FileNotFoundError
-        If the template path does not exist.
-
-    Examples
-    --------
-    >>> cmd_template_validate(argparse.Namespace(template_path="."))
+        Zero for success and one for validation errors.
     """
     from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError
 
     template_path = Path(args.template_path)
-
     if not template_path.exists():
         print(f"Error: Path not found: {template_path}", file=sys.stderr)
         return 1
 
     if template_path.is_file():
-        # Validate single file
         templates = [template_path]
         base_dir = template_path.parent
     else:
-        # Validate directory
         templates = list(template_path.glob("**/*.jinja"))
         base_dir = template_path
 
@@ -96,15 +64,14 @@ def cmd_template_validate(args: argparse.Namespace) -> int:
 
     env = Environment(loader=FileSystemLoader(base_dir))
     errors = []
-
     for template_file in templates:
         relative_path = template_file.relative_to(base_dir)
         try:
             env.get_template(str(relative_path))
             print(f"✓ {relative_path}")
-        except TemplateSyntaxError as e:
-            errors.append((relative_path, str(e)))
-            print(f"✗ {relative_path}: {e}", file=sys.stderr)
+        except TemplateSyntaxError as exc:
+            errors.append((relative_path, str(exc)))
+            print(f"✗ {relative_path}: {exc}", file=sys.stderr)
 
     if errors:
         print(f"\n{len(errors)} template(s) with errors", file=sys.stderr)
@@ -119,23 +86,15 @@ def cmd_registry_list(args: argparse.Namespace) -> int:
 
     Parameters
     ----------
-    args : argparse.Namespace
-        Command arguments.
+    args
+        Parsed command arguments.
 
     Returns
     -------
     int
-        Exit code (0 for success).
-
-    Raises
-    ------
-    ImportError
-        If openai_sdk_helpers is not installed.
-
-    Examples
-    --------
-    >>> cmd_registry_list(argparse.Namespace())
+        Exit code.
     """
+    del args
     try:
         from openai_sdk_helpers import get_default_registry
     except ImportError:
@@ -144,7 +103,6 @@ def cmd_registry_list(args: argparse.Namespace) -> int:
 
     registry = get_default_registry()
     names = registry.list_names()
-
     if not names:
         print("No configurations registered")
         return 0
@@ -154,33 +112,21 @@ def cmd_registry_list(args: argparse.Namespace) -> int:
         configuration = registry.get(name)
         tools_count = len(configuration.tools) if configuration.tools else 0
         print(f"  - {name} ({tools_count} tools)")
-
     return 0
 
 
 def cmd_registry_inspect(args: argparse.Namespace) -> int:
-    """Inspect a specific configuration.
+    """Inspect a specific response configuration.
 
     Parameters
     ----------
-    args : argparse.Namespace
-        Command arguments containing config_name.
+    args
+        Command arguments containing ``config_name``.
 
     Returns
     -------
     int
-        Exit code (0 for success, 1 for not found).
-
-    Raises
-    ------
-    ImportError
-        If openai_sdk_helpers is not installed.
-    KeyError
-        If the configuration is not found in the registry.
-
-    Examples
-    --------
-    >>> cmd_registry_inspect(argparse.Namespace(config_name="my_config"))
+        Zero for success and one when the configuration is absent.
     """
     try:
         from openai_sdk_helpers import get_default_registry
@@ -189,7 +135,6 @@ def cmd_registry_inspect(args: argparse.Namespace) -> int:
         return 1
 
     registry = get_default_registry()
-
     try:
         configuration = registry.get(args.config_name)
     except KeyError:
@@ -206,7 +151,6 @@ def cmd_registry_inspect(args: argparse.Namespace) -> int:
     )
     print(f"Instructions: {instructions_preview}...")
     print(f"Tools: {len(configuration.tools) if configuration.tools else 0}")
-
     if configuration.tools:
         print("\nTool names:")
         for tool in configuration.tools:
@@ -218,8 +162,90 @@ def cmd_registry_inspect(args: argparse.Namespace) -> int:
                     if isinstance(name_value, str) and name_value:
                         tool_name = name_value
             print(f"  - {tool_name}")
-
     return 0
+
+
+def cmd_codex_plugins(args: argparse.Namespace) -> int:
+    """Discover and list installed Codex plugins.
+
+    Parameters
+    ----------
+    args
+        Parsed command arguments.
+
+    Returns
+    -------
+    int
+        Zero when discovery succeeds and one when any plugin fails to load.
+    """
+    del args
+    from openai_sdk_helpers.codex import CodexPluginRegistry
+
+    registry = CodexPluginRegistry()
+    report = registry.discover_isolated()
+    inspections = registry.inspect_plugins()
+    if not inspections:
+        print("No Codex plugins discovered")
+    else:
+        print("Codex plugins:")
+        for inspection in inspections:
+            metadata = inspection.metadata
+            capabilities = ", ".join(metadata.capabilities) or "none"
+            deprecated = " [deprecated]" if metadata.deprecated else ""
+            print(f"  - {metadata.name} {metadata.version}{deprecated}")
+            print(f"    capabilities: {capabilities}")
+            if metadata.summary:
+                print(f"    {metadata.summary}")
+
+    _print_codex_discovery_failures(report.failures)
+    return 0 if report.ok else 1
+
+
+def cmd_codex_commands(args: argparse.Namespace) -> int:
+    """Discover installed Codex plugins and list their commands.
+
+    Parameters
+    ----------
+    args
+        Parsed command arguments.
+
+    Returns
+    -------
+    int
+        Zero when discovery succeeds and one when any plugin fails to load.
+    """
+    del args
+    from openai_sdk_helpers.codex import CodexPluginRegistry
+
+    registry = CodexPluginRegistry()
+    report = registry.discover_isolated()
+    inspections = registry.inspect_plugins()
+    commands_found = False
+    for inspection in inspections:
+        for command_name in inspection.command_names:
+            if not commands_found:
+                print("Codex commands:")
+                commands_found = True
+            print(f"  - {command_name} ({inspection.metadata.name})")
+    if not commands_found:
+        print("No Codex commands discovered")
+
+    _print_codex_discovery_failures(report.failures)
+    return 0 if report.ok else 1
+
+
+def _print_codex_discovery_failures(failures: tuple[object, ...]) -> None:
+    if not failures:
+        return
+    print("Codex plugin discovery failures:", file=sys.stderr)
+    for failure in failures:
+        entry_point = getattr(failure, "entry_point", "unknown")
+        error_type = getattr(failure, "error_type", "Error")
+        message = getattr(failure, "message", "")
+        print(
+            f"  - {entry_point}: {error_type}: {message}",
+            file=sys.stderr,
+        )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -227,70 +253,64 @@ def main(argv: list[str] | None = None) -> int:
 
     Parameters
     ----------
-    argv : list[str], optional
-        Command-line arguments. If None, uses sys.argv.
+    argv
+        Command-line arguments. Uses ``sys.argv`` when omitted.
 
     Returns
     -------
     int
         Exit code.
-
-    Examples
-    --------
-    >>> main(["agent", "test", "my_agent"])
     """
     parser = argparse.ArgumentParser(
         prog="openai-helpers",
         description="OpenAI SDK Helpers CLI",
     )
-
     subparsers = parser.add_subparsers(dest="command", help="Commands")
 
-    # Agent test command
     agent_parser = subparsers.add_parser("agent", help="Agent operations")
     agent_sub = agent_parser.add_subparsers(dest="agent_command")
-
     test_parser = agent_sub.add_parser("test", help="Test an agent")
     test_parser.add_argument("agent_name", help="Agent name to test")
     test_parser.add_argument("--input", default="", help="Test input")
 
-    # Template validate command
     template_parser = subparsers.add_parser("template", help="Template operations")
     template_sub = template_parser.add_subparsers(dest="template_command")
-
     validate_parser = template_sub.add_parser("validate", help="Validate templates")
     validate_parser.add_argument(
         "template_path",
         help="Path to template file or directory",
     )
 
-    # Registry commands
     registry_parser = subparsers.add_parser("registry", help="Registry operations")
     registry_sub = registry_parser.add_subparsers(dest="registry_command")
-
     registry_sub.add_parser("list", help="List registered configurations")
-
     inspect_parser = registry_sub.add_parser("inspect", help="Inspect configuration")
     inspect_parser.add_argument("config_name", help="Configuration name")
 
-    args = parser.parse_args(argv)
+    codex_parser = subparsers.add_parser("codex", help="Codex plugin operations")
+    codex_sub = codex_parser.add_subparsers(dest="codex_command")
+    codex_sub.add_parser("plugins", help="List installed Codex plugins")
+    codex_sub.add_parser("commands", help="List installed Codex commands")
 
+    args = parser.parse_args(argv)
     if not args.command:
         parser.print_help()
         return 0
 
-    # Route commands
-    if args.command == "agent":
-        if args.agent_command == "test":
-            return cmd_agent_test(args)
-    elif args.command == "template":
-        if args.template_command == "validate":
-            return cmd_template_validate(args)
-    elif args.command == "registry":
+    if args.command == "agent" and args.agent_command == "test":
+        return cmd_agent_test(args)
+    if args.command == "template" and args.template_command == "validate":
+        return cmd_template_validate(args)
+    if args.command == "registry":
         if args.registry_command == "list":
             return cmd_registry_list(args)
-        elif args.registry_command == "inspect":
+        if args.registry_command == "inspect":
             return cmd_registry_inspect(args)
+    if args.command == "codex":
+        if args.codex_command == "plugins":
+            return cmd_codex_plugins(args)
+        if args.codex_command == "commands":
+            return cmd_codex_commands(args)
 
     parser.print_help()
     return 0
