@@ -330,26 +330,21 @@ def build_agents_file_search_tool(config: FileSearchConfig) -> object:
     """Create the official Agents SDK ``FileSearchTool`` from one config."""
     from agents import FileSearchTool
 
-    return FileSearchTool(
-        vector_store_ids=list(config.vector_store_ids),
-        max_num_results=config.max_num_results,
-        include_search_results=config.include_search_results,
-        ranking_options=(
-            dict(config.ranking_options)
-            if config.ranking_options is not None
-            else None
-        ),
-        filters=dict(config.filters) if config.filters is not None else None,
-    )
+    kwargs: dict[str, Any] = {
+        "vector_store_ids": list(config.vector_store_ids),
+        "include_search_results": config.include_search_results,
+    }
+    if config.max_num_results is not None:
+        kwargs["max_num_results"] = config.max_num_results
+    if config.ranking_options is not None:
+        kwargs["ranking_options"] = dict(config.ranking_options)
+    if config.filters is not None:
+        kwargs["filters"] = dict(config.filters)
+    return FileSearchTool(**kwargs)
 
 
 class SyncSearchMixin:
     """Direct vector-store search for a synchronous retrieval client."""
-
-    @property
-    def sdk_client(self) -> object:
-        """Return the injected official client."""
-        raise NotImplementedError
 
     def search(
         self,
@@ -367,6 +362,7 @@ class SyncSearchMixin:
         vector_store_id = _identifier(vector_store_id, "vector_store_id")
         queries = _queries(query)
         _validate_max_results(max_num_results)
+        sdk_client = cast(Any, self).sdk_client
 
         def execute() -> RetrievalSearchPage:
             kwargs = _search_kwargs(
@@ -376,10 +372,7 @@ class SyncSearchMixin:
                 ranking_options=ranking_options,
                 rewrite_query=rewrite_query,
             )
-            raw = self.sdk_client.vector_stores.search(  # type: ignore[attr-defined]
-                vector_store_id,
-                **kwargs,
-            )
+            raw = sdk_client.vector_stores.search(vector_store_id, **kwargs)
             return normalize_search_page(raw, query=queries, strict=strict)
 
         return run_observed_sync(operation_context, execute)
@@ -387,11 +380,6 @@ class SyncSearchMixin:
 
 class AsyncSearchMixin:
     """Direct vector-store search for an asynchronous retrieval client."""
-
-    @property
-    def sdk_client(self) -> object:
-        """Return the injected official asynchronous client."""
-        raise NotImplementedError
 
     async def search(
         self,
@@ -409,6 +397,7 @@ class AsyncSearchMixin:
         vector_store_id = _identifier(vector_store_id, "vector_store_id")
         queries = _queries(query)
         _validate_max_results(max_num_results)
+        sdk_client = cast(Any, self).sdk_client
 
         async def execute() -> RetrievalSearchPage:
             kwargs = _search_kwargs(
@@ -418,10 +407,7 @@ class AsyncSearchMixin:
                 ranking_options=ranking_options,
                 rewrite_query=rewrite_query,
             )
-            raw = await self.sdk_client.vector_stores.search(  # type: ignore[attr-defined]
-                vector_store_id,
-                **kwargs,
-            )
+            raw = await sdk_client.vector_stores.search(vector_store_id, **kwargs)
             return normalize_search_page(raw, query=queries, strict=strict)
 
         return await run_observed_async(operation_context, execute)
