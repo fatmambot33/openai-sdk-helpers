@@ -4,6 +4,9 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+- Added a security policy using confidential GitHub private vulnerability reporting and an explicit supported-version transition.
+- Added a security-aware release checklist covering credentials, publishing, files, plugins, tools, transports, diagnostics, and artifact verification.
+- Replaced a secret-shaped example value with an explicit non-secret placeholder.
 - Added built-wheel smoke tests for both CLI entry points, runtime package data, and credential-free Responses, Agents, and Codex examples.
 - Classified examples as supported, illustrative, or deprecated with an executable compatibility policy.
 - Added a canonical capability matrix covering maturity, installation, execution, and SDK escape hatches.
