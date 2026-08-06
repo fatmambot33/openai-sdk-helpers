@@ -17,6 +17,7 @@ Maturity meanings:
 | Settings and client creation | `openai_sdk_helpers.settings` | Configures the official OpenAI Python SDK | Stable | Core | Sync construction | Returns configured official SDK clients and accepts extra client keyword arguments |
 | Shared operation context | `openai_sdk_helpers.runtime` | Vendor-neutral lifecycle metadata that complements, but does not replace, official SDK tracing | Preview | Core | Sync and async observers | Original results and exceptions remain unchanged; Agents SDK tracing remains directly configurable |
 | Explicit conversation state | `openai_sdk_helpers.state` and Agents runners | Validates official Agents session and server-continuation choices; provides explicit local `ResponseMessages` storage | Preview | Core | Local validation plus matching sync/async runner forwarding | Underlying session objects, response IDs, conversation IDs, request kwargs, and message collections remain accessible |
+| Retrieval architecture contracts | `openai_sdk_helpers.retrieval` | Models official Files, Vector Stores, direct search, and File Search configuration without implementing network calls yet | Preview | Core | Local contracts only in #140 | Every normalized object preserves raw SDK resources; injected client protocols expose the official client |
 | Responses workflows | `openai_sdk_helpers.response` | Thin orchestration over the official Responses API | Supported | Core | Sync and async paths; websocket helpers are async/stream-oriented where appropriate | Callers retain SDK configuration, response identifiers, raw events, and result objects |
 | Agents workflows | `openai_sdk_helpers.agent` | Composes the official OpenAI Agents SDK | Supported | Core | Sync and async runners | Callers retain underlying Agents SDK objects, tools, sessions, and results |
 | Typed structures | `openai_sdk_helpers.structure` | Pydantic schemas for SDK inputs and outputs | Stable | Core; extraction structures require `extract` | Local | Pydantic models and generated schemas remain directly accessible |
@@ -24,7 +25,7 @@ Maturity meanings:
 | Tool contracts and handlers | `openai_sdk_helpers.tools` | Reusable definitions for Responses and Agents integrations | Supported | Core | Sync and async handlers where declared | Raw tool definitions and handler exceptions remain accessible |
 | Codex plugin surface | `openai_sdk_helpers.codex` and `openai_sdk_helpers.codex_cli` | Package entry-point plugin contract | Stable for 0.8 | Core | Sync and async commands; startup and shutdown lifecycle | Registry, plugin metadata, discovery reports, and original command handlers remain accessible |
 | Files API helpers | `openai_sdk_helpers.files_api` | Thin helpers over official Files resources | Supported | Core | Sync | Underlying OpenAI client and file resources remain accessible |
-| Vector-store helpers | `openai_sdk_helpers.vector_storage` and response vector-store helpers | Thin helpers over official Vector Stores and File Search resources | Supported; consolidation planned for 0.9 | Core | Primarily sync in the current public surface | Underlying client, store identifiers, and SDK resources remain accessible |
+| Vector-store helpers | `openai_sdk_helpers.vector_storage` and response vector-store helpers | Thin helpers over official Vector Stores and File Search resources | Supported; compatibility adapters planned for 0.9 | Core | Primarily sync in the current public surface | Underlying client, store identifiers, and SDK resources remain accessible |
 | Responses websocket helpers | `openai_sdk_helpers.response.websocket` | Wraps the official Responses websocket connection | Preview | Core | Streaming / connection-oriented | Raw connection and events remain accessible |
 | Output validation | `openai_sdk_helpers.utils.output_validation` | SDK-independent validation adapters | Stable | Core | Local | Individual validators and original values remain accessible |
 | Document extraction | `openai_sdk_helpers.extract`, `ExtractorAgent`, extraction structures | Optional LangExtract integration plus Agents helpers | Supported | `openai-sdk-helpers[extract]` | Local and agent-driven paths | LangExtract objects, extraction models, and agent results remain accessible |
@@ -38,7 +39,8 @@ They must pass the feature acceptance test in `PRODUCT.md` before implementation
 
 | Capability | Target | Roadmap status | Constraint |
 | --- | --- | --- | --- |
-| Consolidated retrieval API | `0.9.0` | Issues #140–#142 | Must adapt existing file/vector-store helpers without hiding official resources |
+| Retrieval lifecycle implementation | `0.9.0` | Issue #141 | Implement the approved #140 sync/async contracts with injected SDK clients, explicit ownership, and compatibility adapters |
+| File Search adapters and normalized results | `0.9.0` | Issue #142 | Consume the approved configuration and result models without hiding filters, ranking, content, or raw resources |
 | MCP integration | `0.10.0` | Issues #143–#144 | Optional extra; explicit filtering, approvals, lifecycle, and failure isolation |
 | Realtime integration | `0.11.0` | Issues #145–#146 | Server-side lifecycle and event helpers only; no browser or audio-device application layer |
 
