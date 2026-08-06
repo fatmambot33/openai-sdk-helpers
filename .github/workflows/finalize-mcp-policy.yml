@@ -1,0 +1,75 @@
+name: Finalize MCP policy branch
+
+on:
+  push:
+    branches: [agent/mcp-policy]
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Apply policy and documentation updates
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          policy = Path('src/openai_sdk_helpers/mcp/policy.py')
+          text = policy.read_text()
+          old = '    if decision not in MCPApprovalDecision:\n'
+          new = '    if not isinstance(decision, MCPApprovalDecision):\n'
+          assert old in text
+          policy.write_text(text.replace(old, new, 1))
+
+          capabilities = Path('docs/capabilities.md')
+          text = capabilities.read_text()
+          old_row = '| MCP transports | `openai_sdk_helpers.mcp` | Builds the official hosted MCP tool and Agents SDK Streamable HTTP server | Preview | Core; opt-in import and configuration | Hosted local construction; explicit async connect/cleanup for Streamable HTTP | Raw official hosted tool and MCP server remain accessible; SDK exceptions are preserved |'
+          new_row = '| MCP integration | `openai_sdk_helpers.mcp` | Builds official hosted and Streamable HTTP transports with explicit local filtering, approvals, caching, safe retries, and failure isolation | Preview | Core; opt-in import and configuration | Hosted local construction; explicit async lifecycle; local policy helpers | Raw official tools, servers, descriptors, calls, and exceptions remain accessible; no mutating retry is automatic |'
+          assert old_row in text
+          text = text.replace(old_row, new_row, 1)
+          planned = '| MCP policy and resilience | `0.10.0` | Issue #144 | Explicit filtering, approvals, bounded safe retries, cache invalidation, and failure isolation; no automatic retry of mutating tool calls |\n'
+          assert planned in text
+          text = text.replace(planned, '', 1)
+          capabilities.write_text(text)
+
+          changelog = Path('CHANGELOG.md')
+          text = changelog.read_text()
+          anchor = '## Unreleased\n\n'
+          addition = (
+              '- Added deterministic MCP allow/block filtering, fail-closed approval helpers, caller-owned tool-list caching, explicit invalidation, and isolated per-server discovery reports.\n'
+              '- Added bounded MCP retries restricted to explicitly idempotent tools classified as safe, with no automatic retry for mutating or unknown calls.\n'
+          )
+          assert anchor in text
+          changelog.write_text(text.replace(anchor, anchor + addition, 1))
+
+          guide = Path('docs/mcp.md')
+          text = guide.read_text()
+          text = text.replace(
+              'Issue #144 adds reusable filtering and approval policy helpers. Until then,\n`require_approval` and `allowed_tools` are explicit official SDK passthrough\nvalues.\n',
+              'Reusable filtering, approval, caching, retry, and failure-isolation policy is\ndocumented in [mcp-policy.md](mcp-policy.md). Hosted `require_approval` and\n`allowed_tools` remain explicit official SDK values.\n',
+          )
+          text = text.replace(
+              'Issue #144 adds explicit bounded retry and failure-isolation policy where it can\nbe implemented without hiding SDK behavior. It must not retry mutating tool\ncalls automatically.\n',
+              'Bounded retry and failure-isolation policy is documented in\n[mcp-policy.md](mcp-policy.md). Mutating or unknown tool calls are never retried\nautomatically.\n',
+          )
+          guide.write_text(text)
+          PY
+          python -m pip install --upgrade black
+          black src/openai_sdk_helpers/mcp tests/test_mcp_policy.py tests/test_mcp_public_api.py
+          git rm .github/workflows/finalize-mcp-policy.yml
+      - name: Commit final branch state
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .
+          git commit -m 'Finalize MCP policy and resilience contract'
+          git push origin HEAD:agent/mcp-policy
