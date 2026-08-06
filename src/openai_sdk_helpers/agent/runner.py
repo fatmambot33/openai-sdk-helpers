@@ -16,6 +16,7 @@ from openai_sdk_helpers.runtime import (
     run_observed_async,
     run_observed_sync,
 )
+from openai_sdk_helpers.state import AgentRunState, resolve_agent_state
 from openai_sdk_helpers.utils.async_utils import run_coroutine_with_fallback
 
 from ..structure.base import StructureBase
@@ -28,6 +29,7 @@ async def run_async(
     context: Optional[Dict[str, Any]] = None,
     output_structure: Optional[type[StructureBase]] = None,
     session: Optional[Session] = None,
+    state: AgentRunState | None = None,
     operation_context: OperationContext | None = None,
 ) -> Any:
     """Run an Agent asynchronously.
@@ -43,7 +45,9 @@ async def run_async(
     output_structure : type[StructureBase] or None, default=None
         Optional type used to cast the final output.
     session : Session or None, default=None
-        Optional session for maintaining conversation history.
+        Backward-compatible shorthand for ``AgentRunState(session=session)``.
+    state : AgentRunState or None, default=None
+        Explicit client-managed session or server-managed continuation choice.
     operation_context : OperationContext or None, default=None
         Optional explicit lifecycle and observability context.
 
@@ -51,6 +55,11 @@ async def run_async(
     -------
     Any
         Original agent result, optionally converted to ``output_structure``.
+
+    Raises
+    ------
+    ValueError
+        If session and server-managed state mechanisms are mixed.
 
     Examples
     --------
@@ -62,13 +71,17 @@ async def run_async(
     ...     return result
     >>> asyncio.run(example())  # doctest: +SKIP
     """
+    resolved_state = resolve_agent_state(state=state, session=session)
 
     async def execute() -> Any:
         result = await Runner.run(
             agent,
             cast(Any, input),
             context=context,
-            session=session,
+            session=resolved_state.session,
+            previous_response_id=resolved_state.previous_response_id,
+            auto_previous_response_id=resolved_state.auto_previous_response_id,
+            conversation_id=resolved_state.conversation_id,
         )
         if output_structure is not None:
             return result.final_output_as(output_structure)
@@ -84,6 +97,7 @@ def run_sync(
     context: Optional[Dict[str, Any]] = None,
     output_structure: Optional[type[StructureBase]] = None,
     session: Optional[Session] = None,
+    state: AgentRunState | None = None,
     operation_context: OperationContext | None = None,
 ) -> Any:
     """Run an Agent synchronously.
@@ -102,7 +116,9 @@ def run_sync(
     output_structure : type[StructureBase] or None, default=None
         Optional type used to cast the final output.
     session : Session or None, default=None
-        Optional session for maintaining conversation history.
+        Backward-compatible shorthand for ``AgentRunState(session=session)``.
+    state : AgentRunState or None, default=None
+        Explicit client-managed session or server-managed continuation choice.
     operation_context : OperationContext or None, default=None
         Optional explicit lifecycle and observability context.
 
@@ -113,6 +129,8 @@ def run_sync(
 
     Raises
     ------
+    ValueError
+        If session and server-managed state mechanisms are mixed.
     AsyncExecutionError
         If execution fails or times out.
 
@@ -122,9 +140,18 @@ def run_sync(
     >>> agent = Agent(name="test", instructions="test", model="gpt-4o-mini")
     >>> result = run_sync(agent, "What is 2+2?")  # doctest: +SKIP
     """
+    resolved_state = resolve_agent_state(state=state, session=session)
 
     def execute() -> Any:
-        coro = Runner.run(agent, cast(Any, input), context=context, session=session)
+        coro = Runner.run(
+            agent,
+            cast(Any, input),
+            context=context,
+            session=resolved_state.session,
+            previous_response_id=resolved_state.previous_response_id,
+            auto_previous_response_id=resolved_state.auto_previous_response_id,
+            conversation_id=resolved_state.conversation_id,
+        )
         result: RunResult = run_coroutine_with_fallback(coro)
         if output_structure is not None:
             return result.final_output_as(output_structure)
