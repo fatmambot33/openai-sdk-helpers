@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+- Removed the legacy PyPI API-token publishing fallback in favor of OIDC-only Trusted Publishing.
+- Added a non-publishing release rehearsal mode and documented publisher setup, verification, and recovery.
 - Made LangExtract and Streamlit optional through the `extract`, `ui`, and `all` installation profiles.
 - Added lazy extraction exports with actionable missing-extra errors and clean-install CI coverage.
 - Completed Codex plugin production hardening.
