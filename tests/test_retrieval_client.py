@@ -155,7 +155,9 @@ class AsyncVectorStoreFiles:
         return SimpleNamespace(id="file_uploaded", status="completed", last_error=None)
 
     async def delete(self, file_id: str, *, vector_store_id: str) -> object:
-        return SimpleNamespace(id=file_id, vector_store_id=vector_store_id, deleted=True)
+        return SimpleNamespace(
+            id=file_id, vector_store_id=vector_store_id, deleted=True
+        )
 
 
 class AsyncVectorStores:

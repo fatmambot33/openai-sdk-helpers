@@ -121,7 +121,9 @@ class OpenAIRetrievalClient:
             kwargs = _optional_kwargs(
                 file=source,
                 purpose=normalized_purpose,
-                expires_after=dict(expires_after) if expires_after is not None else None,
+                expires_after=(
+                    dict(expires_after) if expires_after is not None else None
+                ),
             )
             raw = self._client.files.create(**kwargs)  # type: ignore[attr-defined]
             resource = _uploaded_file(raw, source, normalized_purpose)
@@ -193,11 +195,11 @@ class OpenAIRetrievalClient:
                 name=normalized_name,
                 file_ids=normalized_file_ids or None,
                 metadata=dict(metadata) if metadata is not None else None,
-                expires_after=dict(expires_after) if expires_after is not None else None,
+                expires_after=(
+                    dict(expires_after) if expires_after is not None else None
+                ),
                 chunking_strategy=(
-                    dict(chunking_strategy)
-                    if chunking_strategy is not None
-                    else None
+                    dict(chunking_strategy) if chunking_strategy is not None else None
                 ),
                 description=description,
             )
@@ -271,7 +273,9 @@ class OpenAIRetrievalClient:
             kwargs = _optional_kwargs(
                 name=name,
                 metadata=dict(metadata) if metadata is not None else None,
-                expires_after=dict(expires_after) if expires_after is not None else None,
+                expires_after=(
+                    dict(expires_after) if expires_after is not None else None
+                ),
             )
             raw = self._client.vector_stores.update(  # type: ignore[attr-defined]
                 normalized_id,
@@ -310,9 +314,7 @@ class OpenAIRetrievalClient:
                 file_id=normalized_file_id,
                 attributes=dict(attributes) if attributes is not None else None,
                 chunking_strategy=(
-                    dict(chunking_strategy)
-                    if chunking_strategy is not None
-                    else None
+                    dict(chunking_strategy) if chunking_strategy is not None else None
                 ),
             )
             kwargs.update(polling.sdk_kwargs())
@@ -357,9 +359,7 @@ class OpenAIRetrievalClient:
                 file=source,
                 attributes=dict(attributes) if attributes is not None else None,
                 chunking_strategy=(
-                    dict(chunking_strategy)
-                    if chunking_strategy is not None
-                    else None
+                    dict(chunking_strategy) if chunking_strategy is not None else None
                 ),
             )
             kwargs.update(polling.sdk_kwargs())
@@ -481,7 +481,9 @@ class AsyncOpenAIRetrievalClient:
             kwargs = _optional_kwargs(
                 file=source,
                 purpose=normalized_purpose,
-                expires_after=dict(expires_after) if expires_after is not None else None,
+                expires_after=(
+                    dict(expires_after) if expires_after is not None else None
+                ),
             )
             raw = await self._client.files.create(**kwargs)  # type: ignore[attr-defined]
             resource = _uploaded_file(raw, source, normalized_purpose)
@@ -553,11 +555,11 @@ class AsyncOpenAIRetrievalClient:
                 name=normalized_name,
                 file_ids=normalized_file_ids or None,
                 metadata=dict(metadata) if metadata is not None else None,
-                expires_after=dict(expires_after) if expires_after is not None else None,
+                expires_after=(
+                    dict(expires_after) if expires_after is not None else None
+                ),
                 chunking_strategy=(
-                    dict(chunking_strategy)
-                    if chunking_strategy is not None
-                    else None
+                    dict(chunking_strategy) if chunking_strategy is not None else None
                 ),
                 description=description,
             )
@@ -631,7 +633,9 @@ class AsyncOpenAIRetrievalClient:
             kwargs = _optional_kwargs(
                 name=name,
                 metadata=dict(metadata) if metadata is not None else None,
-                expires_after=dict(expires_after) if expires_after is not None else None,
+                expires_after=(
+                    dict(expires_after) if expires_after is not None else None
+                ),
             )
             raw = await self._client.vector_stores.update(  # type: ignore[attr-defined]
                 normalized_id,
@@ -670,9 +674,7 @@ class AsyncOpenAIRetrievalClient:
                 file_id=normalized_file_id,
                 attributes=dict(attributes) if attributes is not None else None,
                 chunking_strategy=(
-                    dict(chunking_strategy)
-                    if chunking_strategy is not None
-                    else None
+                    dict(chunking_strategy) if chunking_strategy is not None else None
                 ),
             )
             kwargs.update(polling.sdk_kwargs())
@@ -717,9 +719,7 @@ class AsyncOpenAIRetrievalClient:
                 file=source,
                 attributes=dict(attributes) if attributes is not None else None,
                 chunking_strategy=(
-                    dict(chunking_strategy)
-                    if chunking_strategy is not None
-                    else None
+                    dict(chunking_strategy) if chunking_strategy is not None else None
                 ),
             )
             kwargs.update(polling.sdk_kwargs())
