@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from importlib import import_module
+from importlib.util import find_spec
 from typing import Any
 
 from .codex import (
@@ -179,18 +180,14 @@ def __getattr__(name: str) -> Any:
 
 
 __all__ = [
-    # Codex plugins
     "CODEX_PLUGIN_ENTRY_POINT",
     "CodexCommand",
     "CodexPlugin",
     "CodexPluginContext",
     "CodexPluginRegistry",
-    # Environment utilities
     "get_data_path",
-    # Async utilities
     "run_coroutine_thread_safe",
     "run_coroutine_with_fallback",
-    # Error classes
     "OpenAISDKError",
     "ConfigurationError",
     "PromptNotFoundError",
@@ -202,7 +199,6 @@ __all__ = [
     "AsyncExecutionError",
     "ResourceCleanupError",
     "ExtractionError",
-    # Validation
     "validate_non_empty_string",
     "validate_max_length",
     "validate_url_format",
@@ -210,7 +206,6 @@ __all__ = [
     "validate_list_items",
     "validate_choice",
     "validate_safe_path",
-    # Main structure classes
     "StructureBase",
     "SchemaOptions",
     "spec_field",
@@ -270,7 +265,6 @@ __all__ = [
     "create_plan",
     "execute_task",
     "execute_plan",
-    # Output validation
     "ValidationResult",
     "ValidationRule",
     "JSONSchemaValidator",
@@ -278,10 +272,8 @@ __all__ = [
     "LengthValidator",
     "OutputValidator",
     "validate_output",
-    # LangExtract adapter
     "LangExtractAdapter",
     "build_langextract_adapter",
-    # Extraction helpers
     "DocumentExtractor",
     "EXTRACTOR_CONFIG_AGENT_INSTRUCTIONS",
     "EXTRACTOR_CONFIG_GENERATOR",
@@ -291,3 +283,6 @@ __all__ = [
     "optimize_extractor_prompt",
     "optimize_extractor_prompt_with_agent",
 ]
+
+if find_spec("langextract") is None:
+    __all__ = [name for name in __all__ if name not in _OPTIONAL_EXPORTS]
