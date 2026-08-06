@@ -1,0 +1,80 @@
+name: Finalize Realtime lifecycle branch
+
+on:
+  push:
+    branches: [agent/realtime-session]
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Apply lifecycle documentation and typing updates
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          session = Path('src/openai_sdk_helpers/realtime/session.py')
+          text = session.read_text()
+          text = text.replace(
+              'from typing import Any, Protocol, cast\n',
+              'from typing import Any, Protocol, TypeVar, cast\n\nT = TypeVar("T")\n',
+              1,
+          )
+          text = text.replace('\n\nT = Any\n\n\n__all__ = [', '\n\n__all__ = [', 1)
+          session.write_text(text)
+
+          capabilities = Path('docs/capabilities.md')
+          text = capabilities.read_text()
+          current_anchor = '| Responses workflows | `openai_sdk_helpers.response` |'
+          realtime_row = '| Realtime session lifecycle | `openai_sdk_helpers.realtime` | Builds or wraps the official Agents SDK Realtime runner and session with typed settings and explicit async lifecycle | Preview | Core; opt-in import and configuration | Explicit start, close, local timeout, and opt-in restart | Raw official runner and session remain accessible; no browser, audio-device, or hidden reconnect layer |\n'
+          assert current_anchor in text
+          text = text.replace(current_anchor, realtime_row + current_anchor, 1)
+          planned = '| Realtime integration | `0.11.0` | Issues #145–#146 | Server-side lifecycle and event helpers only; no browser or audio-device application layer |\n'
+          replacement = '| Realtime events and tools | `0.11.0` | Issue #146 | Normalize official events without discarding raw payloads; explicit tool, interruption, cancellation, and deterministic test transport |\n'
+          assert planned in text
+          capabilities.write_text(text.replace(planned, replacement, 1))
+
+          changelog = Path('CHANGELOG.md')
+          text = changelog.read_text()
+          anchor = '## Unreleased\n\n'
+          addition = (
+              '- Added typed server-side Realtime model and runner configuration with raw official SDK passthrough.\n'
+              '- Added explicit Realtime session start, close, timeout, cancellation, async context, and opt-in restart lifecycle without hidden reconnection or audio-device management.\n'
+          )
+          assert anchor in text
+          changelog.write_text(text.replace(anchor, anchor + addition, 1))
+
+          readme = Path('README.md')
+          text = readme.read_text()
+          anchor = '- [Conversation state](docs/conversation-state.md) — ownership modes, compatibility, persistence, and migration\n'
+          addition = (
+              '- [Retrieval architecture](docs/retrieval.md) — resource ownership, contracts, and migration\n'
+              '- [Retrieval lifecycle](docs/retrieval-lifecycle.md) — Files and Vector Stores operations\n'
+              '- [File Search](docs/file-search.md) — direct search, hosted tools, results, and citations\n'
+              '- [MCP transports](docs/mcp.md) — hosted and Streamable HTTP lifecycle\n'
+              '- [MCP policy](docs/mcp-policy.md) — filtering, approvals, caching, retries, and isolation\n'
+              '- [Realtime lifecycle](docs/realtime.md) — typed server-side session configuration and ownership\n'
+          )
+          assert anchor in text
+          readme.write_text(text.replace(anchor, anchor + addition, 1))
+          PY
+          python -m pip install --upgrade black
+          black src/openai_sdk_helpers/realtime tests/test_realtime_session.py tests/test_realtime_public_api.py
+          git rm .github/workflows/finalize-realtime-session.yml
+      - name: Commit final branch state
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .
+          git commit -m 'Finalize Realtime lifecycle contract'
+          git push origin HEAD:agent/realtime-session
