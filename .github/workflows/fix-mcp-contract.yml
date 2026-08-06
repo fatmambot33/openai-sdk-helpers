@@ -1,0 +1,59 @@
+name: Fix MCP policy transport contract
+
+on:
+  push:
+    branches: [agent/mcp-policy]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Align deny precedence and SDK transport options
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          policy = Path('src/openai_sdk_helpers/mcp/policy.py')
+          text = policy.read_text()
+          overlap = '''        overlap = set(allowed) & set(blocked)\n        if overlap:\n            raise ValueError(\n                "tools cannot be both allowed and blocked: "\n                + ", ".join(sorted(overlap))\n            )\n'''
+          assert overlap in text
+          policy.write_text(text.replace(overlap, '', 1))
+
+          tests = Path('tests/test_mcp_policy.py')
+          text = tests.read_text()
+          old = '''def test_tool_policy_rejects_conflicting_configuration() -> None:\n    with pytest.raises(ValueError, match="both allowed and blocked"):\n        MCPToolPolicy(allowed_tools=("write",), blocked_tools=("write",))\n    with pytest.raises(ValueError, match="blocked tools cannot require approval"):\n        MCPToolPolicy(blocked_tools=("write",), approval_tools=("write",))\n'''
+          new = '''def test_tool_policy_rejects_approval_for_blocked_tools() -> None:\n    with pytest.raises(ValueError, match="blocked tools cannot require approval"):\n        MCPToolPolicy(blocked_tools=("write",), approval_tools=("write",))\n'''
+          assert old in text
+          tests.write_text(text.replace(old, new, 1))
+
+          transport = Path('src/openai_sdk_helpers/mcp/transport.py')
+          text = transport.read_text()
+          old = '''    use_structured_content : bool, default=False\n        Preserve structured MCP content where supported by the Agents SDK.\n    """\n\n    url: str\n    name: str | None = None\n    headers: Mapping[str, str] = field(default_factory=dict, repr=False)\n    timeout_seconds: float = 5.0\n    sse_read_timeout_seconds: float = 300.0\n    terminate_on_close: bool = True\n    use_structured_content: bool = False\n'''
+          new = '''    use_structured_content : bool, default=False\n        Preserve structured MCP content where supported by the Agents SDK.\n    cache_tools_list : bool, default=False\n        Forward the official SDK tool-list cache option explicitly.\n    tool_filter : object or None, default=None\n        Official Agents SDK MCP tool filter. The raw object is preserved.\n    """\n\n    url: str\n    name: str | None = None\n    headers: Mapping[str, str] = field(default_factory=dict, repr=False)\n    timeout_seconds: float = 5.0\n    sse_read_timeout_seconds: float = 300.0\n    terminate_on_close: bool = True\n    use_structured_content: bool = False\n    cache_tools_list: bool = False\n    tool_filter: object | None = field(default=None, repr=False, compare=False)\n'''
+          assert old in text
+          text = text.replace(old, new, 1)
+          old = '''    if config.name is not None:\n        kwargs["name"] = config.name\n    server = cast(MCPServerProtocol, server_type(**kwargs))\n'''
+          new = '''    if config.name is not None:\n        kwargs["name"] = config.name\n    if config.cache_tools_list:\n        kwargs["cache_tools_list"] = True\n    if config.tool_filter is not None:\n        kwargs["tool_filter"] = config.tool_filter\n    server = cast(MCPServerProtocol, server_type(**kwargs))\n'''
+          assert old in text
+          transport.write_text(text.replace(old, new, 1))
+          PY
+          python -m pip install --upgrade black
+          black src/openai_sdk_helpers/mcp tests/test_mcp_policy.py tests/test_mcp_transport.py
+          git rm .github/workflows/fix-mcp-contract.yml
+      - name: Commit aligned contract
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .
+          git commit -m 'Align MCP deny precedence and transport policy options'
+          git push origin HEAD:agent/mcp-policy
