@@ -11,6 +11,8 @@ from typing import Any, Protocol, TypeVar
 
 from pydantic import BaseModel
 
+from .._optional import import_optional_module
+
 TModel = TypeVar("TModel", bound=BaseModel)
 
 
@@ -158,7 +160,7 @@ def build_langextract_adapter(
     Raises
     ------
     ImportError
-        If LangExtract cannot be imported.
+        If ``openai-sdk-helpers[extract]`` is not installed.
     AttributeError
         If no supported extractor can be resolved.
     """
@@ -177,7 +179,7 @@ def build_langextract_adapter(
 
 
 def _import_langextract_module() -> Any:
-    """Import the LangExtract module.
+    """Import the optional LangExtract module.
 
     Returns
     -------
@@ -187,8 +189,11 @@ def _import_langextract_module() -> Any:
     Raises
     ------
     ImportError
-        If LangExtract is not installed or cannot be imported.
+        If ``openai-sdk-helpers[extract]`` is not installed.
     """
-    import importlib
-
-    return importlib.import_module("langextract")
+    return import_optional_module(
+        "langextract",
+        dependency="langextract",
+        extra="extract",
+        feature="LangExtract integration",
+    )
