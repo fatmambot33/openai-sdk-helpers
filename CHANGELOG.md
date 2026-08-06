@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+- Added explicit `AgentRunState`, `ResponseContinuation`, and `LocalMessageStore` contracts for Agents sessions, server-managed continuation, and package-local message persistence.
+- Added early validation for incompatible state mechanisms while preserving existing stateless calls, raw SDK identifiers, underlying session objects, and the legacy `session=` shorthand.
 - Added an optional typed `OperationContext` with sync and async lifecycle hooks across Responses runners, Agents runners, and Codex command execution.
 - Added vendor-neutral usage capture and safely redacted diagnostics while preserving original SDK results and exceptions.
 
