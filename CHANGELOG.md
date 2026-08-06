@@ -4,6 +4,9 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+- Added an optional typed `OperationContext` with sync and async lifecycle hooks across Responses runners, Agents runners, and Codex command execution.
+- Added vendor-neutral usage capture and safely redacted diagnostics while preserving original SDK results and exceptions.
+
 ## 0.8.0 - 2026-08-06
 
 - Added a security policy using confidential GitHub private vulnerability reporting and an explicit supported-version transition.
