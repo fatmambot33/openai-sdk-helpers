@@ -47,12 +47,15 @@ def test_resource_types_preserve_raw_sdk_objects() -> None:
 
     assert uploaded.raw is raw_file
     assert store.raw is raw_store
-    assert RetrievalOperationResult(
-        operation="files.upload",
-        resource=uploaded,
-        succeeded=True,
-        raw=raw_file,
-    ).raw is raw_file
+    assert (
+        RetrievalOperationResult(
+            operation="files.upload",
+            resource=uploaded,
+            succeeded=True,
+            raw=raw_file,
+        ).raw
+        is raw_file
+    )
 
 
 def test_file_search_config_is_explicit_and_deduplicated() -> None:
