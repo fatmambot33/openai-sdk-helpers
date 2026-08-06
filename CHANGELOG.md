@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 0.7.5 - 2026-08-06
+
 - Added a security policy using confidential GitHub private vulnerability reporting and an explicit supported-version transition.
 - Added a security-aware release checklist covering credentials, publishing, files, plugins, tools, transports, diagnostics, and artifact verification.
 - Replaced a secret-shaped example value with an explicit non-secret placeholder.
