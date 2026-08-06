@@ -29,7 +29,7 @@ class EventCollector:
         self.events.append(event)
 
 
-@dataclass
+@dataclass(frozen=True)
 class FakeUsage:
     """SDK-shaped usage fixture."""
 
