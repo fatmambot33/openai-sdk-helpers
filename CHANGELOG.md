@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+- Added built-wheel smoke tests for both CLI entry points, runtime package data, and credential-free Responses, Agents, and Codex examples.
+- Classified examples as supported, illustrative, or deprecated with an executable compatibility policy.
 - Added a canonical capability matrix covering maturity, installation, execution, and SDK escape hatches.
 - Replaced the duplicated README feature inventory with concise canonical documentation navigation.
 - Added deterministic internal Markdown file and anchor validation to CI.
