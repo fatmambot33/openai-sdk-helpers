@@ -6,6 +6,12 @@ All notable changes to this project are documented here.
 
 ## 0.8.0 - 2026-08-06
 
+- Established the 0.8 compatibility line with consolidated migration guidance for optional extraction and UI profiles, Codex plugins, tool validation, and OIDC publishing.
+- Aligned the Python distribution and bundled Codex plugin manifest at version 0.8.0.
+- Carried forward the production foundation shipped on the 0.7.5 branch without duplicating its detailed release notes.
+
+## 0.7.5 - 2026-08-06
+
 - Added a security policy using confidential GitHub private vulnerability reporting and an explicit supported-version transition.
 - Added a security-aware release checklist covering credentials, publishing, files, plugins, tools, transports, diagnostics, and artifact verification.
 - Replaced a secret-shaped example value with an explicit non-secret placeholder.
@@ -22,5 +28,5 @@ All notable changes to this project are documented here.
 - Added optional structured plugin metadata and capability inspection.
 - Added isolated entry-point discovery reports without changing fail-fast discovery.
 - Added `openai-helpers codex plugins` and `openai-helpers codex commands`.
-- Added installed entry-point discovery coverage, compatibility policy, and 0.8 migration guides.
+- Added installed entry-point discovery coverage, compatibility policy, and a 0.8 migration guide.
 - Standardized repository documentation.

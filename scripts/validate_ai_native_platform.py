@@ -1,100 +1,186 @@
-"""Validate declarations and concrete AI-native repository evidence."""
+"""Validate the repository against the pinned AI-native platform contract."""
+
 from __future__ import annotations
+
+import json
 import re
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
+
 import yaml
+from jsonschema import Draft202012Validator
 
-ROOT = Path(".")
+ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "AI_NATIVE_PLATFORM.yaml"
-TRUE_PATHS = (
-    ("product", "ai_native"), ("product", "plugin_first"), ("product", "sdk_first"),
-    ("plugin", "enabled"), ("plugin", "codex", "supported"), ("plugin", "codex", "marketplace"),
-    ("plugin", "discovery", "entry_points"), ("plugin", "discovery", "manifest"), ("plugin", "discovery", "capabilities"),
-    ("plugin", "credentials", "local_only"), ("plugin", "credentials", "policy", "never_store_remote"),
-    ("plugin", "credentials", "policy", "never_commit"), ("plugin", "credentials", "policy", "never_echo"),
-    ("interfaces", "sdk"), ("interfaces", "cli"), ("interfaces", "plugin"), ("interfaces", "json_schema"),
-    ("quality", "typed"), ("quality", "tests"), ("quality", "docs"), ("quality", "examples"),
-    ("quality", "security_scan"), ("self_improvement", "enabled"), ("self_improvement", "github", "issues"),
-    ("self_improvement", "autonomous", "discover_improvements"), ("self_improvement", "autonomous", "create_issues"),
-    ("self_improvement", "autonomous", "generate_pr"), ("self_improvement", "autonomous", "run_ci"),
-    ("release", "block_if_quality_fails"), ("release", "block_if_plugin_invalid"),
-)
-COMMANDS = {"validate", "test", "docs", "examples", "upgrade", "uninstall"}
-GUARANTEES = {"deterministic_tool_discovery", "structured_outputs", "issue_driven_improvement", "ci_validated_changes", "governed_autonomy"}
-APPROVALS = {"breaking_changes", "security_changes", "credential_changes", "public_api_changes", "permission_expansion", "release_changes"}
+SCHEMA = ROOT / "schemas/ai-native-platform.schema.json"
+IMMUTABLE_REF = re.compile(r"(?:[0-9a-f]{40}|v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)")
+REQUIRED_GUARANTEES = {
+    "deterministic_tool_discovery",
+    "structured_outputs",
+    "issue_driven_improvement",
+    "ci_validated_changes",
+    "governed_autonomy",
+}
+PROFILE_REQUIREMENTS: dict[str, tuple[str, ...]] = {
+    "library": ("interfaces.sdk", "interfaces.json_schema"),
+    "cli": ("interfaces.cli", "interfaces.json_schema"),
+    "plugin": ("interfaces.plugin", "plugin.enabled", "interfaces.json_schema"),
+    "agent-tool": ("interfaces.json_schema",),
+    "service": ("interfaces.json_schema",),
+    "full-platform": (
+        "interfaces.sdk",
+        "interfaces.cli",
+        "interfaces.plugin",
+        "plugin.enabled",
+        "interfaces.json_schema",
+    ),
+}
+BASE_EVIDENCE = {"readme", "tests", "agent_instructions", "typing", "ci"}
 
-def get(data: dict[str, Any], path: tuple[str, ...]) -> Any:
-    current: Any = data
-    for key in path:
-        if not isinstance(current, dict) or key not in current:
-            raise KeyError(".".join(path))
-        current = current[key]
-    return current
 
-def matches(*patterns: str) -> list[Path]:
-    return sorted({p for pattern in patterns for p in ROOT.glob(pattern) if p.is_file() and ".git" not in p.parts})
+def read_path(data: Mapping[str, Any], dotted: str) -> Any:
+    """Read one dotted path from a nested mapping."""
+    value: Any = data
+    for part in dotted.split("."):
+        if not isinstance(value, Mapping) or part not in value:
+            raise KeyError(dotted)
+        value = value[part]
+    return value
 
-def contents(paths: list[Path]) -> str:
-    return "\n".join(p.read_text(encoding="utf-8", errors="ignore") for p in paths if p.stat().st_size < 2_000_000).lower()
 
-def evidence(data: dict[str, Any]) -> list[str]:
-    docs = contents(matches("README.md", "docs/**/*.md"))
-    code = contents(matches("src/**/*.py", "**/plugins/**/*.py", "plugins/**/*.py"))
-    ci = contents(matches(".github/workflows/*.yml", ".github/workflows/*.yaml"))
-    tests = matches("tests/test_*.py", "tests/**/*test*.py")
-    pyproject = ROOT / "pyproject.toml"
-    checks = {
-        "pyproject.toml": pyproject.is_file(),
-        "Codex plugin manifest": bool(matches(".codex-plugin/plugin.json", "plugins/**/.codex-plugin/plugin.json")),
-        "Codex marketplace catalog": bool(matches(".agents/plugins/marketplace.json", "plugins/**/marketplace.json")),
-        "typed plugin contract": "plugin" in code and ("protocol" in code or "abstractbaseclass" in code),
-        "typing marker or Pyright contract": bool(matches("src/**/py.typed", "**/py.typed")) or (pyproject.is_file() and "pyright" in pyproject.read_text(encoding="utf-8", errors="ignore").lower()),
-        "strict type checking in CI": "pyright" in ci or "mypy" in ci,
-        "plugin tests": any("plugin" in p.name.lower() for p in tests),
-        "general tests": bool(tests),
-        "AGENTS.md": (ROOT / "AGENTS.md").is_file(),
-        "PyPI installation documentation": "pip install" in docs,
-        "Git installation documentation": "git+https://" in docs or "git clone" in docs,
-        "editable installation documentation": "pip install -e" in docs,
-        "plugin documentation": "plugin" in docs and "codex" in docs,
-        "AI improvement issue template": (ROOT / ".github/ISSUE_TEMPLATE/ai-improvement.yml").is_file(),
-        "self-improvement workflow": (ROOT / ".github/workflows/ai-self-improvement.yml").is_file() or (ROOT / ".github/workflows/ai-self-improve.yml").is_file(),
-    }
-    credentials = data.get("plugin", {}).get("credentials", {})
-    if credentials.get("required"):
-        checks["credential template"] = isinstance(credentials.get("env_example"), str) and (ROOT / credentials["env_example"]).is_file()
-        checks["configure command"] = bool(credentials.get("setup_command"))
-        checks["doctor command"] = bool(credentials.get("validation_command"))
-        checks[".env ignored"] = (ROOT / ".gitignore").is_file() and ".env" in (ROOT / ".gitignore").read_text(encoding="utf-8", errors="ignore")
-    return [name for name, ok in checks.items() if not ok]
+def required_evidence(data: Mapping[str, Any]) -> set[str]:
+    """Return evidence keys implied by declared capabilities."""
+    keys = set(BASE_EVIDENCE)
+    interfaces = data.get("interfaces", {})
+    quality = data.get("quality", {})
+    plugin = data.get("plugin", {})
+    improvement = data.get("self_improvement", {})
+
+    if isinstance(interfaces, Mapping):
+        for capability, evidence_key in {
+            "sdk": "sdk",
+            "cli": "cli",
+            "json_schema": "schemas",
+            "mcp": "mcp",
+            "openapi": "openapi",
+        }.items():
+            if interfaces.get(capability) is True:
+                keys.add(evidence_key)
+        if interfaces.get("plugin") is True:
+            keys.update({"plugin_manifest", "plugin_tests"})
+
+    if isinstance(quality, Mapping):
+        if quality.get("docs") is True:
+            keys.add("docs")
+        if quality.get("examples") is True:
+            keys.add("examples")
+        if quality.get("security_scan") is True:
+            keys.add("security_workflow")
+
+    if isinstance(plugin, Mapping):
+        credentials = plugin.get("credentials", {})
+        if isinstance(credentials, Mapping) and credentials.get("required") is True:
+            keys.update({"env_example", "gitignore"})
+
+    if isinstance(improvement, Mapping) and improvement.get("enabled") is True:
+        keys.update({"self_improvement_workflow", "improvement_issue_template"})
+    return keys
+
+
+def declarations(value: Any) -> list[str]:
+    """Normalize an evidence declaration to repository-relative paths."""
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        return [item for item in value if isinstance(item, str)]
+    return []
+
+
+def path_exists(declaration: str) -> bool:
+    """Return whether one repository-relative path or glob exists."""
+    path = Path(declaration)
+    if path.is_absolute() or ".." in path.parts:
+        return False
+    if any(character in declaration for character in "*?["):
+        return any(ROOT.glob(declaration))
+    return (ROOT / declaration).exists()
+
+
+def validate() -> list[str]:
+    """Return deterministic contract and evidence errors."""
+    data = yaml.safe_load(MANIFEST.read_text(encoding="utf-8"))
+    schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
+    if not isinstance(data, dict) or not isinstance(schema, dict):
+        return ["manifest and schema must contain mappings"]
+
+    errors = []
+    validator = Draft202012Validator(schema)
+    for error in sorted(validator.iter_errors(data), key=lambda item: list(item.absolute_path)):
+        location = ".".join(str(part) for part in error.absolute_path) or "manifest"
+        errors.append(f"schema [{location}]: {error.message}")
+
+    standard = data.get("standard", {})
+    if isinstance(standard, Mapping):
+        reference = str(standard.get("ref", ""))
+        if IMMUTABLE_REF.fullmatch(reference) is None:
+            errors.append("standard.ref must be an immutable version or commit SHA")
+
+    product = data.get("product", {})
+    profile = product.get("profile") if isinstance(product, Mapping) else None
+    if isinstance(profile, str):
+        for requirement in PROFILE_REQUIREMENTS.get(profile, ()):
+            try:
+                if read_path(data, requirement) is not True:
+                    errors.append(f"{profile} requires {requirement}=true")
+            except KeyError:
+                errors.append(f"{profile} requires {requirement}")
+        interfaces = data.get("interfaces", {})
+        if isinstance(interfaces, Mapping):
+            if profile == "agent-tool" and not (
+                interfaces.get("plugin") is True or interfaces.get("mcp") is True
+            ):
+                errors.append("agent-tool requires a plugin or MCP interface")
+            if profile == "service" and not (
+                interfaces.get("openapi") is True or interfaces.get("sdk") is True
+            ):
+                errors.append("service requires an OpenAPI or SDK interface")
+
+    agent = data.get("agent", {})
+    guarantees = set(agent.get("guarantees", [])) if isinstance(agent, Mapping) else set()
+    for guarantee in sorted(REQUIRED_GUARANTEES - guarantees):
+        errors.append(f"missing agent guarantee: {guarantee}")
+
+    evidence = data.get("evidence", {})
+    paths = evidence.get("paths", {}) if isinstance(evidence, Mapping) else {}
+    if not isinstance(paths, Mapping):
+        errors.append("evidence.paths must be a mapping")
+        return errors
+    for key in sorted(required_evidence(data)):
+        declared = declarations(paths.get(key))
+        if not declared:
+            errors.append(f"missing evidence declaration: {key}")
+            continue
+        missing = [item for item in declared if not path_exists(item)]
+        if missing:
+            errors.append(f"missing evidence for {key}: {', '.join(missing)}")
+    return errors
+
 
 def main() -> int:
-    data = yaml.safe_load(MANIFEST.read_text(encoding="utf-8")) if MANIFEST.is_file() else None
-    if not isinstance(data, dict) or data.get("version") != 1:
-        print("AI-native platform validation failed:\n- missing or invalid version 1 manifest")
-        return 1
-    errors: list[str] = []
-    standard = data.get("standard", {})
-    if standard.get("repository") != "fatmambot33/ai-native-platform": errors.append("invalid standard.repository")
-    if not re.fullmatch(r"[0-9a-f]{40}|v?\d+\.\d+\.\d+", str(standard.get("ref", ""))): errors.append("standard.ref must be immutable")
-    for path in TRUE_PATHS:
-        try:
-            if get(data, path) is not True: errors.append(f"{'.'.join(path)} must be true")
-        except KeyError: errors.append(f"missing {'.'.join(path)}")
-    declared = set(data.get("commands", {}).get("required", []))
-    errors.extend(f"commands.required must include {x}" for x in sorted(COMMANDS - declared))
-    approvals = data.get("self_improvement", {}).get("governance", {}).get("human_approval", {})
-    missing = sorted(x for x in APPROVALS if approvals.get(x) is not True)
-    if missing: errors.append("missing human approval gates: " + ", ".join(missing))
-    missing = sorted(GUARANTEES - set(data.get("agent", {}).get("guarantees", [])))
-    if missing: errors.append("missing agent guarantees: " + ", ".join(missing))
-    errors.extend(f"missing repository evidence: {x}" for x in evidence(data))
+    """Run validation and print an actionable result."""
+    try:
+        errors = validate()
+    except (OSError, ValueError, json.JSONDecodeError, yaml.YAMLError) as exc:
+        errors = [str(exc)]
     if errors:
         print("AI-native platform validation failed:")
-        for error in errors: print(f"- {error}")
+        for error in errors:
+            print(f"- {error}")
         return 1
     print("AI-native platform validation passed with repository evidence.")
     return 0
 
-if __name__ == "__main__": raise SystemExit(main())
+
+if __name__ == "__main__":
+    raise SystemExit(main())
