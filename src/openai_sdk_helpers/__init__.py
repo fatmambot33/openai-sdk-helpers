@@ -23,6 +23,12 @@ from .runtime import (
     run_observed_async,
     run_observed_sync,
 )
+from .state import (
+    AgentRunState,
+    ConversationStateMode,
+    LocalMessageStore,
+    ResponseContinuation,
+)
 from .utils.async_utils import run_coroutine_thread_safe, run_coroutine_with_fallback
 
 from .errors import (
@@ -201,6 +207,10 @@ __all__ = [
     "OperationUsage",
     "run_observed_async",
     "run_observed_sync",
+    "AgentRunState",
+    "ConversationStateMode",
+    "LocalMessageStore",
+    "ResponseContinuation",
     "get_data_path",
     "run_coroutine_thread_safe",
     "run_coroutine_with_fallback",
