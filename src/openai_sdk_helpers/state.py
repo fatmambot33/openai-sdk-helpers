@@ -194,9 +194,9 @@ class LocalMessageStore:
 
     Notes
     -----
-    Construction, loading, and closing do not save automatically. Call ``save``
-    explicitly. ``clear`` writes an empty message collection, while ``delete``
-    removes the caller-owned file.
+    Construction, loading, and ``close(save=False)`` do not write state.
+    ``clear`` writes an empty message collection, while ``delete`` removes the
+    caller-owned file.
     """
 
     path: Path | str
@@ -222,6 +222,37 @@ class LocalMessageStore:
         path.parent.mkdir(parents=True, exist_ok=True)
         messages.to_json_file(str(path))
         return path
+
+    def close(
+        self,
+        messages: ResponseMessages | None = None,
+        *,
+        save: bool = False,
+    ) -> Path | None:
+        """Close local persistence with explicit optional saving.
+
+        Parameters
+        ----------
+        messages : ResponseMessages or None, default=None
+            Messages to persist when ``save`` is enabled.
+        save : bool, default=False
+            Persist before closing. The default performs no write.
+
+        Returns
+        -------
+        Path or None
+            Saved path when requested, otherwise ``None``.
+
+        Raises
+        ------
+        ValueError
+            If saving is requested without a message collection.
+        """
+        if not save:
+            return None
+        if messages is None:
+            raise ValueError("messages are required when save=True")
+        return self.save(messages)
 
     def resume(self) -> ResponseMessages:
         """Load and return the persisted message collection.
