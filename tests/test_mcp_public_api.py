@@ -6,12 +6,26 @@ from openai_sdk_helpers import mcp
 
 EXPECTED_MCP_API = (
     "HostedMCPConfig",
+    "MCPApprovalDecision",
+    "MCPApprovalHandler",
+    "MCPApprovalRequest",
+    "MCPRetryPolicy",
+    "MCPServerFailure",
     "MCPServerProtocol",
+    "MCPToolCache",
+    "MCPToolCacheEntry",
+    "MCPToolDescriptor",
+    "MCPToolListReport",
+    "MCPToolPolicy",
     "MCPTransport",
     "ManagedMCPServer",
     "StreamableHTTPMCPConfig",
+    "build_agents_tool_filter",
     "build_hosted_mcp_tool",
     "build_streamable_http_server",
+    "list_tools_isolated",
+    "request_approval",
+    "run_safe_tool_call",
 )
 
 
