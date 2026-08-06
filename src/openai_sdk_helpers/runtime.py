@@ -214,6 +214,7 @@ class OperationContext:
     _finished: bool = field(default=False, init=False, repr=False)
 
     def __post_init__(self) -> None:
+        """Normalize immutable inputs and validate lifecycle counters."""
         name = self.operation_name.strip()
         if not name:
             raise ValueError("operation_name must not be empty")
