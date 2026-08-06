@@ -5,7 +5,18 @@ from __future__ import annotations
 from collections.abc import Awaitable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, BinaryIO, Generic, Protocol, TypeVar, runtime_checkable
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    BinaryIO,
+    Generic,
+    Protocol,
+    TypeVar,
+    runtime_checkable,
+)
+
+if TYPE_CHECKING:
+    from .lifecycle import VectorStoreFileReference
 
 ResourceT = TypeVar("ResourceT")
 FileSource = BinaryIO | Path | str
@@ -269,7 +280,7 @@ class SyncRetrievalClient(Protocol):
         *,
         name: str,
         file_ids: Sequence[str] = (),
-        attributes: Mapping[str, AttributeValue] | None = None,
+        metadata: Mapping[str, str] | None = None,
         expires_after: Mapping[str, Any] | None = None,
         chunking_strategy: Mapping[str, Any] | None = None,
     ) -> RetrievalOperationResult[VectorStoreReference]:
@@ -283,7 +294,7 @@ class SyncRetrievalClient(Protocol):
         *,
         attributes: Mapping[str, AttributeValue] | None = None,
         chunking_strategy: Mapping[str, Any] | None = None,
-    ) -> RetrievalOperationResult[UploadedFile]:
+    ) -> RetrievalOperationResult[VectorStoreFileReference]:
         """Attach an existing file to an existing vector store."""
         ...
 
@@ -291,7 +302,7 @@ class SyncRetrievalClient(Protocol):
         self,
         vector_store_id: str,
         file_id: str,
-    ) -> RetrievalOperationResult[UploadedFile]:
+    ) -> RetrievalOperationResult[VectorStoreFileReference]:
         """Remove a file from a store without deleting the Files resource."""
         ...
 
@@ -344,7 +355,7 @@ class AsyncRetrievalClient(Protocol):
         *,
         name: str,
         file_ids: Sequence[str] = (),
-        attributes: Mapping[str, AttributeValue] | None = None,
+        metadata: Mapping[str, str] | None = None,
         expires_after: Mapping[str, Any] | None = None,
         chunking_strategy: Mapping[str, Any] | None = None,
     ) -> Awaitable[RetrievalOperationResult[VectorStoreReference]]:
@@ -358,7 +369,7 @@ class AsyncRetrievalClient(Protocol):
         *,
         attributes: Mapping[str, AttributeValue] | None = None,
         chunking_strategy: Mapping[str, Any] | None = None,
-    ) -> Awaitable[RetrievalOperationResult[UploadedFile]]:
+    ) -> Awaitable[RetrievalOperationResult[VectorStoreFileReference]]:
         """Attach an existing file to an existing vector store."""
         ...
 
@@ -366,7 +377,7 @@ class AsyncRetrievalClient(Protocol):
         self,
         vector_store_id: str,
         file_id: str,
-    ) -> Awaitable[RetrievalOperationResult[UploadedFile]]:
+    ) -> Awaitable[RetrievalOperationResult[VectorStoreFileReference]]:
         """Remove a file from a store without deleting the Files resource."""
         ...
 
