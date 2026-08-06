@@ -154,15 +154,19 @@ async def execute_realtime_tool_call(
             return await coroutine
         try:
             return await asyncio.wait_for(coroutine, timeout=timeout_seconds)
-        except TimeoutError as error:
+        except asyncio.TimeoutError as error:
+            normalized_error = TimeoutError(
+                f"Realtime tool {call.name!r} timed out after "
+                f"{timeout_seconds} seconds"
+            )
             if capture_errors:
                 return RealtimeToolResult(
                     call_id=call.call_id,
                     name=call.name,
-                    error=error,
+                    error=normalized_error,
                     raw_call=call.raw,
                 )
-            raise
+            raise normalized_error from error
 
     return await run_observed_async(operation_context, execute)
 
