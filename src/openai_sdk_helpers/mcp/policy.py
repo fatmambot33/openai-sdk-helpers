@@ -66,12 +66,6 @@ class MCPToolPolicy:
         object.__setattr__(self, "blocked_tools", blocked)
         object.__setattr__(self, "approval_tools", approvals)
         object.__setattr__(self, "safe_retry_tools", retryable)
-        overlap = set(allowed) & set(blocked)
-        if overlap:
-            raise ValueError(
-                "tools cannot be both allowed and blocked: "
-                + ", ".join(sorted(overlap))
-            )
         hidden_approvals = set(approvals) & set(blocked)
         if hidden_approvals:
             raise ValueError(
