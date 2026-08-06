@@ -162,7 +162,7 @@ async def request_approval(
     decision = handler(request)
     if inspect.isawaitable(decision):
         decision = await cast(Awaitable[MCPApprovalDecision], decision)
-    if decision not in MCPApprovalDecision:
+    if not isinstance(decision, MCPApprovalDecision):
         return MCPApprovalDecision.REJECT
     return cast(MCPApprovalDecision, decision)
 
