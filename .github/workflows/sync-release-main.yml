@@ -17,6 +17,8 @@ jobs:
           fetch-depth: 0
       - name: Merge current main and preserve release history
         run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git fetch origin main
           set +e
           git merge --no-ff --no-commit origin/main
@@ -81,12 +83,13 @@ jobs:
           test -z "$(git diff --name-only --diff-filter=U)"
           grep -q '^version = "0.8.0"' pyproject.toml
           grep -q '"version": "0.8.0"' plugins/openai-sdk-helpers/.codex-plugin/plugin.json
+          if ! grep -q '^## 0.7.5 - 2026-08-06$' CHANGELOG.md; then
+            echo 'Merged changelog omitted 0.7.5 history' >&2
+            exit 1
+          fi
           grep -q '^## 0.8.0 - 2026-08-06$' CHANGELOG.md
-          grep -q '^## 0.7.5 - 2026-08-06$' CHANGELOG.md
           git rm .github/workflows/sync-release-main.yml
       - name: Commit synchronized release branch
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit -m 'Synchronize 0.8.0 release candidate with current main'
           git push origin HEAD:agent/release-0.8.0
