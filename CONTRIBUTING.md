@@ -1,10 +1,73 @@
 # Contributing
 
-1. Open or select an issue.
-2. Keep the change focused.
-3. Add or update tests.
-4. Add type hints and documentation.
-5. Run the project checks.
-6. Open a pull request with a clear summary.
+## Workflow
 
-Before merging, confirm the change supports `PRODUCT.md` and update `CHANGELOG.md` when appropriate.
+1. Open or select one focused issue.
+2. Branch from the current `main` branch.
+3. Keep the implementation small enough for one coherent pull request.
+4. Add or update deterministic tests.
+5. Add type hints and NumPy-style docstrings.
+6. Update the applicable canonical documentation.
+7. Run all repository checks.
+8. Open a pull request with scope, compatibility impact, validation, and issue links.
+
+Before merging, confirm the change supports [PRODUCT.md](PRODUCT.md), preserves a
+usable core installation, and does not hide OpenAI API calls or resource
+ownership behind surprising defaults.
+
+## Required checks
+
+```bash
+pydocstyle src
+black --check --diff .
+pyright src
+pytest -q --cov=src --cov-report=term-missing --cov-fail-under=70
+python scripts/check_markdown_links.py
+```
+
+CI additionally validates supported Python versions, minimum/latest compatible
+OpenAI SDK dependencies, built distributions, installed package profiles, and
+repository governance.
+
+## Documentation ownership
+
+A public change must update every applicable canonical document:
+
+- [docs/capabilities.md](docs/capabilities.md) for capability, maturity,
+  installation, execution, or escape-hatch changes;
+- [docs/public-api.md](docs/public-api.md) for intentional import changes;
+- [docs/installation.md](docs/installation.md) for dependency profiles;
+- the focused behavior guide for semantics and examples;
+- [CHANGELOG.md](CHANGELOG.md) for user-visible changes;
+- [README.md](README.md) only when top-level navigation or the product summary changes.
+
+Do not copy the capability matrix into the README or repeat long guides across
+multiple files. Link to the canonical source instead. Internal Markdown links
+must pass the repository link checker.
+
+## Public API changes
+
+Public additions require:
+
+- an issue that explains the concrete user workflow;
+- a typed, documented contract;
+- sync/async semantics where applicable;
+- explicit ownership and cleanup behavior;
+- access to underlying official SDK objects;
+- compatibility and migration notes;
+- deterministic success and failure tests.
+
+Breaking changes, deprecations, security-sensitive defaults, releases, and new
+public contracts require human review even when implementation is automated.
+
+## Pull-request completion
+
+A pull request is ready to merge only when:
+
+- all required checks pass on the final head commit;
+- no unresolved review thread remains;
+- documentation and changelog entries match the implementation;
+- optional integrations remain outside the base installation;
+- no credential, paid API call, or external network dependency is required by
+  pull-request tests;
+- the linked issue's acceptance criteria are genuinely satisfied.
