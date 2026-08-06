@@ -52,7 +52,11 @@ class HostedMCPConfig:
         """Normalize identity and copied collection values."""
         label = _required(self.server_label, "server_label")
         url = _required(self.server_url, "server_url")
-        tools = tuple(dict.fromkeys(_required(tool, "allowed_tool") for tool in self.allowed_tools))
+        tools = tuple(
+            dict.fromkeys(
+                _required(tool, "allowed_tool") for tool in self.allowed_tools
+            )
+        )
         object.__setattr__(self, "server_label", label)
         object.__setattr__(self, "server_url", url)
         object.__setattr__(self, "allowed_tools", tools)
@@ -107,6 +111,10 @@ class StreamableHTTPMCPConfig:
         Whether the transport should request session termination on cleanup.
     use_structured_content : bool, default=False
         Preserve structured MCP content where supported by the Agents SDK.
+    cache_tools_list : bool, default=False
+        Forward the official SDK tool-list cache option explicitly.
+    tool_filter : object or None, default=None
+        Official Agents SDK MCP tool filter. The raw object is preserved.
     """
 
     url: str
@@ -116,6 +124,8 @@ class StreamableHTTPMCPConfig:
     sse_read_timeout_seconds: float = 300.0
     terminate_on_close: bool = True
     use_structured_content: bool = False
+    cache_tools_list: bool = False
+    tool_filter: object | None = field(default=None, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         """Normalize transport values and copy caller mappings."""
@@ -127,7 +137,9 @@ class StreamableHTTPMCPConfig:
             raise ValueError("timeout_seconds must be positive")
         if self.sse_read_timeout_seconds <= 0:
             raise ValueError("sse_read_timeout_seconds must be positive")
-        headers = {_required(key, "header_name"): value for key, value in self.headers.items()}
+        headers = {
+            _required(key, "header_name"): value for key, value in self.headers.items()
+        }
         object.__setattr__(self, "headers", headers)
 
     def as_params(self) -> dict[str, Any]:
@@ -253,6 +265,10 @@ def build_streamable_http_server(
     }
     if config.name is not None:
         kwargs["name"] = config.name
+    if config.cache_tools_list:
+        kwargs["cache_tools_list"] = True
+    if config.tool_filter is not None:
+        kwargs["tool_filter"] = config.tool_filter
     server = cast(MCPServerProtocol, server_type(**kwargs))
     return ManagedMCPServer(server, MCPTransport.STREAMABLE_HTTP)
 

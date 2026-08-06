@@ -1,5 +1,21 @@
-"""Opt-in adapters for official OpenAI Agents SDK MCP transports."""
+"""Opt-in adapters for official OpenAI Agents SDK MCP integrations."""
 
+from .policy import (
+    MCPApprovalDecision,
+    MCPApprovalHandler,
+    MCPApprovalRequest,
+    MCPRetryPolicy,
+    MCPServerFailure,
+    MCPToolCache,
+    MCPToolCacheEntry,
+    MCPToolDescriptor,
+    MCPToolListReport,
+    MCPToolPolicy,
+    build_agents_tool_filter,
+    list_tools_isolated,
+    request_approval,
+    run_safe_tool_call,
+)
 from .transport import (
     HostedMCPConfig,
     MCPServerProtocol,
@@ -12,10 +28,24 @@ from .transport import (
 
 __all__ = [
     "HostedMCPConfig",
+    "MCPApprovalDecision",
+    "MCPApprovalHandler",
+    "MCPApprovalRequest",
+    "MCPRetryPolicy",
+    "MCPServerFailure",
     "MCPServerProtocol",
+    "MCPToolCache",
+    "MCPToolCacheEntry",
+    "MCPToolDescriptor",
+    "MCPToolListReport",
+    "MCPToolPolicy",
     "MCPTransport",
     "ManagedMCPServer",
     "StreamableHTTPMCPConfig",
+    "build_agents_tool_filter",
     "build_hosted_mcp_tool",
     "build_streamable_http_server",
+    "list_tools_isolated",
+    "request_approval",
+    "run_safe_tool_call",
 ]
