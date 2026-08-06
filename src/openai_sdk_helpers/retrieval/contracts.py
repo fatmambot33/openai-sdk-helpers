@@ -210,7 +210,9 @@ class FileSearchConfig:
     def __post_init__(self) -> None:
         """Normalize store identifiers and copy mutable mappings."""
         identifiers = tuple(
-            dict.fromkeys(_identifier(value, "vector_store_id") for value in self.vector_store_ids)
+            dict.fromkeys(
+                _identifier(value, "vector_store_id") for value in self.vector_store_ids
+            )
         )
         if not identifiers:
             raise ValueError("vector_store_ids must not be empty")
