@@ -18,7 +18,7 @@ Maturity meanings:
 | Shared operation context | `openai_sdk_helpers.runtime` | Vendor-neutral lifecycle metadata that complements, but does not replace, official SDK tracing | Preview | Core | Sync and async observers | Original results and exceptions remain unchanged; Agents SDK tracing remains directly configurable |
 | Explicit conversation state | `openai_sdk_helpers.state` and Agents runners | Validates official Agents session and server-continuation choices; provides explicit local `ResponseMessages` storage | Preview | Core | Local validation plus matching sync/async runner forwarding | Underlying session objects, response IDs, conversation IDs, request kwargs, and message collections remain accessible |
 | Retrieval lifecycle | `openai_sdk_helpers.retrieval` | Wraps injected official Files and Vector Stores resources without owning credentials or cleanup | Preview | Core | Matching sync/async clients; explicit SDK polling | Normalized outcomes preserve raw SDK resources and exceptions; `sdk_client` exposes the injected official client |
-| Retrieval search contracts | `openai_sdk_helpers.retrieval` | Models direct vector-store search and File Search configuration without request adapters yet | Preview | Core | Local contracts only until #142 | Every normalized search item and page preserves raw SDK resources |
+| Direct search and File Search | `openai_sdk_helpers.retrieval` | Wraps official vector-store search and builds official Responses/Agents File Search configuration | Preview | Core | Matching sync/async direct search plus local hosted-tool adapters | Raw search pages, result items, tool calls, citations, filters, request mappings, and official Agents tools remain accessible |
 | Responses workflows | `openai_sdk_helpers.response` | Thin orchestration over the official Responses API | Supported | Core | Sync and async paths; websocket helpers are async/stream-oriented where appropriate | Callers retain SDK configuration, response identifiers, raw events, and result objects |
 | Agents workflows | `openai_sdk_helpers.agent` | Composes the official OpenAI Agents SDK | Supported | Core | Sync and async runners | Callers retain underlying Agents SDK objects, tools, sessions, and results |
 | Typed structures | `openai_sdk_helpers.structure` | Pydantic schemas for SDK inputs and outputs | Stable | Core; extraction structures require `extract` | Local | Pydantic models and generated schemas remain directly accessible |
@@ -40,7 +40,6 @@ They must pass the feature acceptance test in `PRODUCT.md` before implementation
 
 | Capability | Target | Roadmap status | Constraint |
 | --- | --- | --- | --- |
-| File Search adapters and normalized results | `0.9.0` | Issue #142 | Consume the approved configuration and result models without hiding filters, ranking, content, or raw resources |
 | MCP integration | `0.10.0` | Issues #143–#144 | Optional extra; explicit filtering, approvals, lifecycle, and failure isolation |
 | Realtime integration | `0.11.0` | Issues #145–#146 | Server-side lifecycle and event helpers only; no browser or audio-device application layer |
 
