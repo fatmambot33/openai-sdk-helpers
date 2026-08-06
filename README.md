@@ -89,7 +89,7 @@ Agents SDK loop, tools, sessions, guardrails, handoffs, or tracing.
 ```python
 from openai_sdk_helpers.agent import SummarizerAgent
 
-agent = SummarizerAgent(default_model="gpt-5-mini")
+agent = SummarizerAgent(default_model="your-model")
 result = agent.run_sync("Summarize this text in one sentence.")
 print(result.text)
 ```
@@ -154,6 +154,7 @@ through `extra_client_kwargs`.
 - [Capability matrix](docs/capabilities.md) — canonical feature inventory and maturity
 - [Public API](docs/public-api.md) — intentional import surface
 - [Installation profiles](docs/installation.md) — core and optional dependencies
+- [Supported examples](examples/README.md) — executable and illustrative example policy
 - [Codex plugins](docs/codex-plugins.md) — protocol, lifecycle, discovery, and packaging
 - [0.8 Codex migration](docs/codex-plugin-migration-0.8.md) — compatibility guidance
 - [Publishing](docs/publishing.md) — OIDC release process and recovery
@@ -176,8 +177,8 @@ python scripts/check_markdown_links.py
 ```
 
 Additional CI validates Python 3.10–3.13, minimum and latest compatible OpenAI
-SDK versions, built distributions, installed entry points, and isolated `core`,
-`extract`, `ui`, and `all` profiles.
+SDK versions, built distributions, installed entry points, supported examples,
+and isolated `core`, `extract`, `ui`, and `all` profiles.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) before changing
 public behavior.
