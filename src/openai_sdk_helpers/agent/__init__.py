@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from importlib.util import find_spec
 from typing import Any
 
 from .._optional import import_optional_module
@@ -76,3 +77,6 @@ __all__ = [
     "WebAgentSearch",
     "build_agent_input_messages",
 ]
+
+if find_spec("langextract") is None:
+    __all__.remove("ExtractorAgent")
