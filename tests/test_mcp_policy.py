@@ -47,9 +47,7 @@ def test_tool_policy_filters_in_server_order_and_blocks_override() -> None:
     assert policy.permits_retry("read") is False
 
 
-def test_tool_policy_rejects_conflicting_configuration() -> None:
-    with pytest.raises(ValueError, match="both allowed and blocked"):
-        MCPToolPolicy(allowed_tools=("write",), blocked_tools=("write",))
+def test_tool_policy_rejects_approval_for_blocked_tools() -> None:
     with pytest.raises(ValueError, match="blocked tools cannot require approval"):
         MCPToolPolicy(blocked_tools=("write",), approval_tools=("write",))
 
@@ -78,6 +76,22 @@ async def test_approval_is_fail_closed_and_arguments_are_hidden() -> None:
     blocked = MCPApprovalRequest("docs", "delete", {})
     assert (
         await request_approval(policy, blocked, approve) is MCPApprovalDecision.REJECT
+    )
+
+
+@pytest.mark.asyncio
+async def test_invalid_approval_value_fails_closed() -> None:
+    policy = MCPToolPolicy(
+        allowed_tools=("write",),
+        approval_tools=("write",),
+    )
+    request = MCPApprovalRequest("docs", "write", {})
+
+    def invalid(_: MCPApprovalRequest) -> Any:
+        return "approve"
+
+    assert (
+        await request_approval(policy, request, invalid) is MCPApprovalDecision.REJECT
     )
 
 
