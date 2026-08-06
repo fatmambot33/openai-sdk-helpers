@@ -1,0 +1,61 @@
+name: Package smoke tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  installed-wheel:
+    name: Installed wheel and examples
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Build distributions
+        run: |
+          python -m pip install --upgrade pip build twine
+          python -m build --outdir package-dist
+          python -m twine check package-dist/*
+
+      - name: Install the built wheel
+        run: |
+          python -m venv .venv-wheel
+          .venv-wheel/bin/python -m pip install --upgrade pip
+          .venv-wheel/bin/python -m pip install package-dist/*.whl
+          .venv-wheel/bin/python -m pip check
+
+      - name: Verify installed package data and entry points
+        run: |
+          env -u OPENAI_API_KEY -u PYTHONPATH \
+            .venv-wheel/bin/python scripts/validate_installed_wheel.py
+          env -u OPENAI_API_KEY -u PYTHONPATH \
+            .venv-wheel/bin/openai-helpers --help
+          env -u OPENAI_API_KEY -u PYTHONPATH \
+            .venv-wheel/bin/openai-helpers-credentials --help
+
+      - name: Execute supported examples
+        run: |
+          env -u OPENAI_API_KEY -u PYTHONPATH \
+            .venv-wheel/bin/python examples/supported_responses.py
+          env -u OPENAI_API_KEY -u PYTHONPATH \
+            .venv-wheel/bin/python examples/supported_agents.py
+          env -u OPENAI_API_KEY -u PYTHONPATH \
+            .venv-wheel/bin/python examples/codex_plugin.py
+
+      - name: Upload validated distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-smoke-distributions
+          path: package-dist/
