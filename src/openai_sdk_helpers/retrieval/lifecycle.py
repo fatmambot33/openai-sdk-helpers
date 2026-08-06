@@ -35,7 +35,9 @@ class PollingConfig:
             raise ValueError("poll_interval_ms must be positive")
         if self.timeout_seconds is not None and self.timeout_seconds <= 0:
             raise ValueError("timeout_seconds must be positive")
-        statuses = tuple(dict.fromkeys(status.strip() for status in self.terminal_statuses))
+        statuses = tuple(
+            dict.fromkeys(status.strip() for status in self.terminal_statuses)
+        )
         if not statuses or any(not status for status in statuses):
             raise ValueError("terminal_statuses must contain non-empty values")
         object.__setattr__(self, "terminal_statuses", statuses)
