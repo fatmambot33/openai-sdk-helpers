@@ -14,6 +14,15 @@ from .codex import (
     CodexPluginRegistry,
 )
 from .environment import get_data_path
+from .runtime import (
+    OperationContext,
+    OperationEvent,
+    OperationObserver,
+    OperationPhase,
+    OperationUsage,
+    run_observed_async,
+    run_observed_sync,
+)
 from .utils.async_utils import run_coroutine_thread_safe, run_coroutine_with_fallback
 
 from .errors import (
@@ -185,6 +194,13 @@ __all__ = [
     "CodexPlugin",
     "CodexPluginContext",
     "CodexPluginRegistry",
+    "OperationContext",
+    "OperationEvent",
+    "OperationObserver",
+    "OperationPhase",
+    "OperationUsage",
+    "run_observed_async",
+    "run_observed_sync",
     "get_data_path",
     "run_coroutine_thread_safe",
     "run_coroutine_with_fallback",
