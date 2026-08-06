@@ -21,17 +21,24 @@ class PollingConfig:
     timeout_seconds : float or None, default=None
         Timeout forwarded to the official SDK polling helper. ``None`` keeps the
         injected client's timeout configuration.
+    terminal_statuses : tuple[str, ...], default=("completed", "failed", "cancelled")
+        SDK statuses accepted after the polling helper returns.
     """
 
     poll_interval_ms: int = 1000
     timeout_seconds: float | None = None
+    terminal_statuses: tuple[str, ...] = ("completed", "failed", "cancelled")
 
     def __post_init__(self) -> None:
-        """Validate positive polling and timeout values."""
+        """Validate positive polling values and terminal statuses."""
         if self.poll_interval_ms < 1:
             raise ValueError("poll_interval_ms must be positive")
         if self.timeout_seconds is not None and self.timeout_seconds <= 0:
             raise ValueError("timeout_seconds must be positive")
+        statuses = tuple(dict.fromkeys(status.strip() for status in self.terminal_statuses))
+        if not statuses or any(not status for status in statuses):
+            raise ValueError("terminal_statuses must contain non-empty values")
+        object.__setattr__(self, "terminal_statuses", statuses)
 
     def sdk_kwargs(self) -> dict[str, object]:
         """Return keyword arguments accepted by SDK polling helpers."""
@@ -39,6 +46,25 @@ class PollingConfig:
         if self.timeout_seconds is not None:
             kwargs["timeout"] = self.timeout_seconds
         return kwargs
+
+    def validate_terminal_status(self, status: str | None) -> None:
+        """Require a configured terminal status after polling returns.
+
+        Parameters
+        ----------
+        status : str or None
+            SDK-reported vector-store file status.
+
+        Raises
+        ------
+        RuntimeError
+            If the SDK helper returns without a known terminal status.
+        """
+        if status not in self.terminal_statuses:
+            raise RuntimeError(
+                "Polling returned a non-terminal vector-store file status: "
+                f"{status!r}"
+            )
 
 
 @dataclass(frozen=True, slots=True)
