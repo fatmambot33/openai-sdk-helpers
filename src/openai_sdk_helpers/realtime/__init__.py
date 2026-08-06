@@ -1,5 +1,34 @@
-"""Server-side Realtime session configuration and lifecycle helpers."""
+"""Server-side Realtime lifecycle, events, tools, and test helpers."""
 
+from .events import (
+    RealtimeControlProtocol,
+    RealtimeEventEnvelope,
+    RealtimeEventKind,
+    RealtimeEventNormalizationError,
+    RealtimeEventSource,
+    RealtimeToolCall,
+    RealtimeToolHandler,
+    RealtimeToolRegistry,
+    RealtimeToolResult,
+    cancel_realtime_response,
+    interrupt_realtime_session,
+    iter_realtime_events,
+    normalize_realtime_event,
+    parse_realtime_tool_call,
+    send_realtime_audio,
+    send_realtime_message,
+    submit_realtime_tool_result,
+)
+from .processing import (
+    RealtimeEventCallback,
+    RealtimeToolApprovalDecision,
+    RealtimeToolApprovalHandler,
+    RealtimeToolApprovalRequest,
+    consume_realtime_events,
+    execute_realtime_tool_call,
+    process_realtime_tool_event,
+    request_realtime_tool_approval,
+)
 from .session import (
     ManagedRealtimeSession,
     RealtimeLifecycleConfig,
@@ -11,15 +40,42 @@ from .session import (
     build_realtime_runner,
     manage_realtime_runner,
 )
+from .testing import InMemoryRealtimeSession
 
 __all__ = [
+    "InMemoryRealtimeSession",
     "ManagedRealtimeSession",
+    "RealtimeControlProtocol",
+    "RealtimeEventCallback",
+    "RealtimeEventEnvelope",
+    "RealtimeEventKind",
+    "RealtimeEventNormalizationError",
+    "RealtimeEventSource",
     "RealtimeLifecycleConfig",
     "RealtimeLifecycleState",
     "RealtimeRunnerConfig",
     "RealtimeRunnerProtocol",
     "RealtimeSessionConfig",
     "RealtimeSessionProtocol",
+    "RealtimeToolApprovalDecision",
+    "RealtimeToolApprovalHandler",
+    "RealtimeToolApprovalRequest",
+    "RealtimeToolCall",
+    "RealtimeToolHandler",
+    "RealtimeToolRegistry",
+    "RealtimeToolResult",
     "build_realtime_runner",
+    "cancel_realtime_response",
+    "consume_realtime_events",
+    "execute_realtime_tool_call",
+    "interrupt_realtime_session",
+    "iter_realtime_events",
     "manage_realtime_runner",
+    "normalize_realtime_event",
+    "parse_realtime_tool_call",
+    "process_realtime_tool_event",
+    "request_realtime_tool_approval",
+    "send_realtime_audio",
+    "send_realtime_message",
+    "submit_realtime_tool_result",
 ]
