@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+- Added preview retrieval contracts for OpenAI files, vector stores, direct search results, and File Search configuration with raw SDK escape hatches.
+- Added a migration map separating resource lifecycle, search configuration, and message composition while preserving every existing retrieval import pending adapters.
 - Added explicit `AgentRunState`, `ResponseContinuation`, and `LocalMessageStore` contracts for Agents sessions, server-managed continuation, and package-local message persistence.
 - Added early validation for incompatible state mechanisms while preserving existing stateless calls, raw SDK identifiers, underlying session objects, and the legacy `session=` shorthand.
 - Added an optional typed `OperationContext` with sync and async lifecycle hooks across Responses runners, Agents runners, and Codex command execution.
