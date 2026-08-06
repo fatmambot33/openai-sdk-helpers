@@ -8,6 +8,7 @@ generating OpenAI-compatible schema definitions.
 
 from __future__ import annotations
 
+from importlib.util import find_spec
 from typing import Any
 
 from .._optional import import_optional_module
@@ -122,3 +123,6 @@ __all__ = [
     "response_tool_definition",
     "response_format",
 ]
+
+if find_spec("langextract") is None:
+    __all__ = [name for name in __all__ if name not in _EXTRACTION_EXPORTS]
