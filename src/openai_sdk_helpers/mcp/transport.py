@@ -52,7 +52,11 @@ class HostedMCPConfig:
         """Normalize identity and copied collection values."""
         label = _required(self.server_label, "server_label")
         url = _required(self.server_url, "server_url")
-        tools = tuple(dict.fromkeys(_required(tool, "allowed_tool") for tool in self.allowed_tools))
+        tools = tuple(
+            dict.fromkeys(
+                _required(tool, "allowed_tool") for tool in self.allowed_tools
+            )
+        )
         object.__setattr__(self, "server_label", label)
         object.__setattr__(self, "server_url", url)
         object.__setattr__(self, "allowed_tools", tools)
@@ -127,7 +131,9 @@ class StreamableHTTPMCPConfig:
             raise ValueError("timeout_seconds must be positive")
         if self.sse_read_timeout_seconds <= 0:
             raise ValueError("sse_read_timeout_seconds must be positive")
-        headers = {_required(key, "header_name"): value for key, value in self.headers.items()}
+        headers = {
+            _required(key, "header_name"): value for key, value in self.headers.items()
+        }
         object.__setattr__(self, "headers", headers)
 
     def as_params(self) -> dict[str, Any]:
