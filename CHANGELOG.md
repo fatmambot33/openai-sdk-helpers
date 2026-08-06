@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 0.8.0 - 2026-08-06
+
 - Added a security policy using confidential GitHub private vulnerability reporting and an explicit supported-version transition.
 - Added a security-aware release checklist covering credentials, publishing, files, plugins, tools, transports, diagnostics, and artifact verification.
 - Replaced a secret-shaped example value with an explicit non-secret placeholder.
@@ -20,5 +22,5 @@ All notable changes to this project are documented here.
 - Added optional structured plugin metadata and capability inspection.
 - Added isolated entry-point discovery reports without changing fail-fast discovery.
 - Added `openai-helpers codex plugins` and `openai-helpers codex commands`.
-- Added installed entry-point discovery coverage, compatibility policy, and a 0.8 migration guide.
+- Added installed entry-point discovery coverage, compatibility policy, and 0.8 migration guides.
 - Standardized repository documentation.
