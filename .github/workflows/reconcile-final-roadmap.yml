@@ -1,0 +1,49 @@
+name: Reconcile final roadmap stack
+
+on:
+  push:
+    branches: [agent/realtime-events]
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Restore validated lower-stack files
+        run: |
+          git fetch origin agent/file-search agent/mcp-policy
+          git checkout origin/agent/file-search -- \
+            src/openai_sdk_helpers/retrieval/__init__.py \
+            src/openai_sdk_helpers/retrieval/full_client.py \
+            src/openai_sdk_helpers/retrieval/search.py \
+            tests/test_file_search.py \
+            tests/test_retrieval_contract.py
+          git checkout origin/agent/mcp-policy -- \
+            src/openai_sdk_helpers/mcp/__init__.py \
+            src/openai_sdk_helpers/mcp/policy.py \
+            src/openai_sdk_helpers/mcp/transport.py \
+            tests/test_mcp_policy.py \
+            tests/test_mcp_public_api.py \
+            tests/test_mcp_transport.py
+          python -m pip install --upgrade pip
+          pip install -e '.[dev]'
+          black --check src/openai_sdk_helpers/retrieval src/openai_sdk_helpers/mcp tests/test_file_search.py tests/test_retrieval_contract.py tests/test_mcp_policy.py tests/test_mcp_public_api.py tests/test_mcp_transport.py
+          pyright src/openai_sdk_helpers/retrieval src/openai_sdk_helpers/mcp
+          pytest -q tests/test_file_search.py tests/test_retrieval_contract.py tests/test_mcp_policy.py tests/test_mcp_public_api.py tests/test_mcp_transport.py
+          git rm .github/workflows/reconcile-final-roadmap.yml
+      - name: Commit reconciled final stack
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .
+          git commit -m 'Reconcile validated retrieval and MCP stack'
+          git push origin HEAD:agent/realtime-events
