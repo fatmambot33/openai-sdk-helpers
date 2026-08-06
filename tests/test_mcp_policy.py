@@ -73,11 +73,12 @@ async def test_approval_is_fail_closed_and_arguments_are_hidden() -> None:
         return MCPApprovalDecision.APPROVE
 
     assert (
-        await request_approval(policy, request, approve)
-        is MCPApprovalDecision.APPROVE
+        await request_approval(policy, request, approve) is MCPApprovalDecision.APPROVE
     )
     blocked = MCPApprovalRequest("docs", "delete", {})
-    assert await request_approval(policy, blocked, approve) is MCPApprovalDecision.REJECT
+    assert (
+        await request_approval(policy, blocked, approve) is MCPApprovalDecision.REJECT
+    )
 
 
 @pytest.mark.asyncio

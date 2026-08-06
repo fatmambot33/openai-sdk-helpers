@@ -19,7 +19,8 @@ Maturity meanings:
 | Explicit conversation state | `openai_sdk_helpers.state` and Agents runners | Validates official Agents session and server-continuation choices; provides explicit local `ResponseMessages` storage | Preview | Core | Local validation plus matching sync/async runner forwarding | Underlying session objects, response IDs, conversation IDs, request kwargs, and message collections remain accessible |
 | Retrieval lifecycle | `openai_sdk_helpers.retrieval` | Wraps injected official Files and Vector Stores resources without owning credentials or cleanup | Preview | Core | Matching sync/async clients; explicit SDK polling | Normalized outcomes preserve raw SDK resources and exceptions; `sdk_client` exposes the injected official client |
 | Direct search and File Search | `openai_sdk_helpers.retrieval` | Wraps official vector-store search and builds official Responses/Agents File Search configuration | Preview | Core | Matching sync/async direct search plus local hosted-tool adapters | Raw search pages, result items, tool calls, citations, filters, request mappings, and official Agents tools remain accessible |
-| Realtime session lifecycle | `openai_sdk_helpers.realtime` | Builds or wraps the official Agents SDK Realtime runner and session with typed settings and explicit async lifecycle | Preview | Core; opt-in import and configuration | Explicit start, close, local timeout, and opt-in restart | Raw official runner and session remain accessible; no browser, audio-device, or hidden reconnect layer |
+| MCP integration | `openai_sdk_helpers.mcp` | Builds official hosted and Streamable HTTP transports with explicit filtering, approvals, caching, safe retries, and failure isolation | Preview | Core; opt-in import and configuration | Hosted construction, explicit async lifecycle, and local policy helpers | Raw official tools, servers, descriptors, calls, and exceptions remain accessible; no mutating retry is automatic |
+| Realtime integration | `openai_sdk_helpers.realtime` | Wraps the official Agents SDK runner/session and normalizes common events while retaining raw SDK objects | Preview | Core; opt-in import and configuration | Explicit async lifecycle, ordered event/callback consumption, fail-closed tools, controls, and deterministic tests | Raw runner, session, event, call, result, and exception access; no browser, audio-device, hidden reconnect, or automatic execution layer |
 | Responses workflows | `openai_sdk_helpers.response` | Thin orchestration over the official Responses API | Supported | Core | Sync and async paths; websocket helpers are async/stream-oriented where appropriate | Callers retain SDK configuration, response identifiers, raw events, and result objects |
 | Agents workflows | `openai_sdk_helpers.agent` | Composes the official OpenAI Agents SDK | Supported | Core | Sync and async runners | Callers retain underlying Agents SDK objects, tools, sessions, and results |
 | Typed structures | `openai_sdk_helpers.structure` | Pydantic schemas for SDK inputs and outputs | Stable | Core; extraction structures require `extract` | Local | Pydantic models and generated schemas remain directly accessible |
@@ -36,13 +37,9 @@ Maturity meanings:
 
 ## Planned capabilities
 
-Planned items are not installed, exported, or implied by the current package.
-They must pass the feature acceptance test in `PRODUCT.md` before implementation.
-
-| Capability | Target | Roadmap status | Constraint |
-| --- | --- | --- | --- |
-| MCP integration | `0.10.0` | Issues #143–#144 | Optional extra; explicit filtering, approvals, lifecycle, and failure isolation |
-| Realtime events and tools | `0.11.0` | Issue #146 | Normalize official events without discarding raw payloads; explicit tool, interruption, cancellation, and deterministic test transport |
+The currently committed roadmap ends with the preview Realtime surface above.
+Additional public capabilities require a new issue, product-principle review, and
+release target before implementation.
 
 Images and audio generation are not committed roadmap surfaces. They should be
 added only after repeated workflows demonstrate that a package-level helper is

@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+- Added ordered Realtime event normalization and sequential callback consumption while preserving every raw SDK event.
+- Added fail-closed Realtime tool approval, explicit timeout and cancellation behavior, serialized result submission, controls, and a deterministic in-memory test session.
+- Added opt-in hosted and Streamable HTTP MCP transport helpers with explicit connection ownership and raw official SDK access.
+- Added MCP filtering, fail-closed approvals, bounded safe retries, cache invalidation, and per-server failure isolation without automatic mutating retries.
 - Added typed server-side Realtime model and runner configuration with raw official SDK passthrough.
 - Added explicit Realtime session start, close, timeout, cancellation, async context, and opt-in restart lifecycle without hidden reconnection or audio-device management.
 - Added direct synchronous and asynchronous vector-store search with validated filters, strict or lenient result normalization, pagination, ranking, and query rewriting.

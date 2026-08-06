@@ -148,7 +148,7 @@ async def execute_realtime_tool_call(
         coroutine = registry.execute(
             call,
             capture_errors=capture_errors,
-            operation_context=operation_context,
+            operation_context=None,
         )
         if timeout_seconds is None:
             return await coroutine

@@ -155,6 +155,20 @@ compatibility contract unless listed here.
 - `optimize_extractor_prompt`
 - `optimize_extractor_prompt_with_agent`
 
+## Focused Realtime submodule API
+
+The intentional preview API exposed by `openai_sdk_helpers.realtime` includes:
+
+- typed runner and session configuration plus `ManagedRealtimeSession`;
+- `RealtimeEventEnvelope`, `RealtimeEventKind`, and ordered event consumers;
+- `RealtimeToolCall`, `RealtimeToolResult`, and `RealtimeToolRegistry`;
+- fail-closed approval, timeout, execution, and explicit submission helpers;
+- explicit message, audio-chunk, interruption, and cancellation helpers;
+- `InMemoryRealtimeSession` for deterministic network-free tests.
+
+Every normalized event and tool call preserves its raw source object. The exact
+export order is locked by `tests/test_realtime_public_api.py`.
+
 ## Compatibility policy
 
 The package-root export list is defined by `openai_sdk_helpers.__all__` and is

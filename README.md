@@ -171,6 +171,7 @@ and trust boundaries.
 - [MCP transports](docs/mcp.md) — hosted and Streamable HTTP lifecycle
 - [MCP policy](docs/mcp-policy.md) — filtering, approvals, caching, retries, and isolation
 - [Realtime lifecycle](docs/realtime.md) — typed server-side session configuration and ownership
+- [Realtime events and tools](docs/realtime-events.md) — ordered events, approvals, controls, and deterministic testing
 - [Installation profiles](docs/installation.md) — core and optional dependencies
 - [Supported examples](examples/README.md) — executable and illustrative example policy
 - [Security policy](SECURITY.md) — confidential reporting and supported versions
@@ -209,9 +210,9 @@ This project is not an end-user application, hosted platform, replacement SDK,
 universal agent framework, prompt catalog, or storage service. Application-
 specific business logic belongs in consuming projects.
 
-MCP, consolidated retrieval, and Realtime helpers are roadmap items, not current
-package promises. Their issue order and release gates are tracked in
-[ROADMAP.md](ROADMAP.md).
+Retrieval, MCP, and Realtime are preview surfaces on the stacked roadmap. They
+remain subject to their documented public-contract, security, compatibility, and
+release gates before a stable package release. See [ROADMAP.md](ROADMAP.md).
 
 ## License
 
