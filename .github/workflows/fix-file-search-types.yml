@@ -1,0 +1,47 @@
+name: Fix File Search typing
+
+on:
+  push:
+    branches: [agent/file-search]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Apply exact typing fixes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/openai_sdk_helpers/retrieval/search.py')
+          text = path.read_text()
+          old = '''    if value is None:\n        return None\n    if hasattr(value, "as_dict"):\n        return cast(SearchFilter, value).as_dict()\n    return dict(value)\n'''
+          new = '''    if value is None:\n        return None\n    if isinstance(value, Mapping):\n        return dict(value)\n    return value.as_dict()\n'''
+          assert old in text
+          text = text.replace(old, new, 1)
+          old = '''    resolved = dict(request_kwargs)\n    tools = list(resolved.get("tools") or ())\n    tools.append(config.as_tool())\n    resolved["tools"] = tools\n    includes = list(resolved.get("include") or ())\n'''
+          new = '''    resolved = dict(request_kwargs)\n    tools: list[Any] = list(cast(Sequence[Any], resolved.get("tools") or ()))\n    tools.append(config.as_tool())\n    resolved["tools"] = tools\n    includes: list[str] = [\n        str(value) for value in cast(Sequence[Any], resolved.get("include") or ())\n    ]\n'''
+          assert old in text
+          path.write_text(text.replace(old, new, 1))
+          PY
+          python -m pip install --upgrade black pyright
+          black src/openai_sdk_helpers/retrieval/search.py
+          pyright src/openai_sdk_helpers/retrieval/search.py
+          git rm .github/workflows/fix-file-search-types.yml
+      - name: Commit corrected branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .
+          git commit -m 'Fix File Search typing contracts'
+          git push origin HEAD:agent/file-search
