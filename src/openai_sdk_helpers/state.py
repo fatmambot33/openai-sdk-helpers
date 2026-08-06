@@ -7,10 +7,10 @@ from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Mapping
 
-from .response.messages import ResponseMessages
-
 if TYPE_CHECKING:
     from agents import Session
+
+    from .response.messages import ResponseMessages
 
 
 class ConversationStateMode(str, Enum):
@@ -267,6 +267,8 @@ class LocalMessageStore:
         FileNotFoundError
             If no saved state exists.
         """
+        from .response.messages import ResponseMessages
+
         return ResponseMessages.from_json_file(str(self._path))
 
     def clear(self) -> ResponseMessages:
@@ -277,6 +279,8 @@ class LocalMessageStore:
         ResponseMessages
             Empty collection written to storage.
         """
+        from .response.messages import ResponseMessages
+
         messages = ResponseMessages()
         self.save(messages)
         return messages
@@ -314,6 +318,7 @@ class LocalMessageStore:
 
     @property
     def _path(self) -> Path:
+        """Return the normalized storage path."""
         return self.path if isinstance(self.path, Path) else Path(self.path)
 
 
