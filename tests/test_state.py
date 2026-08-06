@@ -128,7 +128,7 @@ async def test_agent_runner_forwards_server_managed_state(
     assert captured["kwargs"]["session"] is None
     assert captured["kwargs"]["previous_response_id"] == "resp_123"
     assert captured["kwargs"]["auto_previous_response_id"] is True
-    assert captured["kwargs"]["conversation_id"] is None
+    assert "conversation_id" not in captured["kwargs"]
 
 
 @pytest.mark.asyncio
