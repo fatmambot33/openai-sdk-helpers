@@ -73,7 +73,7 @@ def optional_dependency_error(
     """
     return ImportError(
         f"{feature} requires the optional dependency '{dependency}'. "
-        f"Install it with: pip install \"openai-sdk-helpers[{extra}]\""
+        f'Install it with: pip install "openai-sdk-helpers[{extra}]"'
     )
 
 
