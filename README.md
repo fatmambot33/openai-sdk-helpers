@@ -10,7 +10,7 @@ Small, typed, SDK-first primitives for composing OpenAI Responses, Agents,
 files, vector stores, tools, and Codex plugins.
 
 [Install](#installation) · [Choose a surface](#choose-a-surface) ·
-[Capabilities](docs/capabilities.md) · [Public API](docs/public-api.md) ·
+[Capabilities](docs/capabilities.md) · [Security](SECURITY.md) ·
 [Roadmap](ROADMAP.md)
 
 </div>
@@ -149,12 +149,22 @@ Common variables include `OPENAI_API_KEY`, `OPENAI_ORG_ID`,
 `OPENAI_MAX_RETRIES`. Uncommon official client parameters remain available
 through `extra_client_kwargs`.
 
+## Security
+
+Report suspected vulnerabilities through the repository's confidential GitHub
+private vulnerability reporting flow, not a public issue. Never include real
+credentials, customer prompts, model responses, uploaded files, or production
+logs. See [SECURITY.md](SECURITY.md) for supported versions, reporting guidance,
+and trust boundaries.
+
 ## Documentation
 
 - [Capability matrix](docs/capabilities.md) — canonical feature inventory and maturity
 - [Public API](docs/public-api.md) — intentional import surface
 - [Installation profiles](docs/installation.md) — core and optional dependencies
 - [Supported examples](examples/README.md) — executable and illustrative example policy
+- [Security policy](SECURITY.md) — confidential reporting and supported versions
+- [Release checklist](docs/release-checklist.md) — security and publication gates
 - [Codex plugins](docs/codex-plugins.md) — protocol, lifecycle, discovery, and packaging
 - [0.8 Codex migration](docs/codex-plugin-migration-0.8.md) — compatibility guidance
 - [Publishing](docs/publishing.md) — OIDC release process and recovery

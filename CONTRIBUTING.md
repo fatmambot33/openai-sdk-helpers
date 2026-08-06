@@ -1,5 +1,8 @@
 # Contributing
 
+Security vulnerabilities must not be reported in public issues. Follow the
+confidential process in [SECURITY.md](SECURITY.md).
+
 ## Workflow
 
 1. Open or select one focused issue.
@@ -38,6 +41,8 @@ A public change must update every applicable canonical document:
 - [docs/public-api.md](docs/public-api.md) for intentional import changes;
 - [docs/installation.md](docs/installation.md) for dependency profiles;
 - the focused behavior guide for semantics and examples;
+- [SECURITY.md](SECURITY.md) for trust-boundary or supported-version changes;
+- [docs/release-checklist.md](docs/release-checklist.md) for release-gate changes;
 - [CHANGELOG.md](CHANGELOG.md) for user-visible changes;
 - [README.md](README.md) only when top-level navigation or the product summary changes.
 
@@ -60,6 +65,18 @@ Public additions require:
 Breaking changes, deprecations, security-sensitive defaults, releases, and new
 public contracts require human review even when implementation is automated.
 
+## Security-sensitive changes
+
+Use the security section of [docs/release-checklist.md](docs/release-checklist.md)
+when changing credentials, publishing, files, plugins, tools, external
+transports, diagnostics, tracing, subprocesses, or destructive resource
+operations. Pull requests must explain trust boundaries, redaction, ownership,
+cleanup, cancellation, and failure isolation where applicable.
+
+Examples, tests, fixtures, screenshots, and documentation must contain
+placeholder credentials and synthetic data only. Do not copy production logs,
+prompts, responses, files, or tool arguments into a pull request.
+
 ## Pull-request completion
 
 A pull request is ready to merge only when:
@@ -70,4 +87,5 @@ A pull request is ready to merge only when:
 - optional integrations remain outside the base installation;
 - no credential, paid API call, or external network dependency is required by
   pull-request tests;
+- applicable security review items are completed by a human reviewer;
 - the linked issue's acceptance criteria are genuinely satisfied.

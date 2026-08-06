@@ -168,9 +168,9 @@ def example_settings_builder():
     print("\n=== Example 4: Settings Builder ===")
 
     try:
-        # Build settings with validation
+        # Build settings with a non-secret placeholder value.
         settings = build_openai_settings(
-            api_key="sk-test-key-example",
+            api_key="example-api-key-placeholder",
             default_model="gpt-4o",
             timeout="30.5",  # String parsed to float
             max_retries="3",  # String parsed to int
