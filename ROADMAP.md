@@ -4,13 +4,23 @@ Every roadmap item must support `PRODUCT.md` and preserve a small, typed,
 predictable, SDK-first public API. The dependency-ordered execution tracker is
 issue #147.
 
+## Current status
+
+Engineering for the committed roadmap through Realtime is complete in the
+stacked pull-request chain. Each phase remains isolated and reviewable so public
+contracts, security-sensitive defaults, and release artifacts can be approved in
+dependency order.
+
+The stack must not be merged out of order or published by bypassing protected
+OIDC release controls.
+
 ## 0.8.0 — platform foundation
 
-Repository implementation is complete and the release candidate is prepared.
+Repository implementation and the release candidate are complete.
 
 - [x] #132 — make optional integrations truly optional.
-- [ ] #133 — verify PyPI Trusted Publisher and protected GitHub `pypi`
-      environment. The OIDC-only repository workflow is merged; owner-side
+- [ ] #133 — verify the PyPI Trusted Publisher and protected GitHub `pypi`
+      environment. The OIDC-only repository workflow is prepared; owner-side
       configuration remains.
 - [x] #134 — replace duplicated feature documentation with a capability matrix.
 - [x] #135 — execute supported examples and package smoke tests from the wheel.
@@ -31,38 +41,52 @@ receives explicit human release approval.
 
 ## 0.8.x — shared runtime contracts
 
-- [ ] #138 — add a typed operation context and observability hooks.
-- [ ] #139 — define Responses continuation and Agents session semantics.
+Engineering is complete in stacked PRs #154 and #156.
 
-These issues begin only after 0.8.0 is published. The implementation must reuse
-official SDK tracing and session behavior rather than building a parallel
-platform.
+- [x] #138 — add a typed operation context and observability hooks.
+- [x] #139 — define Responses continuation and Agents session semantics.
+
+The implementation reuses official SDK tracing and state mechanisms rather than
+building a parallel platform. The public contracts remain stacked behind the
+0.8.0 release boundary.
 
 ## 0.9.0 — retrieval consolidation
 
-- [ ] #140 — approve one public retrieval API and migration map.
-- [ ] #141 — implement typed file and vector-store lifecycle helpers.
-- [ ] #142 — add File Search configuration and normalized results.
+Engineering is complete in stacked PRs #158, #160, and #162.
 
-The goal is one coherent surface over existing OpenAI files, vector stores, and
-File Search helpers, with backward-compatible adapters and access to raw SDK
-resources.
+- [x] #140 — define one public retrieval API and migration map.
+- [x] #141 — implement typed file and vector-store lifecycle helpers.
+- [x] #142 — add File Search configuration and normalized results.
+
+The resulting surface separates resource lifecycle, direct vector-store search,
+hosted File Search configuration, and message composition. Existing imports
+remain available, raw SDK resources are preserved, and remote cleanup is always
+explicit.
 
 ## 0.10.0 — MCP
 
-- [ ] #143 — add optional typed hosted and Streamable HTTP MCP integration.
-- [ ] #144 — add filtering, approvals, caching, and failure isolation.
+Engineering is complete in stacked PRs #163 and #164.
 
-MCP remains optional. Discovery must not imply trust or execution, and
-security-sensitive defaults require human review.
+- [x] #143 — add typed hosted and Streamable HTTP MCP integration.
+- [x] #144 — add filtering, fail-closed approvals, caching, bounded safe retries,
+      and failure isolation.
+
+MCP import, construction, connection, discovery, approval, execution, retry, and
+cleanup remain explicit. Unknown or mutating tools are not silently approved or
+retried. Final public transport and security policy still require human review.
 
 ## 0.11.0 — Realtime
 
-- [ ] #145 — add typed server-side session configuration and lifecycle helpers.
-- [ ] #146 — add normalized events, tool execution, interruption, and test transport.
+Engineering is complete in stacked PRs #165 and #170.
 
-The scope excludes browser UI, audio-device management, and protocol
-reimplementation.
+- [x] #145 — add typed server-side session configuration and lifecycle helpers.
+- [x] #146 — add normalized events, explicit tool execution, interruption,
+      cancellation, and deterministic testing support.
+
+The scope excludes browser UI, audio-device management, encoding, playback,
+protocol reimplementation, hidden reconnect, and automatic tool execution. Raw
+official runner, session, event, tool-call, result, and exception access remains
+available. Final public and safety contracts still require human review.
 
 ## Release gates
 
@@ -77,5 +101,6 @@ A milestone is complete only when:
 7. security-sensitive changes complete `docs/release-checklist.md` review;
 8. publication uses protected OIDC identity and verified immutable artifacts.
 
-Do not start a blocked phase, weaken a gate, or claim a release before external
-owner controls and publication verification are complete.
+Do not weaken a gate, merge the stack out of dependency order, or claim a
+release before external owner controls and publication verification are
+complete.
