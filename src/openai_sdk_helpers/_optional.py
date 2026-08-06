@@ -40,9 +40,7 @@ def import_optional_module(
         return import_module(module_name)
     except ModuleNotFoundError as exc:
         missing_name = exc.name or ""
-        if missing_name == dependency or missing_name.startswith(
-            f"{dependency}."
-        ):
+        if missing_name == dependency or missing_name.startswith(f"{dependency}."):
             raise optional_dependency_error(
                 dependency=dependency,
                 extra=extra,
