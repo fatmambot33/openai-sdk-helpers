@@ -4,6 +4,9 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+- Added a canonical capability matrix covering maturity, installation, execution, and SDK escape hatches.
+- Replaced the duplicated README feature inventory with concise canonical documentation navigation.
+- Added deterministic internal Markdown file and anchor validation to CI.
 - Removed the legacy PyPI API-token publishing fallback in favor of OIDC-only Trusted Publishing.
 - Added a non-publishing release rehearsal mode and documented publisher setup, verification, and recovery.
 - Made LangExtract and Streamlit optional through the `extract`, `ui`, and `all` installation profiles.
