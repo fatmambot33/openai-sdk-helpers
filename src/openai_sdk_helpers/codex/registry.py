@@ -7,6 +7,12 @@ from dataclasses import dataclass
 from importlib.metadata import EntryPoint, entry_points
 from typing import Any, Iterable, Mapping
 
+from openai_sdk_helpers.runtime import (
+    OperationContext,
+    run_observed_async,
+    run_observed_sync,
+)
+
 from .plugin import (
     CODEX_PLUGIN_API_VERSION,
     CodexCommand,
@@ -153,25 +159,73 @@ class CodexPluginRegistry:
             for name in self._plugins
         )
 
-    def run(self, command: str, /, *args: Any, **kwargs: Any) -> Any:
+    def run(
+        self,
+        command: str,
+        /,
+        *args: Any,
+        operation_context: OperationContext | None = None,
+        **kwargs: Any,
+    ) -> Any:
         """Execute a registered command.
 
         Async commands return an awaitable. Use :meth:`run_async` when the
         caller wants one API that supports both synchronous and asynchronous
         commands.
-        """
-        try:
-            handler = self._commands[command]
-        except KeyError as exc:
-            raise KeyError(f"Unknown Codex command: {command}") from exc
-        return handler(*args, **kwargs)
 
-    async def run_async(self, command: str, /, *args: Any, **kwargs: Any) -> Any:
-        """Execute a command and await its result when necessary."""
-        result = self.run(command, *args, **kwargs)
-        if inspect.isawaitable(result):
-            return await result
-        return result
+        Parameters
+        ----------
+        command : str
+            Registered command name.
+        *args : Any
+            Positional command arguments.
+        operation_context : OperationContext or None, default=None
+            Optional explicit lifecycle and observability context.
+        **kwargs : Any
+            Keyword command arguments.
+
+        Returns
+        -------
+        Any
+            Original command result or observed awaitable.
+        """
+        handler = self._get_handler(command)
+        return run_observed_sync(
+            operation_context,
+            lambda: handler(*args, **kwargs),
+        )
+
+    async def run_async(
+        self,
+        command: str,
+        /,
+        *args: Any,
+        operation_context: OperationContext | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        """Execute a command and await its result when necessary.
+
+        Parameters
+        ----------
+        command : str
+            Registered command name.
+        *args : Any
+            Positional command arguments.
+        operation_context : OperationContext or None, default=None
+            Optional explicit lifecycle and observability context.
+        **kwargs : Any
+            Keyword command arguments.
+
+        Returns
+        -------
+        Any
+            Original resolved command result.
+        """
+        handler = self._get_handler(command)
+        return await run_observed_async(
+            operation_context,
+            lambda: handler(*args, **kwargs),
+        )
 
     async def startup(self) -> None:
         """Run optional plugin startup hooks in registration order."""
@@ -240,6 +294,12 @@ class CodexPluginRegistry:
                     )
                 )
         return CodexPluginDiscoveryReport(tuple(loaded), tuple(failures))
+
+    def _get_handler(self, command: str) -> CodexCommand:
+        try:
+            return self._commands[command]
+        except KeyError as exc:
+            raise KeyError(f"Unknown Codex command: {command}") from exc
 
     def _load_entry_point(self, entry_point: EntryPoint) -> CodexPlugin:
         candidate = entry_point.load()
