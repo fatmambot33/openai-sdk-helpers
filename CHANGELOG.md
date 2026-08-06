@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+- Added direct synchronous and asynchronous vector-store search with validated filters, strict or lenient result normalization, pagination, ranking, and query rewriting.
+- Added explicit Responses and Agents File Search adapters, included tool-call result normalization, and file citation extraction while preserving raw SDK objects.
 - Added dependency-injected synchronous and asynchronous retrieval clients for explicit Files and Vector Stores lifecycle operations.
 - Added ordered partial-failure batch uploads, SDK-backed polling configuration, attachment status, explicit detach-versus-delete behavior, and optional operation observability.
 - Added preview retrieval contracts for OpenAI files, vector stores, direct search results, and File Search configuration with raw SDK escape hatches.
