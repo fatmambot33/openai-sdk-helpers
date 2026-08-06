@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+- Added typed server-side Realtime model and runner configuration with raw official SDK passthrough.
+- Added explicit Realtime session start, close, timeout, cancellation, async context, and opt-in restart lifecycle without hidden reconnection or audio-device management.
 - Added direct synchronous and asynchronous vector-store search with validated filters, strict or lenient result normalization, pagination, ranking, and query rewriting.
 - Added explicit Responses and Agents File Search adapters, included tool-call result normalization, and file citation extraction while preserving raw SDK objects.
 - Added dependency-injected synchronous and asynchronous retrieval clients for explicit Files and Vector Stores lifecycle operations.

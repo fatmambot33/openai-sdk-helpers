@@ -7,7 +7,9 @@ import inspect
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Protocol, cast
+from typing import Any, Protocol, TypeVar, cast
+
+T = TypeVar("T")
 
 from openai_sdk_helpers.runtime import OperationContext, run_observed_async
 
@@ -131,7 +133,9 @@ class RealtimeSessionConfig:
                 else self.tool_choice
             ),
         }
-        config.update({name: value for name, value in values.items() if value is not None})
+        config.update(
+            {name: value for name, value in values.items() if value is not None}
+        )
         return config
 
 
@@ -279,8 +283,13 @@ class ManagedRealtimeSession:
                 RealtimeLifecycleState.CLOSED,
                 RealtimeLifecycleState.FAILED,
             }:
-                raise RuntimeError(f"Cannot start Realtime session from {self._state.value}")
-            if self._state is not RealtimeLifecycleState.CREATED and not self._lifecycle.allow_restart:
+                raise RuntimeError(
+                    f"Cannot start Realtime session from {self._state.value}"
+                )
+            if (
+                self._state is not RealtimeLifecycleState.CREATED
+                and not self._lifecycle.allow_restart
+            ):
                 raise RuntimeError("Realtime session restart is disabled")
             self._state = RealtimeLifecycleState.STARTING
 
@@ -408,9 +417,6 @@ def _required(value: str, name: str) -> str:
     if not normalized:
         raise ValueError(f"{name} must not be empty")
     return normalized
-
-
-T = Any
 
 
 __all__ = [

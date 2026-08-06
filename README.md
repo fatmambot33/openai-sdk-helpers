@@ -165,6 +165,12 @@ and trust boundaries.
 - [Public API](docs/public-api.md) — intentional import surface
 - [Operation context](docs/operation-context.md) — lifecycle hooks, usage, diagnostics, and SDK boundaries
 - [Conversation state](docs/conversation-state.md) — ownership modes, compatibility, persistence, and migration
+- [Retrieval architecture](docs/retrieval.md) — resource ownership, contracts, and migration
+- [Retrieval lifecycle](docs/retrieval-lifecycle.md) — Files and Vector Stores operations
+- [File Search](docs/file-search.md) — direct search, hosted tools, results, and citations
+- [MCP transports](docs/mcp.md) — hosted and Streamable HTTP lifecycle
+- [MCP policy](docs/mcp-policy.md) — filtering, approvals, caching, retries, and isolation
+- [Realtime lifecycle](docs/realtime.md) — typed server-side session configuration and ownership
 - [Installation profiles](docs/installation.md) — core and optional dependencies
 - [Supported examples](examples/README.md) — executable and illustrative example policy
 - [Security policy](SECURITY.md) — confidential reporting and supported versions
