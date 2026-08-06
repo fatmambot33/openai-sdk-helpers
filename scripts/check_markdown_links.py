@@ -13,7 +13,14 @@ _HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$")
 _HTML_TAG_PATTERN = re.compile(r"<[^>]+>")
 _INLINE_LINK_PATTERN = re.compile(r"\[([^\]]+)\]\([^)]+\)")
 _EXTERNAL_SCHEMES = {"data", "http", "https", "mailto", "tel"}
-_IGNORED_DIRECTORIES = {".git", ".mypy_cache", ".pytest_cache", ".venv", "build", "dist"}
+_IGNORED_DIRECTORIES = {
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".venv",
+    "build",
+    "dist",
+}
 
 
 def _markdown_files(root: Path) -> list[Path]:
@@ -32,7 +39,9 @@ def _markdown_files(root: Path) -> list[Path]:
     return sorted(
         path
         for path in root.rglob("*.md")
-        if not any(part in _IGNORED_DIRECTORIES for part in path.relative_to(root).parts)
+        if not any(
+            part in _IGNORED_DIRECTORIES for part in path.relative_to(root).parts
+        )
     )
 
 
@@ -80,7 +89,7 @@ def _slugify_heading(heading: str) -> str:
     """
     text = _INLINE_LINK_PATTERN.sub(r"\1", heading)
     text = _HTML_TAG_PATTERN.sub("", text)
-    text = text.replace("`", "").replace("*", "").replace("_", "_")
+    text = text.replace("`", "").replace("*", "")
     text = text.strip().lower()
     text = re.sub(r"[^\w\- ]", "", text)
     text = re.sub(r"\s+", "-", text)
@@ -158,7 +167,9 @@ def check_markdown_links(root: Path) -> list[str]:
             for match in _LINK_PATTERN.finditer(line):
                 target = _link_target(match.group(1))
                 parsed = urlsplit(target)
-                if parsed.scheme.lower() in _EXTERNAL_SCHEMES or target.startswith("//"):
+                if parsed.scheme.lower() in _EXTERNAL_SCHEMES or target.startswith(
+                    "//"
+                ):
                     continue
 
                 relative_path = Path(unquote(parsed.path)) if parsed.path else Path()
@@ -184,9 +195,15 @@ def check_markdown_links(root: Path) -> list[str]:
                     )
                     continue
 
-                if parsed.fragment and destination.is_file() and destination.suffix == ".md":
+                if (
+                    parsed.fragment
+                    and destination.is_file()
+                    and destination.suffix == ".md"
+                ):
                     anchor = unquote(parsed.fragment).lower()
-                    available = anchor_cache.setdefault(destination, _anchors(destination))
+                    available = anchor_cache.setdefault(
+                        destination, _anchors(destination)
+                    )
                     if anchor not in available:
                         errors.append(
                             f"{source.relative_to(root)}:{line_number}: "
