@@ -212,9 +212,9 @@ def serialize_filter(
     """
     if value is None:
         return None
-    if hasattr(value, "as_dict"):
-        return cast(SearchFilter, value).as_dict()
-    return dict(value)
+    if isinstance(value, Mapping):
+        return dict(value)
+    return value.as_dict()
 
 
 def normalize_search_page(
@@ -314,10 +314,12 @@ def apply_file_search_to_response(
 ) -> dict[str, Any]:
     """Copy Responses request kwargs and append explicit File Search settings."""
     resolved = dict(request_kwargs)
-    tools = list(resolved.get("tools") or ())
+    tools: list[Any] = list(cast(Sequence[Any], resolved.get("tools") or ()))
     tools.append(config.as_tool())
     resolved["tools"] = tools
-    includes = list(resolved.get("include") or ())
+    includes: list[str] = [
+        str(value) for value in cast(Sequence[Any], resolved.get("include") or ())
+    ]
     for include in config.response_includes():
         if include not in includes:
             includes.append(include)
