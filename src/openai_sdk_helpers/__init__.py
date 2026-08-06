@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from importlib import import_module
+from typing import Any
+
 from .codex import (
     CODEX_PLUGIN_ENTRY_POINT,
     CodexCommand,
@@ -48,11 +51,6 @@ from .structure import (
     ExtendedSummaryStructure,
     ValidationResultStructure,
     AgentBlueprint,
-    AnnotatedDocumentStructure,
-    AttributeStructure,
-    DocumentStructure,
-    ExampleDataStructure,
-    ExtractionStructure,
     create_plan,
     execute_task,
     execute_plan,
@@ -66,7 +64,6 @@ from .agent import (
     AgentConfiguration,
     AgentEnum,
     CoordinatorAgent,
-    ExtractorAgent,
     SummarizerAgent,
     TranslatorAgent,
     ValidatorAgent,
@@ -109,16 +106,77 @@ from .utils.output_validation import (
     validate_output,
 )
 from .utils.langextract import LangExtractAdapter, build_langextract_adapter
-from .extract import (
-    DocumentExtractor,
-    EXTRACTOR_CONFIG_AGENT_INSTRUCTIONS,
-    EXTRACTOR_CONFIG_GENERATOR,
-    PROMPT_OPTIMIZER_AGENT_INSTRUCTIONS,
-    generate_document_extractor_config,
-    generate_document_extractor_config_with_agent,
-    optimize_extractor_prompt,
-    optimize_extractor_prompt_with_agent,
-)
+
+_OPTIONAL_EXPORTS = {
+    "ExtractorAgent": ("openai_sdk_helpers.agent", "ExtractorAgent"),
+    "AnnotatedDocumentStructure": (
+        "openai_sdk_helpers.structure",
+        "AnnotatedDocumentStructure",
+    ),
+    "AttributeStructure": ("openai_sdk_helpers.structure", "AttributeStructure"),
+    "DocumentStructure": ("openai_sdk_helpers.structure", "DocumentStructure"),
+    "ExampleDataStructure": ("openai_sdk_helpers.structure", "ExampleDataStructure"),
+    "ExtractionStructure": ("openai_sdk_helpers.structure", "ExtractionStructure"),
+    "DocumentExtractor": ("openai_sdk_helpers.extract", "DocumentExtractor"),
+    "EXTRACTOR_CONFIG_AGENT_INSTRUCTIONS": (
+        "openai_sdk_helpers.extract",
+        "EXTRACTOR_CONFIG_AGENT_INSTRUCTIONS",
+    ),
+    "EXTRACTOR_CONFIG_GENERATOR": (
+        "openai_sdk_helpers.extract",
+        "EXTRACTOR_CONFIG_GENERATOR",
+    ),
+    "PROMPT_OPTIMIZER_AGENT_INSTRUCTIONS": (
+        "openai_sdk_helpers.extract",
+        "PROMPT_OPTIMIZER_AGENT_INSTRUCTIONS",
+    ),
+    "generate_document_extractor_config": (
+        "openai_sdk_helpers.extract",
+        "generate_document_extractor_config",
+    ),
+    "generate_document_extractor_config_with_agent": (
+        "openai_sdk_helpers.extract",
+        "generate_document_extractor_config_with_agent",
+    ),
+    "optimize_extractor_prompt": (
+        "openai_sdk_helpers.extract",
+        "optimize_extractor_prompt",
+    ),
+    "optimize_extractor_prompt_with_agent": (
+        "openai_sdk_helpers.extract",
+        "optimize_extractor_prompt_with_agent",
+    ),
+}
+
+
+def __getattr__(name: str) -> Any:
+    """Load optional extraction exports only when requested.
+
+    Parameters
+    ----------
+    name : str
+        Requested package attribute.
+
+    Returns
+    -------
+    Any
+        Lazily imported public export.
+
+    Raises
+    ------
+    AttributeError
+        If the requested attribute is not a public optional export.
+    ImportError
+        If the extraction extra is required but not installed.
+    """
+    target = _OPTIONAL_EXPORTS.get(name)
+    if target is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    module_name, attribute_name = target
+    value = getattr(import_module(module_name), attribute_name)
+    globals()[name] = value
+    return value
+
 
 __all__ = [
     # Codex plugins
@@ -220,7 +278,7 @@ __all__ = [
     "LengthValidator",
     "OutputValidator",
     "validate_output",
-    # LangExtract
+    # LangExtract adapter
     "LangExtractAdapter",
     "build_langextract_adapter",
     # Extraction helpers
