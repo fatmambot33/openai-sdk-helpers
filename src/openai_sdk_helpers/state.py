@@ -108,7 +108,9 @@ class ResponseContinuation:
                     "previous_response_id cannot be combined with conversation"
                 )
             if existing_conversation not in (None, self.conversation_id):
-                raise ValueError("request already has a different conversation identifier")
+                raise ValueError(
+                    "request already has a different conversation identifier"
+                )
             resolved["conversation"] = self.conversation_id
         return resolved
 

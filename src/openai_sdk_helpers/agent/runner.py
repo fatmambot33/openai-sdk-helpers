@@ -22,6 +22,18 @@ from openai_sdk_helpers.utils.async_utils import run_coroutine_with_fallback
 from ..structure.base import StructureBase
 
 
+def _runner_state_kwargs(state: AgentRunState) -> dict[str, Any]:
+    """Return only explicitly selected server-managed state arguments."""
+    kwargs: dict[str, Any] = {}
+    if state.previous_response_id is not None:
+        kwargs["previous_response_id"] = state.previous_response_id
+    if state.auto_previous_response_id:
+        kwargs["auto_previous_response_id"] = True
+    if state.conversation_id is not None:
+        kwargs["conversation_id"] = state.conversation_id
+    return kwargs
+
+
 async def run_async(
     agent: Agent,
     input: str | list[dict[str, Any]],
@@ -72,6 +84,7 @@ async def run_async(
     >>> asyncio.run(example())  # doctest: +SKIP
     """
     resolved_state = resolve_agent_state(state=state, session=session)
+    state_kwargs = _runner_state_kwargs(resolved_state)
 
     async def execute() -> Any:
         result = await Runner.run(
@@ -79,9 +92,7 @@ async def run_async(
             cast(Any, input),
             context=context,
             session=resolved_state.session,
-            previous_response_id=resolved_state.previous_response_id,
-            auto_previous_response_id=resolved_state.auto_previous_response_id,
-            conversation_id=resolved_state.conversation_id,
+            **state_kwargs,
         )
         if output_structure is not None:
             return result.final_output_as(output_structure)
@@ -141,6 +152,7 @@ def run_sync(
     >>> result = run_sync(agent, "What is 2+2?")  # doctest: +SKIP
     """
     resolved_state = resolve_agent_state(state=state, session=session)
+    state_kwargs = _runner_state_kwargs(resolved_state)
 
     def execute() -> Any:
         coro = Runner.run(
@@ -148,9 +160,7 @@ def run_sync(
             cast(Any, input),
             context=context,
             session=resolved_state.session,
-            previous_response_id=resolved_state.previous_response_id,
-            auto_previous_response_id=resolved_state.auto_previous_response_id,
-            conversation_id=resolved_state.conversation_id,
+            **state_kwargs,
         )
         result: RunResult = run_coroutine_with_fallback(coro)
         if output_structure is not None:
