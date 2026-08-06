@@ -9,6 +9,12 @@ from __future__ import annotations
 
 from typing import Any, TypeVar
 
+from openai_sdk_helpers.runtime import (
+    OperationContext,
+    run_observed_async,
+    run_observed_sync,
+)
+
 from .base import ResponseBase
 
 R = TypeVar("R", bound=ResponseBase[Any])
@@ -19,10 +25,11 @@ def run_sync(
     *,
     content: str,
     response_kwargs: dict[str, Any] | None = None,
+    operation_context: OperationContext | None = None,
 ) -> Any:
     """Execute a response workflow synchronously with automatic cleanup.
 
-    Instantiates the response class, executes run_sync with the provided
+    Instantiates the response class, executes ``run_sync`` with the provided
     content, and ensures cleanup occurs even if an exception is raised.
 
     Parameters
@@ -31,14 +38,15 @@ def run_sync(
         Response class to instantiate for the workflow.
     content : str
         Prompt text to send to the OpenAI API.
-    response_kwargs : dict[str, Any] or None, default None
-        Optional keyword arguments forwarded to response_cls constructor.
+    response_kwargs : dict[str, Any] or None, default=None
+        Optional keyword arguments forwarded to the response constructor.
+    operation_context : OperationContext or None, default=None
+        Optional explicit lifecycle and observability context.
 
     Returns
     -------
     Any
-        Parsed response from ResponseBase.run_sync, typically a structured
-        output or None.
+        Original parsed result from ``ResponseBase.run_sync``.
 
     Examples
     --------
@@ -46,14 +54,18 @@ def run_sync(
     >>> result = run_sync(
     ...     MyResponse,
     ...     content="Analyze this text",
-    ...     response_kwargs={"openai_settings": settings}
+    ...     response_kwargs={"openai_settings": settings},
     ... )
     """
-    response = response_cls(**(response_kwargs or {}))
-    try:
-        return response.run_sync(content=content)
-    finally:
-        response.close()
+
+    def execute() -> Any:
+        response = response_cls(**(response_kwargs or {}))
+        try:
+            return response.run_sync(content=content)
+        finally:
+            response.close()
+
+    return run_observed_sync(operation_context, execute)
 
 
 async def run_async(
@@ -61,10 +73,11 @@ async def run_async(
     *,
     content: str,
     response_kwargs: dict[str, Any] | None = None,
+    operation_context: OperationContext | None = None,
 ) -> Any:
     """Execute a response workflow asynchronously with automatic cleanup.
 
-    Instantiates the response class, executes run_async with the provided
+    Instantiates the response class, executes ``run_async`` with the provided
     content, and ensures cleanup occurs even if an exception is raised.
 
     Parameters
@@ -73,14 +86,15 @@ async def run_async(
         Response class to instantiate for the workflow.
     content : str
         Prompt text to send to the OpenAI API.
-    response_kwargs : dict[str, Any] or None, default None
-        Optional keyword arguments forwarded to response_cls constructor.
+    response_kwargs : dict[str, Any] or None, default=None
+        Optional keyword arguments forwarded to the response constructor.
+    operation_context : OperationContext or None, default=None
+        Optional explicit lifecycle and observability context.
 
     Returns
     -------
     Any
-        Parsed response from ResponseBase.run_async, typically a structured
-        output or None.
+        Original parsed result from ``ResponseBase.run_async``.
 
     Examples
     --------
@@ -88,14 +102,18 @@ async def run_async(
     >>> result = await run_async(
     ...     MyResponse,
     ...     content="Summarize this document",
-    ...     response_kwargs={"openai_settings": settings}
+    ...     response_kwargs={"openai_settings": settings},
     ... )
     """
-    response = response_cls(**(response_kwargs or {}))
-    try:
-        return await response.run_async(content=content)
-    finally:
-        response.close()
+
+    async def execute() -> Any:
+        response = response_cls(**(response_kwargs or {}))
+        try:
+            return await response.run_async(content=content)
+        finally:
+            response.close()
+
+    return await run_observed_async(operation_context, execute)
 
 
 __all__ = ["run_sync", "run_async"]
