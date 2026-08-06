@@ -41,8 +41,7 @@ def main() -> int:
 
     installed_distribution = distribution(_DISTRIBUTION_NAME)
     installed_files = {
-        str(path).replace("\\", "/")
-        for path in (installed_distribution.files or ())
+        str(path).replace("\\", "/") for path in (installed_distribution.files or ())
     }
     missing_files = sorted(_REQUIRED_PACKAGE_FILES - installed_files)
     if missing_files:
