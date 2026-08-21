@@ -23,7 +23,7 @@ dependencies = [
     "pydantic>=2.7,<3",
     "typing_extensions>=4.15.0,<5",
     "python-dotenv",
-    "openai>=2.45.0,<3.0.0",
+    "openai>=2.45.0,<4.0.0",
     "openai-agents>=0.18.1,<1.0.0",
 ]
 
