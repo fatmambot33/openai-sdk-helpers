@@ -7,6 +7,7 @@ All notable changes to this project are documented here.
 ## 0.8.0 - 2026-08-06
 
 - Established the 0.8 compatibility line with consolidated migration guidance for optional extraction and UI profiles, Codex plugins, tool validation, and OIDC publishing.
+- Expanded OpenAI Python compatibility to `>=2.45.0,<4.0.0`, including validated 3.x support, and declared the `tqdm` runtime dependency required by the public vector-storage surface.
 - Aligned the Python distribution and bundled Codex plugin manifest at version 0.8.0.
 - Carried forward the production foundation shipped on the 0.7.5 branch without duplicating its detailed release notes.
 
