@@ -94,6 +94,31 @@ class OpenAIRetrievalClient:
     ----------
     client : object
         Configured official ``OpenAI`` client. The wrapper does not close it.
+
+    Methods
+    -------
+    upload_file(source, *, purpose, expires_after=None, operation_context=None)
+        Upload one file without closing caller-owned handles.
+    upload_files(sources, *, purpose, expires_after=None, continue_on_error=True, operation_context=None)
+        Upload files sequentially and preserve ordered outcomes.
+    create_vector_store(*, name, file_ids=(), metadata=None, expires_after=None, chunking_strategy=None, description=None, operation_context=None)
+        Create one vector store.
+    retrieve_vector_store(vector_store_id, *, operation_context=None)
+        Retrieve one vector store.
+    list_vector_stores(*, limit=None, order=None, after=None, before=None, operation_context=None)
+        List one page of vector stores.
+    update_vector_store(vector_store_id, *, name=None, metadata=None, expires_after=None, operation_context=None)
+        Update explicit vector-store metadata.
+    attach_file(vector_store_id, file_id, *, attributes=None, chunking_strategy=None, polling=None, operation_context=None)
+        Attach and poll an existing file.
+    upload_and_poll(vector_store_id, source, *, attributes=None, chunking_strategy=None, polling=None, operation_context=None)
+        Upload through the vector-store helper and poll.
+    detach_file(vector_store_id, file_id, *, operation_context=None)
+        Detach a file without deleting the Files resource.
+    delete_file(file_id, *, operation_context=None)
+        Delete an underlying Files resource explicitly.
+    delete_vector_store(vector_store_id, *, operation_context=None)
+        Delete a vector store explicitly.
     """
 
     def __init__(self, client: object) -> None:
@@ -158,7 +183,7 @@ class OpenAIRetrievalClient:
                             expires_after=expires_after,
                         )
                     )
-                except BaseException as error:
+                except Exception as error:
                     if not continue_on_error:
                         raise
                     results.append(
@@ -454,7 +479,38 @@ class OpenAIRetrievalClient:
 
 
 class AsyncOpenAIRetrievalClient:
-    """Asynchronous lifecycle wrapper around an injected ``AsyncOpenAI`` client."""
+    """Asynchronous lifecycle wrapper around an injected ``AsyncOpenAI`` client.
+
+    Parameters
+    ----------
+    client : object
+        Configured official ``AsyncOpenAI`` client. The wrapper does not close it.
+
+    Methods
+    -------
+    upload_file(source, *, purpose, expires_after=None, operation_context=None)
+        Upload one file without closing caller-owned handles.
+    upload_files(sources, *, purpose, expires_after=None, continue_on_error=True, operation_context=None)
+        Upload files sequentially and preserve ordered outcomes.
+    create_vector_store(*, name, file_ids=(), metadata=None, expires_after=None, chunking_strategy=None, description=None, operation_context=None)
+        Create one vector store.
+    retrieve_vector_store(vector_store_id, *, operation_context=None)
+        Retrieve one vector store.
+    list_vector_stores(*, limit=None, order=None, after=None, before=None, operation_context=None)
+        List one page of vector stores.
+    update_vector_store(vector_store_id, *, name=None, metadata=None, expires_after=None, operation_context=None)
+        Update explicit vector-store metadata.
+    attach_file(vector_store_id, file_id, *, attributes=None, chunking_strategy=None, polling=None, operation_context=None)
+        Attach and poll an existing file.
+    upload_and_poll(vector_store_id, source, *, attributes=None, chunking_strategy=None, polling=None, operation_context=None)
+        Upload through the vector-store helper and poll.
+    detach_file(vector_store_id, file_id, *, operation_context=None)
+        Detach a file without deleting the Files resource.
+    delete_file(file_id, *, operation_context=None)
+        Delete an underlying Files resource explicitly.
+    delete_vector_store(vector_store_id, *, operation_context=None)
+        Delete a vector store explicitly.
+    """
 
     def __init__(self, client: object) -> None:
         if not hasattr(client, "files") or not hasattr(client, "vector_stores"):
@@ -518,7 +574,7 @@ class AsyncOpenAIRetrievalClient:
                             expires_after=expires_after,
                         )
                     )
-                except BaseException as error:
+                except Exception as error:
                     if not continue_on_error:
                         raise
                     results.append(
