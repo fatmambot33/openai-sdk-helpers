@@ -77,6 +77,17 @@ installations independently.
 
 ### Compatibility note
 
+`openai-sdk-helpers` now supports OpenAI Python `>=2.45.0,<4.0.0`, including the
+3.x line. The compatibility matrix, full Python 3.10–3.13 test suite, clean
+installation profiles, and installed-wheel smoke tests pass with the latest 3.x
+SDK. OpenAI Python 3.x changes its default HTTP client to HTTPX2, so applications
+that construct custom HTTPX clients or transports should follow the official
+OpenAI SDK migration guidance.
+
+The package now explicitly declares `tqdm`, which is required by the public
+`VectorStorage` batch progress surface and was previously missing from wheel
+runtime metadata.
+
 `ResponseConfiguration` now validates `tools` at initialization. The value must
 be a non-string sequence of mapping objects. String-like containers and
 non-mapping entries fail immediately with `TypeError`. Valid official SDK-shaped
