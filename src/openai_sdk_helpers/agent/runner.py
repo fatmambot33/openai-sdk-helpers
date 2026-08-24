@@ -11,7 +11,13 @@ from typing import Any, Dict, Optional, cast
 
 from agents import Agent, RunResult, Runner, Session
 
+from openai_sdk_helpers.runtime import (
+    OperationContext,
+    run_observed_async,
+    run_observed_sync,
+)
 from openai_sdk_helpers.utils.async_utils import run_coroutine_with_fallback
+
 from ..structure.base import StructureBase
 
 
@@ -22,6 +28,7 @@ async def run_async(
     context: Optional[Dict[str, Any]] = None,
     output_structure: Optional[type[StructureBase]] = None,
     session: Optional[Session] = None,
+    operation_context: OperationContext | None = None,
 ) -> Any:
     """Run an Agent asynchronously.
 
@@ -37,11 +44,13 @@ async def run_async(
         Optional type used to cast the final output.
     session : Session or None, default=None
         Optional session for maintaining conversation history.
+    operation_context : OperationContext or None, default=None
+        Optional explicit lifecycle and observability context.
 
     Returns
     -------
     Any
-        Agent response, optionally converted to ``output_structure``.
+        Original agent result, optionally converted to ``output_structure``.
 
     Examples
     --------
@@ -53,10 +62,19 @@ async def run_async(
     ...     return result
     >>> asyncio.run(example())  # doctest: +SKIP
     """
-    result = await Runner.run(agent, cast(Any, input), context=context, session=session)
-    if output_structure is not None:
-        return result.final_output_as(output_structure)
-    return result
+
+    async def execute() -> Any:
+        result = await Runner.run(
+            agent,
+            cast(Any, input),
+            context=context,
+            session=session,
+        )
+        if output_structure is not None:
+            return result.final_output_as(output_structure)
+        return result
+
+    return await run_observed_async(operation_context, execute)
 
 
 def run_sync(
@@ -66,12 +84,12 @@ def run_sync(
     context: Optional[Dict[str, Any]] = None,
     output_structure: Optional[type[StructureBase]] = None,
     session: Optional[Session] = None,
+    operation_context: OperationContext | None = None,
 ) -> Any:
     """Run an Agent synchronously.
 
-    Internally uses async execution with proper event loop handling.
-    If an event loop is already running, creates a new thread to avoid
-    nested event loop errors.
+    Internally uses async execution with proper event loop handling. If an event
+    loop is already running, a new thread avoids nested event loop errors.
 
     Parameters
     ----------
@@ -85,11 +103,13 @@ def run_sync(
         Optional type used to cast the final output.
     session : Session or None, default=None
         Optional session for maintaining conversation history.
+    operation_context : OperationContext or None, default=None
+        Optional explicit lifecycle and observability context.
 
     Returns
     -------
     Any
-        Agent response, optionally converted to ``output_structure``.
+        Original agent result, optionally converted to ``output_structure``.
 
     Raises
     ------
@@ -102,11 +122,15 @@ def run_sync(
     >>> agent = Agent(name="test", instructions="test", model="gpt-4o-mini")
     >>> result = run_sync(agent, "What is 2+2?")  # doctest: +SKIP
     """
-    coro = Runner.run(agent, cast(Any, input), context=context, session=session)
-    result: RunResult = run_coroutine_with_fallback(coro)
-    if output_structure is not None:
-        return result.final_output_as(output_structure)
-    return result
+
+    def execute() -> Any:
+        coro = Runner.run(agent, cast(Any, input), context=context, session=session)
+        result: RunResult = run_coroutine_with_fallback(coro)
+        if output_structure is not None:
+            return result.final_output_as(output_structure)
+        return result
+
+    return run_observed_sync(operation_context, execute)
 
 
 __all__ = ["run_sync", "run_async"]
