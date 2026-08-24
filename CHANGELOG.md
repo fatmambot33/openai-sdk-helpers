@@ -4,6 +4,13 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 0.8.1 - 2026-08-25
+
+- Added the optional typed `OperationContext` lifecycle shared by Responses, Agents, and Codex commands, with vendor-neutral observers, usage capture, explicit retry metadata, and safe diagnostics that redact sensitive content by default.
+- Added explicit conversation-state ownership through `AgentRunState` and `ResponseContinuation`, rejecting ambiguous combinations before SDK execution while preserving the existing `session=` shorthand.
+- Added caller-owned `LocalMessageStore` persistence with explicit save, resume, clear, close-without-save, and delete semantics.
+- Preserved original SDK results, exceptions, identifiers, tracing, and session objects without adding a telemetry backend or hidden state selection.
+
 ## 0.8.0 - 2026-08-06
 
 - Established the 0.8 compatibility line with consolidated migration guidance for optional extraction and UI profiles, Codex plugins, tool validation, and OIDC publishing.
