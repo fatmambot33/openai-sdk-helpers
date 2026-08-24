@@ -87,6 +87,14 @@ def _optional_kwargs(**values: object | None) -> dict[str, object]:
     return {name: value for name, value in values.items() if value is not None}
 
 
+def _validate_upload_polling(polling: PollingConfig) -> None:
+    if polling.timeout_seconds is not None:
+        raise ValueError(
+            "timeout_seconds is not supported by the SDK upload_and_poll helper; "
+            "upload the file first and use attach_file for request-timeout control"
+        )
+
+
 class OpenAIRetrievalClient:
     """Synchronous lifecycle wrapper around an injected official OpenAI client.
 
@@ -377,6 +385,7 @@ class OpenAIRetrievalClient:
             "vector_store_id",
         )
         polling = polling or PollingConfig()
+        _validate_upload_polling(polling)
 
         def execute() -> RetrievalOperationResult[VectorStoreFileReference]:
             kwargs = _optional_kwargs(
@@ -768,6 +777,7 @@ class AsyncOpenAIRetrievalClient:
             "vector_store_id",
         )
         polling = polling or PollingConfig()
+        _validate_upload_polling(polling)
 
         async def execute() -> RetrievalOperationResult[VectorStoreFileReference]:
             kwargs = _optional_kwargs(
