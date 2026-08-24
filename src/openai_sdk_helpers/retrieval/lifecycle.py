@@ -5,8 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Generic, TypeVar
 
-from .contracts import RetrievalOperationResult
-
 ResourceT = TypeVar("ResourceT")
 
 
@@ -19,10 +17,18 @@ class PollingConfig:
     poll_interval_ms : int, default=1000
         Delay between SDK polling requests in milliseconds.
     timeout_seconds : float or None, default=None
-        Timeout forwarded to the official SDK polling helper. ``None`` keeps the
-        injected client's timeout configuration.
+        Request timeout forwarded to the official SDK ``create_and_poll`` or
+        ``upload_and_poll`` helper. This is not an overall ingestion deadline;
+        ``None`` keeps the injected client's request-timeout configuration.
     terminal_statuses : tuple[str, ...], default=("completed", "failed", "cancelled")
         SDK statuses accepted after the polling helper returns.
+
+    Methods
+    -------
+    sdk_kwargs()
+        Return keyword arguments supported by SDK polling helpers.
+    validate_terminal_status(status)
+        Require a configured terminal status after polling returns.
     """
 
     poll_interval_ms: int = 1000
@@ -43,7 +49,7 @@ class PollingConfig:
         object.__setattr__(self, "terminal_statuses", statuses)
 
     def sdk_kwargs(self) -> dict[str, object]:
-        """Return keyword arguments accepted by SDK polling helpers."""
+        """Return keyword arguments supported by SDK polling helpers."""
         kwargs: dict[str, object] = {"poll_interval_ms": self.poll_interval_ms}
         if self.timeout_seconds is not None:
             kwargs["timeout"] = self.timeout_seconds
@@ -85,6 +91,11 @@ class VectorStoreFileReference:
         SDK-reported ingestion error without interpretation.
     raw : object or None, default=None
         Underlying official SDK vector-store file resource.
+
+    Methods
+    -------
+    No public methods
+        Instances are immutable references carrying normalized attachment data.
     """
 
     file_id: str
@@ -110,7 +121,18 @@ class VectorStoreFileReference:
 
 @dataclass(frozen=True, slots=True)
 class RetrievalBatchResult(Generic[ResourceT]):
-    """Ordered batch outcomes preserving every per-item failure."""
+    """Ordered batch outcomes preserving every per-item failure.
+
+    Parameters
+    ----------
+    results : tuple[RetrievalOperationResult[ResourceT], ...]
+        Per-item outcomes in the same order as the submitted inputs.
+
+    Methods
+    -------
+    No public methods
+        Use the ``succeeded``, ``failed``, and ``ok`` result properties.
+    """
 
     results: tuple[RetrievalOperationResult[ResourceT], ...]
 
@@ -132,6 +154,11 @@ class RetrievalBatchResult(Generic[ResourceT]):
     def ok(self) -> bool:
         """Return whether every item succeeded."""
         return not self.failed
+
+
+# Resolve postponed public annotations at runtime without creating an import cycle:
+# contracts imports this module only after defining RetrievalOperationResult.
+from .contracts import RetrievalOperationResult as RetrievalOperationResult
 
 
 __all__ = [
