@@ -39,7 +39,8 @@ local persistence remains explicitly caller-owned.
 
 ## 0.9.0 — retrieval consolidation
 
-Implementation is complete; publication is the remaining release gate.
+Published through the protected PyPI Trusted Publishing path and released as
+`v0.9.0` with wheel, source distribution, and SBOM evidence.
 
 - [x] #140 — approve one public retrieval API and migration map.
 - [x] #141 — implement typed file and vector-store lifecycle helpers.
