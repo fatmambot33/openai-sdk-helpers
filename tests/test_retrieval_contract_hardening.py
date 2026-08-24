@@ -15,6 +15,7 @@ from openai_sdk_helpers.retrieval import (
     AsyncRetrievalClient,
     AsyncRetrievalLifecycleClient,
     OpenAIRetrievalClient,
+    PollingConfig,
     SyncRetrievalClient,
     SyncRetrievalLifecycleClient,
 )
@@ -94,9 +95,39 @@ def test_full_protocol_type_hints_resolve_at_runtime() -> None:
     assert "VectorStoreFileReference" in str(async_hints["return"])
 
 
-def test_supported_sdk_polling_helpers_accept_timeout() -> None:
-    """Lock the request-timeout passthrough against supported SDK versions."""
+def test_supported_sdk_polling_signatures_are_explicit() -> None:
+    """Lock timeout support against the minimum and latest SDK matrices."""
     for helper in (Files.create_and_poll, AsyncFiles.create_and_poll):
         parameters = inspect.signature(helper).parameters
         assert "poll_interval_ms" in parameters
         assert "timeout" in parameters
+
+    for helper in (Files.upload_and_poll, AsyncFiles.upload_and_poll):
+        parameters = inspect.signature(helper).parameters
+        assert "poll_interval_ms" in parameters
+        assert "timeout" not in parameters
+
+
+def test_upload_and_poll_rejects_request_timeout_before_api_call() -> None:
+    """Reject a timeout the official upload helper cannot accept."""
+    client = OpenAIRetrievalClient(_sdk_shape())
+
+    with pytest.raises(ValueError, match="upload_and_poll"):
+        client.upload_and_poll(
+            "vs_1",
+            "guide.pdf",
+            polling=PollingConfig(timeout_seconds=5),
+        )
+
+
+@pytest.mark.asyncio
+async def test_async_upload_and_poll_rejects_request_timeout_before_api_call() -> None:
+    """Match unsupported timeout validation in the asynchronous client."""
+    client = AsyncOpenAIRetrievalClient(_sdk_shape())
+
+    with pytest.raises(ValueError, match="upload_and_poll"):
+        await client.upload_and_poll(
+            "vs_1",
+            "guide.pdf",
+            polling=PollingConfig(timeout_seconds=5),
+        )
