@@ -14,16 +14,21 @@ from openai_sdk_helpers.retrieval import (
 )
 
 EXPECTED_RETRIEVAL_API = (
+    "AsyncOpenAIRetrievalClient",
     "AsyncRetrievalClient",
     "AttributeValue",
     "FileSearchConfig",
     "FileSource",
+    "OpenAIRetrievalClient",
+    "PollingConfig",
+    "RetrievalBatchResult",
     "RetrievalOperationResult",
     "RetrievalSearchContent",
     "RetrievalSearchPage",
     "RetrievalSearchResult",
     "SyncRetrievalClient",
     "UploadedFile",
+    "VectorStoreFileReference",
     "VectorStoreReference",
 )
 
