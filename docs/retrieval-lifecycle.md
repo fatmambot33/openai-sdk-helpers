@@ -5,6 +5,11 @@ and Vector Stores lifecycle operations over caller-injected official SDK clients
 They do not construct clients, own credentials, close injected clients, close
 caller-owned file handles, or delete remote resources automatically.
 
+The lifecycle-only structural contracts are
+`SyncRetrievalLifecycleClient` and `AsyncRetrievalLifecycleClient`. The broader
+`SyncRetrievalClient` and `AsyncRetrievalClient` contracts also include direct
+search and are completed by the File Search phase in issue #142.
+
 ## Construction
 
 ```python
@@ -54,10 +59,12 @@ for outcome in batch.results:
         print(type(outcome.error).__name__)
 ```
 
-With `continue_on_error=True`, each failure retains the original exception and
-later inputs continue. With `False`, the original exception is raised
-immediately. Uploads are sequential and make no hidden concurrency or retry
-promise.
+With `continue_on_error=True`, ordinary per-item exceptions retain the original
+exception and later inputs continue. With `False`, the original exception is
+raised immediately. Task cancellation and process-level interrupts are never
+converted into item failures: `asyncio.CancelledError`, `KeyboardInterrupt`, and
+`SystemExit` propagate. Uploads are sequential and make no hidden concurrency or
+retry promise.
 
 Deleting a Files resource is always separate and explicit:
 
@@ -118,11 +125,14 @@ attachment = retrieval.attach_file(
 )
 ```
 
-`PollingConfig` forwards `poll_interval_ms` and the optional request timeout to
-the official SDK polling helper. Its configured terminal states default to
-`completed`, `failed`, and `cancelled`. If the helper returns a different status,
-the wrapper raises `RuntimeError` rather than claiming ingestion completed.
-Timeouts and SDK exceptions are re-raised unchanged.
+For `attach_file`, `PollingConfig` forwards `poll_interval_ms` and the optional
+request timeout to the official SDK `create_and_poll` helper. The timeout controls
+the SDK request that creates the attachment; it is not an overall ingestion
+deadline. Configured terminal states default to `completed`, `failed`, and
+`cancelled`. If the helper returns a different status, the wrapper raises
+`RuntimeError` rather than claiming ingestion completed. Only `completed` is
+reported with `succeeded=True`; failed and cancelled terminal resources remain
+available with `succeeded=False` and their raw SDK state intact.
 
 Upload directly through the vector-store helper when a separate Files upload is
 not required:
@@ -134,6 +144,12 @@ attachment = retrieval.upload_and_poll(
     polling=PollingConfig(poll_interval_ms=500),
 )
 ```
+
+The official SDK `upload_and_poll` helper supports the polling interval but does
+not expose a request-timeout keyword. Supplying `timeout_seconds` to this package
+path therefore raises `ValueError` before any API call. When request-timeout
+control is required, upload explicitly with `upload_file` and then call
+`attach_file` with the returned file ID.
 
 Both attachment methods expose the raw SDK vector-store file object and its
 status through `VectorStoreFileReference`.
