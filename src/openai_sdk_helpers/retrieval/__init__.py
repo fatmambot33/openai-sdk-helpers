@@ -19,10 +19,12 @@ from .lifecycle import (
     RetrievalBatchResult,
     VectorStoreFileReference,
 )
+from .protocols import AsyncRetrievalLifecycleClient, SyncRetrievalLifecycleClient
 
 __all__ = [
     "AsyncOpenAIRetrievalClient",
     "AsyncRetrievalClient",
+    "AsyncRetrievalLifecycleClient",
     "AttributeValue",
     "FileSearchConfig",
     "FileSource",
@@ -34,6 +36,7 @@ __all__ = [
     "RetrievalSearchPage",
     "RetrievalSearchResult",
     "SyncRetrievalClient",
+    "SyncRetrievalLifecycleClient",
     "UploadedFile",
     "VectorStoreFileReference",
     "VectorStoreReference",
