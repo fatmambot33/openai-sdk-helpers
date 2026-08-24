@@ -16,6 +16,16 @@ compatibility contract unless listed here.
 - `run_coroutine_thread_safe`
 - `run_coroutine_with_fallback`
 
+## Operation lifecycle
+
+- `OperationContext`
+- `OperationEvent`
+- `OperationObserver`
+- `OperationPhase`
+- `OperationUsage`
+- `run_observed_async`
+- `run_observed_sync`
+
 ## Errors
 
 - `OpenAISDKError`
