@@ -1,6 +1,5 @@
-"""Public retrieval contracts and OpenAI lifecycle clients."""
+"""Public retrieval contracts, lifecycle clients, and search adapters."""
 
-from .client import AsyncOpenAIRetrievalClient, OpenAIRetrievalClient
 from .contracts import (
     AsyncRetrievalClient,
     AttributeValue,
@@ -14,30 +13,61 @@ from .contracts import (
     UploadedFile,
     VectorStoreReference,
 )
+from .full_client import AsyncOpenAIRetrievalClient, OpenAIRetrievalClient
 from .lifecycle import (
     PollingConfig,
     RetrievalBatchResult,
     VectorStoreFileReference,
 )
 from .protocols import AsyncRetrievalLifecycleClient, SyncRetrievalLifecycleClient
+from .search import (
+    ComparisonFilter,
+    ComparisonOperator,
+    CompoundFilter,
+    CompoundOperator,
+    FileCitation,
+    FileSearchCall,
+    RetrievalNormalizationError,
+    SearchFilter,
+    apply_file_search_to_response,
+    build_agents_file_search_tool,
+    collect_file_citations,
+    normalize_file_search_call,
+    normalize_search_page,
+    serialize_filter,
+)
 
 __all__ = [
     "AsyncOpenAIRetrievalClient",
     "AsyncRetrievalClient",
     "AsyncRetrievalLifecycleClient",
     "AttributeValue",
+    "ComparisonFilter",
+    "ComparisonOperator",
+    "CompoundFilter",
+    "CompoundOperator",
+    "FileCitation",
+    "FileSearchCall",
     "FileSearchConfig",
     "FileSource",
     "OpenAIRetrievalClient",
     "PollingConfig",
     "RetrievalBatchResult",
+    "RetrievalNormalizationError",
     "RetrievalOperationResult",
     "RetrievalSearchContent",
     "RetrievalSearchPage",
     "RetrievalSearchResult",
+    "SearchFilter",
     "SyncRetrievalClient",
     "SyncRetrievalLifecycleClient",
     "UploadedFile",
     "VectorStoreFileReference",
     "VectorStoreReference",
+    "apply_file_search_to_response",
+    "build_agents_file_search_tool",
+    "collect_file_citations",
+    "normalize_file_search_call",
+    "normalize_search_page",
+    "serialize_filter",
 ]
