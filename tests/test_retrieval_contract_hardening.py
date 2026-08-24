@@ -1,4 +1,4 @@
-"""Regression tests for retrieval lifecycle contract hardening."""
+"""Regression tests for retrieval lifecycle and search contract hardening."""
 
 from __future__ import annotations
 
@@ -19,10 +19,16 @@ from openai_sdk_helpers.retrieval import (
     SyncRetrievalClient,
     SyncRetrievalLifecycleClient,
 )
+from openai_sdk_helpers.retrieval.client import (
+    AsyncOpenAIRetrievalClient as AsyncLifecycleImplementation,
+)
+from openai_sdk_helpers.retrieval.client import (
+    OpenAIRetrievalClient as SyncLifecycleImplementation,
+)
 
 
 class InterruptingSyncClient(OpenAIRetrievalClient):
-    """Lifecycle client whose upload simulates process interruption.
+    """Retrieval client whose upload simulates process interruption.
 
     Methods
     -------
@@ -36,7 +42,7 @@ class InterruptingSyncClient(OpenAIRetrievalClient):
 
 
 class CancellingAsyncClient(AsyncOpenAIRetrievalClient):
-    """Lifecycle client whose upload simulates task cancellation.
+    """Retrieval client whose upload simulates task cancellation.
 
     Methods
     -------
@@ -50,7 +56,7 @@ class CancellingAsyncClient(AsyncOpenAIRetrievalClient):
 
 
 def _sdk_shape() -> object:
-    """Return the minimal client shape accepted by lifecycle constructors."""
+    """Return the minimal client shape accepted by retrieval constructors."""
     return SimpleNamespace(files=SimpleNamespace(), vector_stores=SimpleNamespace())
 
 
@@ -75,15 +81,22 @@ async def test_async_batch_does_not_swallow_task_cancellation() -> None:
         )
 
 
-def test_concrete_clients_satisfy_lifecycle_protocols_only() -> None:
-    """Keep lifecycle and full-search structural contracts distinct."""
+def test_lifecycle_implementations_and_full_clients_match_protocol_layers() -> None:
+    """Keep lifecycle-only and lifecycle-plus-search contracts explicit."""
+    sync_lifecycle = SyncLifecycleImplementation(_sdk_shape())
+    async_lifecycle = AsyncLifecycleImplementation(_sdk_shape())
     sync_client = OpenAIRetrievalClient(_sdk_shape())
     async_client = AsyncOpenAIRetrievalClient(_sdk_shape())
 
+    assert isinstance(sync_lifecycle, SyncRetrievalLifecycleClient)
+    assert isinstance(async_lifecycle, AsyncRetrievalLifecycleClient)
+    assert not isinstance(sync_lifecycle, SyncRetrievalClient)
+    assert not isinstance(async_lifecycle, AsyncRetrievalClient)
+
     assert isinstance(sync_client, SyncRetrievalLifecycleClient)
     assert isinstance(async_client, AsyncRetrievalLifecycleClient)
-    assert not isinstance(sync_client, SyncRetrievalClient)
-    assert not isinstance(async_client, AsyncRetrievalClient)
+    assert isinstance(sync_client, SyncRetrievalClient)
+    assert isinstance(async_client, AsyncRetrievalClient)
 
 
 def test_full_protocol_type_hints_resolve_at_runtime() -> None:
