@@ -1,5 +1,80 @@
 # Release notes
 
+## 0.9.0 — 2026-08-25
+
+Version 0.9.0 consolidates retrieval around one typed, SDK-first public surface
+for OpenAI Files, Vector Stores, direct vector-store search, and hosted File
+Search. It builds on the 0.8.1 shared runtime contracts without hiding official
+SDK clients, resources, identifiers, errors, filters, ranking controls, or raw
+results.
+
+### Retrieval lifecycle
+
+- Added dependency-injected `OpenAIRetrievalClient` and
+  `AsyncOpenAIRetrievalClient` lifecycle operations over caller-configured
+  official OpenAI clients.
+- Added explicit Files upload/delete and Vector Stores create, retrieve, list,
+  update, and delete operations.
+- Added existing-file attachment and upload-and-poll with explicit polling
+  configuration and terminal-state validation.
+- Treats only `completed` ingestion as successful; failed and cancelled terminal
+  resources remain inspectable with their raw SDK state.
+- Keeps detach distinct from deleting the underlying Files resource.
+- Preserves caller ownership: injected clients and caller-owned file handles are
+  never closed, and remote resources are never cleaned up implicitly.
+- Batch uploads preserve input order and ordinary per-item exceptions while task
+  cancellation and process interrupts propagate.
+
+### Direct vector-store search
+
+- Added matching synchronous and asynchronous `search()` methods.
+- Supports one query or an ordered sequence of queries, common typed attribute
+  filters, explicit official SDK filter mappings, result limits, ranking
+  options, and query rewriting.
+- Normalizes file identity, score, attributes, content fragments, pagination,
+  and query values while retaining the raw SDK page and each raw result.
+- Strict normalization raises indexed errors for malformed SDK-shaped items;
+  lenient mode omits malformed items without reordering valid results.
+- Empty result sets are valid and deterministic.
+
+### Hosted File Search adapters
+
+- Added `FileSearchConfig` adapters for Responses request mappings and the
+  official Agents SDK `FileSearchTool`.
+- Responses adaptation copies caller input rather than mutating it and adds
+  `file_search_call.results` only when explicitly requested.
+- Included File Search tool-call results can be normalized without issuing a
+  second request.
+- File citation annotations can be collected in model-output order while
+  preserving the raw annotation object.
+- Hosted-tool configuration remains separate from direct search execution and
+  does not upload files, create vector stores, issue model requests, or assume
+  cleanup ownership.
+
+### Compatibility and migration
+
+Existing `FilesAPIManager`, `VectorStorage`, response file/vector-store helpers,
+and Agents file-message builders remain available. The 0.9 retrieval package is
+the preferred surface for new code, but this release does not remove legacy
+imports or silently migrate ownership semantics.
+
+The package continues to support Python 3.10–3.13, OpenAI Python
+`>=2.45.0,<4.0.0`, and the existing optional `core`, `extract`, `ui`, and `all`
+installation profiles. The final retrieval heads passed the minimum/latest SDK
+matrix, installed-wheel smoke tests, security checks, and deterministic
+network-free tests.
+
+Review [docs/retrieval.md](docs/retrieval.md),
+[docs/retrieval-lifecycle.md](docs/retrieval-lifecycle.md), and
+[docs/file-search.md](docs/file-search.md) for migration boundaries, ownership,
+search behavior, filters, citations, and raw SDK escape hatches.
+
+### Upgrade
+
+```bash
+pip install --upgrade openai-sdk-helpers==0.9.0
+```
+
 ## 0.8.0 — 2026-08-06
 
 Version 0.8.0 completes the Codex plugin roadmap and establishes the package's
