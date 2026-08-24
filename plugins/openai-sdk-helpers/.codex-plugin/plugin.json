@@ -1,6 +1,6 @@
 {
   "name": "openai-sdk-helpers",
-  "version": "0.8.1",
+  "version": "0.9.0",
   "description": "Build OpenAI SDK workflows with reusable typed helpers in Codex.",
   "author": {
     "name": "openai-sdk-helpers maintainers",
