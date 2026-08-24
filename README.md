@@ -121,6 +121,7 @@ The canonical inventory of shipped and planned surfaces is
 
 - centralized OpenAI settings and client creation;
 - optional shared operation metadata and lifecycle observers;
+- explicit conversation-state ownership and persistence contracts;
 - Responses API orchestration, structured outputs, files, tools, and websocket helpers;
 - Agents SDK wrappers, runners, search workflows, and reusable text agents;
 - typed Pydantic structures and Jinja prompt rendering;
@@ -163,6 +164,7 @@ and trust boundaries.
 - [Capability matrix](docs/capabilities.md) — canonical feature inventory and maturity
 - [Public API](docs/public-api.md) — intentional import surface
 - [Operation context](docs/operation-context.md) — lifecycle hooks, usage, diagnostics, and SDK boundaries
+- [Conversation state](docs/conversation-state.md) — ownership modes, compatibility, persistence, and migration
 - [Installation profiles](docs/installation.md) — core and optional dependencies
 - [Supported examples](examples/README.md) — executable and illustrative example policy
 - [Security policy](SECURITY.md) — confidential reporting and supported versions

@@ -26,6 +26,13 @@ compatibility contract unless listed here.
 - `run_observed_async`
 - `run_observed_sync`
 
+## Conversation state
+
+- `AgentRunState`
+- `ConversationStateMode`
+- `LocalMessageStore`
+- `ResponseContinuation`
+
 ## Errors
 
 - `OpenAISDKError`

@@ -16,9 +16,22 @@ from openai_sdk_helpers.runtime import (
     run_observed_async,
     run_observed_sync,
 )
+from openai_sdk_helpers.state import AgentRunState, resolve_agent_state
 from openai_sdk_helpers.utils.async_utils import run_coroutine_with_fallback
 
 from ..structure.base import StructureBase
+
+
+def _runner_state_kwargs(state: AgentRunState) -> dict[str, Any]:
+    """Return only explicitly selected server-managed state arguments."""
+    kwargs: dict[str, Any] = {}
+    if state.previous_response_id is not None:
+        kwargs["previous_response_id"] = state.previous_response_id
+    if state.auto_previous_response_id:
+        kwargs["auto_previous_response_id"] = True
+    if state.conversation_id is not None:
+        kwargs["conversation_id"] = state.conversation_id
+    return kwargs
 
 
 async def run_async(
@@ -28,6 +41,7 @@ async def run_async(
     context: Optional[Dict[str, Any]] = None,
     output_structure: Optional[type[StructureBase]] = None,
     session: Optional[Session] = None,
+    state: AgentRunState | None = None,
     operation_context: OperationContext | None = None,
 ) -> Any:
     """Run an Agent asynchronously.
@@ -43,7 +57,9 @@ async def run_async(
     output_structure : type[StructureBase] or None, default=None
         Optional type used to cast the final output.
     session : Session or None, default=None
-        Optional session for maintaining conversation history.
+        Backward-compatible shorthand for ``AgentRunState(session=session)``.
+    state : AgentRunState or None, default=None
+        Explicit client-managed session or server-managed continuation choice.
     operation_context : OperationContext or None, default=None
         Optional explicit lifecycle and observability context.
 
@@ -51,6 +67,11 @@ async def run_async(
     -------
     Any
         Original agent result, optionally converted to ``output_structure``.
+
+    Raises
+    ------
+    ValueError
+        If session and server-managed state mechanisms are mixed.
 
     Examples
     --------
@@ -62,13 +83,16 @@ async def run_async(
     ...     return result
     >>> asyncio.run(example())  # doctest: +SKIP
     """
+    resolved_state = resolve_agent_state(state=state, session=session)
+    state_kwargs = _runner_state_kwargs(resolved_state)
 
     async def execute() -> Any:
         result = await Runner.run(
             agent,
             cast(Any, input),
             context=context,
-            session=session,
+            session=resolved_state.session,
+            **state_kwargs,
         )
         if output_structure is not None:
             return result.final_output_as(output_structure)
@@ -84,6 +108,7 @@ def run_sync(
     context: Optional[Dict[str, Any]] = None,
     output_structure: Optional[type[StructureBase]] = None,
     session: Optional[Session] = None,
+    state: AgentRunState | None = None,
     operation_context: OperationContext | None = None,
 ) -> Any:
     """Run an Agent synchronously.
@@ -102,7 +127,9 @@ def run_sync(
     output_structure : type[StructureBase] or None, default=None
         Optional type used to cast the final output.
     session : Session or None, default=None
-        Optional session for maintaining conversation history.
+        Backward-compatible shorthand for ``AgentRunState(session=session)``.
+    state : AgentRunState or None, default=None
+        Explicit client-managed session or server-managed continuation choice.
     operation_context : OperationContext or None, default=None
         Optional explicit lifecycle and observability context.
 
@@ -113,6 +140,8 @@ def run_sync(
 
     Raises
     ------
+    ValueError
+        If session and server-managed state mechanisms are mixed.
     AsyncExecutionError
         If execution fails or times out.
 
@@ -122,9 +151,17 @@ def run_sync(
     >>> agent = Agent(name="test", instructions="test", model="gpt-4o-mini")
     >>> result = run_sync(agent, "What is 2+2?")  # doctest: +SKIP
     """
+    resolved_state = resolve_agent_state(state=state, session=session)
+    state_kwargs = _runner_state_kwargs(resolved_state)
 
     def execute() -> Any:
-        coro = Runner.run(agent, cast(Any, input), context=context, session=session)
+        coro = Runner.run(
+            agent,
+            cast(Any, input),
+            context=context,
+            session=resolved_state.session,
+            **state_kwargs,
+        )
         result: RunResult = run_coroutine_with_fallback(coro)
         if output_structure is not None:
             return result.final_output_as(output_structure)

@@ -16,6 +16,7 @@ Maturity meanings:
 | --- | --- | --- | --- | --- | --- | --- |
 | Settings and client creation | `openai_sdk_helpers.settings` | Configures the official OpenAI Python SDK | Stable | Core | Sync construction | Returns configured official SDK clients and accepts extra client keyword arguments |
 | Shared operation context | `openai_sdk_helpers.runtime` | Vendor-neutral lifecycle metadata that complements, but does not replace, official SDK tracing | Preview | Core | Sync and async observers | Original results and exceptions remain unchanged; Agents SDK tracing remains directly configurable |
+| Explicit conversation state | `openai_sdk_helpers.state` and Agents runners | Validates official Agents session and server-continuation choices; provides explicit local `ResponseMessages` storage | Preview | Core | Local validation plus matching sync/async runner forwarding | Underlying session objects, response IDs, conversation IDs, request kwargs, and message collections remain accessible |
 | Responses workflows | `openai_sdk_helpers.response` | Thin orchestration over the official Responses API | Supported | Core | Sync and async paths; websocket helpers are async/stream-oriented where appropriate | Callers retain SDK configuration, response identifiers, raw events, and result objects |
 | Agents workflows | `openai_sdk_helpers.agent` | Composes the official OpenAI Agents SDK | Supported | Core | Sync and async runners | Callers retain underlying Agents SDK objects, tools, sessions, and results |
 | Typed structures | `openai_sdk_helpers.structure` | Pydantic schemas for SDK inputs and outputs | Stable | Core; extraction structures require `extract` | Local | Pydantic models and generated schemas remain directly accessible |
@@ -37,7 +38,6 @@ They must pass the feature acceptance test in `PRODUCT.md` before implementation
 
 | Capability | Target | Roadmap status | Constraint |
 | --- | --- | --- | --- |
-| Explicit state and session semantics | `0.8.x` | Issue #139 | Must reject ambiguous continuation choices without replacing official SDK sessions |
 | Consolidated retrieval API | `0.9.0` | Issues #140–#142 | Must adapt existing file/vector-store helpers without hiding official resources |
 | MCP integration | `0.10.0` | Issues #143–#144 | Optional extra; explicit filtering, approvals, lifecycle, and failure isolation |
 | Realtime integration | `0.11.0` | Issues #145–#146 | Server-side lifecycle and event helpers only; no browser or audio-device application layer |
