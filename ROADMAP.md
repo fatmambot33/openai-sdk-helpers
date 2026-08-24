@@ -6,18 +6,17 @@ issue #147.
 
 ## 0.8.0 — platform foundation
 
-Repository implementation is complete and the release candidate is prepared.
+Published and verified on PyPI.
 
 - [x] #132 — make optional integrations truly optional.
-- [ ] #133 — verify PyPI Trusted Publisher and protected GitHub `pypi`
-      environment. The OIDC-only repository workflow is merged; owner-side
-      configuration remains.
+- [x] #133 — migrate PyPI publishing to Trusted Publishing and protect the
+      GitHub `pypi` environment.
 - [x] #134 — replace duplicated feature documentation with a capability matrix.
 - [x] #135 — execute supported examples and package smoke tests from the wheel.
 - [x] #136 — define confidential vulnerability reporting and security policy.
-- [ ] #137 — approve, merge, publish, and verify 0.8.0.
+- [x] #137 — approve, merge, publish, and verify 0.8.0.
 
-The 0.8.0 release candidate includes:
+The 0.8.0 release established:
 
 - the completed Codex plugin protocol, lifecycle, discovery, metadata,
   inspection, CLI, compatibility policy, and migration guidance;
@@ -26,17 +25,17 @@ The 0.8.0 release candidate includes:
 - canonical capabilities, installation, security, and release documentation;
 - Python 3.10–3.13, minimum/latest SDK, clean-install, and installed-wheel gates.
 
-Publication remains fail-closed until #133 records owner verification and #137
-receives explicit human release approval.
+## 0.8.1 — shared runtime contracts
 
-## 0.8.x — shared runtime contracts
+Implementation is complete and prepared for publication.
 
-- [ ] #138 — add a typed operation context and observability hooks.
-- [ ] #139 — define Responses continuation and Agents session semantics.
+- [x] #138 — add a typed operation context and observability hooks.
+- [x] #139 — define Responses continuation and Agents session semantics.
 
-These issues begin only after 0.8.0 is published. The implementation must reuse
-official SDK tracing and session behavior rather than building a parallel
-platform.
+The runtime layer reuses official SDK tracing and session behavior rather than
+building a parallel platform. Context is optional, diagnostics redact sensitive
+content by default, ambiguous state ownership fails before SDK execution, and
+local persistence remains explicitly caller-owned.
 
 ## 0.9.0 — retrieval consolidation
 
