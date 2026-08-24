@@ -330,7 +330,7 @@ class OpenAIRetrievalClient:
             return RetrievalOperationResult(
                 operation="vector_stores.files.attach",
                 resource=resource,
-                succeeded=resource.status != "failed",
+                succeeded=resource.status == "completed",
                 raw=raw,
             )
 
@@ -374,7 +374,7 @@ class OpenAIRetrievalClient:
             return RetrievalOperationResult(
                 operation="vector_stores.files.upload_and_poll",
                 resource=resource,
-                succeeded=resource.status != "failed",
+                succeeded=resource.status == "completed",
                 raw=raw,
             )
 
@@ -690,7 +690,7 @@ class AsyncOpenAIRetrievalClient:
             return RetrievalOperationResult(
                 operation="vector_stores.files.attach",
                 resource=resource,
-                succeeded=resource.status != "failed",
+                succeeded=resource.status == "completed",
                 raw=raw,
             )
 
@@ -734,7 +734,7 @@ class AsyncOpenAIRetrievalClient:
             return RetrievalOperationResult(
                 operation="vector_stores.files.upload_and_poll",
                 resource=resource,
-                succeeded=resource.status != "failed",
+                succeeded=resource.status == "completed",
                 raw=raw,
             )
 
