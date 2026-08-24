@@ -4,19 +4,21 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 0.9.0 - 2026-08-25
+
 - Added dependency-injected synchronous and asynchronous retrieval clients for explicit Files and Vector Stores lifecycle operations.
 - Added ordered partial-failure batch uploads, SDK-backed polling configuration, attachment status, explicit detach-versus-delete behavior, and optional operation observability.
 - Added direct synchronous and asynchronous vector-store search with explicit filters, ranking options, query rewriting, pagination metadata, strict or lenient normalization, and raw SDK escape hatches.
 - Added hosted File Search adapters for Responses and the Agents SDK, including included-result normalization and ordered file-citation extraction without hidden requests.
-- Added preview retrieval contracts for OpenAI files, vector stores, direct search results, and File Search configuration with raw SDK escape hatches.
-- Added a migration map separating resource lifecycle, search configuration, and message composition while preserving every existing retrieval import pending adapters.
+- Added typed common comparison and compound attribute filters while retaining explicit official SDK mapping escape hatches.
+- Added a migration map separating resource lifecycle, search configuration, and message composition while preserving legacy retrieval imports for compatibility.
 
 ## 0.8.1 - 2026-08-25
 
 - Added the optional typed `OperationContext` lifecycle shared by Responses, Agents, and Codex commands, with vendor-neutral observers, usage capture, explicit retry metadata, and safe diagnostics that redact sensitive content by default.
 - Added explicit conversation-state ownership through `AgentRunState` and `ResponseContinuation`, rejecting ambiguous combinations before SDK execution while preserving the existing `session=` shorthand.
 - Added caller-owned `LocalMessageStore` persistence with explicit save, resume, clear, close-without-save, and delete semantics.
-- Preserved original SDK results, exceptions, identifiers, tracing, and session objects without adding a telemetry backend or hidden state selection.
+- Preserved original SDK results, exceptions, identifiers, tracing, and session objects without adding a telemetry backend or hidden state mechanism.
 
 ## 0.8.0 - 2026-08-06
 
