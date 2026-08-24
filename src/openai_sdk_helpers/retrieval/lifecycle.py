@@ -156,9 +156,11 @@ class RetrievalBatchResult(Generic[ResourceT]):
         return not self.failed
 
 
-# Resolve postponed public annotations at runtime without creating an import cycle:
-# contracts imports this module only after defining RetrievalOperationResult.
+# Resolve postponed public annotations without a circular runtime dependency.
+from . import contracts as _contracts
 from .contracts import RetrievalOperationResult as RetrievalOperationResult
+
+setattr(_contracts, "VectorStoreFileReference", VectorStoreFileReference)
 
 
 __all__ = [
