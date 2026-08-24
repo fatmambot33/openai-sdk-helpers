@@ -27,7 +27,7 @@ The 0.8.0 release established:
 
 ## 0.8.1 — shared runtime contracts
 
-Implementation is complete and prepared for publication.
+Published and verified on PyPI.
 
 - [x] #138 — add a typed operation context and observability hooks.
 - [x] #139 — define Responses continuation and Agents session semantics.
@@ -39,13 +39,18 @@ local persistence remains explicitly caller-owned.
 
 ## 0.9.0 — retrieval consolidation
 
-- [ ] #140 — approve one public retrieval API and migration map.
-- [ ] #141 — implement typed file and vector-store lifecycle helpers.
-- [ ] #142 — add File Search configuration and normalized results.
+Implementation is complete; publication is the remaining release gate.
 
-The goal is one coherent surface over existing OpenAI files, vector stores, and
-File Search helpers, with backward-compatible adapters and access to raw SDK
-resources.
+- [x] #140 — approve one public retrieval API and migration map.
+- [x] #141 — implement typed file and vector-store lifecycle helpers.
+- [x] #142 — add File Search configuration and normalized results.
+
+The retrieval surface now provides dependency-injected synchronous and
+asynchronous Files and Vector Stores lifecycle operations, direct vector-store
+search, typed common attribute filters, Responses and Agents File Search
+adapters, normalized results and citations, and raw official SDK escape hatches.
+Legacy retrieval imports remain available for compatibility and migration is
+explicit rather than automatic.
 
 ## 0.10.0 — MCP
 
