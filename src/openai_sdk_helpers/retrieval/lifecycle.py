@@ -17,16 +17,18 @@ class PollingConfig:
     poll_interval_ms : int, default=1000
         Delay between SDK polling requests in milliseconds.
     timeout_seconds : float or None, default=None
-        Request timeout forwarded to the official SDK ``create_and_poll`` or
-        ``upload_and_poll`` helper. This is not an overall ingestion deadline;
-        ``None`` keeps the injected client's request-timeout configuration.
+        Request timeout forwarded when attaching an existing file through the
+        official SDK ``create_and_poll`` helper. The SDK ``upload_and_poll``
+        helper does not accept this keyword, so upload-and-poll rejects a
+        configured timeout before making an API call. This value is not an
+        overall ingestion deadline.
     terminal_statuses : tuple[str, ...], default=("completed", "failed", "cancelled")
         SDK statuses accepted after the polling helper returns.
 
     Methods
     -------
     sdk_kwargs()
-        Return keyword arguments supported by SDK polling helpers.
+        Return polling and optional request-timeout keyword arguments.
     validate_terminal_status(status)
         Require a configured terminal status after polling returns.
     """
@@ -49,7 +51,7 @@ class PollingConfig:
         object.__setattr__(self, "terminal_statuses", statuses)
 
     def sdk_kwargs(self) -> dict[str, object]:
-        """Return keyword arguments supported by SDK polling helpers."""
+        """Return polling and optional request-timeout keyword arguments."""
         kwargs: dict[str, object] = {"poll_interval_ms": self.poll_interval_ms}
         if self.timeout_seconds is not None:
             kwargs["timeout"] = self.timeout_seconds
