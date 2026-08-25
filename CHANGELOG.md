@@ -4,6 +4,9 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+- Added an opt-in typed `openai_sdk_helpers.mcp` surface for official hosted MCP tools and Agents SDK Streamable HTTP servers, with explicit connection ownership, raw SDK access, safe operation observation, and no hidden discovery, trust, execution, or retry behavior.
+- Added the explicit `mcp` installation profile, network-free transport tests, focused MCP documentation, and actionable missing-integration errors.
+
 ## 0.9.1 - 2026-08-25
 
 - Harden direct vector-store search normalization by forwarding only normalized queries, rejecting more than five direct-search queries before the SDK call, requiring real filenames in strict mode, and validating result attribute keys and scalar values.
