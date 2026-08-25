@@ -5,10 +5,17 @@ SDK and hosted MCP surfaces. It does not implement the Model Context Protocol,
 discover servers globally, connect during import, execute tools during discovery,
 or hide the official SDK objects.
 
-The base package already depends on the Agents SDK, which currently carries its
-MCP transport dependency. “Optional” therefore means the MCP public surface is
-used only when an application imports and configures it; no MCP server is
-constructed, connected, or exposed to a model by default.
+Install the explicit profile before using this surface:
+
+```console
+pip install "openai-sdk-helpers[mcp]"
+```
+
+The base package already depends on the Agents SDK, which may itself carry a
+compatible MCP dependency. The explicit `mcp` extra is nevertheless the stable
+installation contract for applications that use this module. No MCP server is
+constructed, connected, discovered, trusted, or exposed to a model by importing
+the package.
 
 ## Supported transports
 
@@ -23,10 +30,35 @@ Agents SDK use.
 
 ## Hosted MCP
 
-Hosted MCP is represented by `HostedMCPConfig` and built into the official
-Agents SDK `HostedMCPTool`:
+Hosted MCP is represented by `HostedMCPConfig`. The same explicit configuration
+can be used directly with the Responses API or wrapped in the official Agents SDK
+`HostedMCPTool`.
+
+### Responses API
 
 ```python
+from openai import OpenAI
+from openai_sdk_helpers.mcp import HostedMCPConfig
+
+client = OpenAI()
+config = HostedMCPConfig(
+    server_label="documentation",
+    server_url="https://example.test/mcp",
+    require_approval="always",
+    allowed_tools=("search", "read"),
+)
+
+response = client.responses.create(
+    model="gpt-5",
+    input="Use the documentation server.",
+    tools=[config.as_tool_config()],
+)
+```
+
+### Agents SDK
+
+```python
+from agents import Agent
 from openai_sdk_helpers.mcp import HostedMCPConfig, build_hosted_mcp_tool
 
 config = HostedMCPConfig(
@@ -36,11 +68,12 @@ config = HostedMCPConfig(
     allowed_tools=("search", "read"),
 )
 tool = build_hosted_mcp_tool(config)
+agent = Agent(name="Assistant", tools=[tool])
 ```
 
-`build_hosted_mcp_tool()` performs local object construction only. It does not
-contact the server or run an agent. The returned value is the original official
-SDK tool.
+`as_tool_config()` is a local transformation. `build_hosted_mcp_tool()` performs
+local official SDK object construction. Neither contacts the server nor runs a
+model.
 
 The configuration keeps these values explicit:
 
@@ -63,6 +96,7 @@ values.
 Create an unconnected official Agents SDK server:
 
 ```python
+from agents import Agent, Runner
 from openai_sdk_helpers.mcp import (
     StreamableHTTPMCPConfig,
     build_streamable_http_server,
@@ -82,7 +116,7 @@ managed = build_streamable_http_server(
 assert not managed.connected
 server = await managed.connect()
 try:
-    agent = Agent(..., mcp_servers=[server])
+    agent = Agent(name="Assistant", mcp_servers=[server])
     result = await Runner.run(agent, "Use the documentation server.")
 finally:
     await managed.cleanup()
@@ -110,7 +144,7 @@ The raw official server remains available as `raw_server` and is returned by
 
 ```python
 async with managed as server:
-    agent = Agent(..., mcp_servers=[server])
+    agent = Agent(name="Assistant", mcp_servers=[server])
     ...
 ```
 
@@ -153,6 +187,13 @@ Issue #144 adds explicit bounded retry and failure-isolation policy where it can
 be implemented without hiding SDK behavior. It must not retry mutating tool
 calls automatically.
 
+If the MCP/Agents transport integration cannot be imported, the builders fail
+with the actionable installation command:
+
+```console
+pip install "openai-sdk-helpers[mcp]"
+```
+
 ## Trust boundary
 
 MCP discovery does not establish trust. A server can expose read-only or
@@ -174,5 +215,11 @@ read-only is actually side-effect free.
 
 The MCP module is a focused import surface and is not added to the package root.
 Existing Responses, Agents, Codex, retrieval, and direct official SDK workflows
-are unchanged. The adapters use lazy official SDK imports so environments fail
-with an actionable import error only when an unavailable MCP builder is invoked.
+are unchanged. The builders use lazy official SDK imports so simply importing
+`openai_sdk_helpers.mcp` does not create a connection or perform discovery.
+
+CI validates the explicit `mcp` install profile and the package's supported
+minimum/latest OpenAI Agents dependency range. The Streamable HTTP adapter uses
+stable official constructor fields shared by those supported versions; advanced
+filtering, caching, retries, approval callbacks, and failure policies remain the
+separate #144 layer.
