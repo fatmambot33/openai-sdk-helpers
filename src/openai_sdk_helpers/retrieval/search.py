@@ -631,7 +631,9 @@ def _attributes(raw_item: object) -> dict[str, AttributeValue]:
         if not isinstance(key, str):
             raise TypeError("attribute keys must be strings")
         if not isinstance(value, (str, bool, int, float)):
-            raise TypeError("attribute values must be strings, booleans, integers, or floats")
+            raise TypeError(
+                "attribute values must be strings, booleans, integers, or floats"
+            )
         normalized[key] = value
     return normalized
 
