@@ -23,6 +23,8 @@ jobs:
             target: ".[extract]"
           - profile: ui
             target: ".[ui]"
+          - profile: mcp
+            target: ".[mcp]"
           - profile: all
             target: ".[all]"
 
