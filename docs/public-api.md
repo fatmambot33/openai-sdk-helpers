@@ -155,9 +155,27 @@ compatibility contract unless listed here.
 - `optimize_extractor_prompt`
 - `optimize_extractor_prompt_with_agent`
 
+## Focused MCP namespace
+
+MCP remains intentionally absent from the package root. The supported preview
+surface is exported explicitly from `openai_sdk_helpers.mcp`:
+
+- `HostedMCPConfig`
+- `MCPServerProtocol`
+- `MCPTransport`
+- `ManagedMCPServer`
+- `StreamableHTTPMCPConfig`
+- `build_hosted_mcp_tool`
+- `build_streamable_http_server`
+
+This focused namespace preserves the underlying official SDK objects and does
+not imply connection, discovery, trust, or tool execution when imported.
+
 ## Compatibility policy
 
 The package-root export list is defined by `openai_sdk_helpers.__all__` and is
 covered by regression tests. Removing or renaming one of these names is a
 breaking API change and must follow the project's deprecation and semantic
-versioning policy.
+versioning policy. Focused namespaces with their own explicit `__all__` contract,
+including `openai_sdk_helpers.mcp`, follow the same deliberate review policy for
+removals or renames.
