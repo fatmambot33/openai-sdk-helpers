@@ -65,6 +65,27 @@ def _validate_ui() -> None:
     assert StreamlitAppRegistry is not None
 
 
+def _validate_mcp() -> None:
+    """Validate the MCP transport installation profile without connecting."""
+    import mcp  # noqa: F401
+    from openai_sdk_helpers.mcp import (
+        HostedMCPConfig,
+        StreamableHTTPMCPConfig,
+        build_hosted_mcp_tool,
+        build_streamable_http_server,
+    )
+
+    hosted = HostedMCPConfig(
+        server_label="validation",
+        server_url="https://example.test/mcp",
+    )
+    streamable = StreamableHTTPMCPConfig(url="https://example.test/mcp")
+    assert hosted.server_label == "validation"
+    assert streamable.url == "https://example.test/mcp"
+    assert callable(build_hosted_mcp_tool)
+    assert callable(build_streamable_http_server)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run validation for one installation profile.
 
@@ -79,7 +100,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         Zero when the selected installation profile is valid.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("profile", choices=("core", "extract", "ui", "all"))
+    parser.add_argument(
+        "profile",
+        choices=("core", "extract", "ui", "mcp", "all"),
+    )
     args = parser.parse_args(argv)
 
     if args.profile == "core":
@@ -88,9 +112,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         _validate_extract()
     elif args.profile == "ui":
         _validate_ui()
+    elif args.profile == "mcp":
+        _validate_mcp()
     else:
         _validate_extract()
         _validate_ui()
+        _validate_mcp()
     return 0
 
 
