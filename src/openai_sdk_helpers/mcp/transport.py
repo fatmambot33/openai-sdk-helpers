@@ -7,10 +7,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Protocol, cast
 
-from openai_sdk_helpers.runtime import (
-    OperationContext,
-    run_observed_async,
-)
+from ..runtime import OperationContext, run_observed_async
 
 
 class MCPTransport(str, Enum):
@@ -37,8 +34,13 @@ class HostedMCPConfig:
     server_description : str or None, default=None
         Optional description sent with the hosted tool configuration.
     authorization : str or None, default=None
-        Optional caller-provided authorization value. It is never logged or
-        copied into diagnostic metadata by this adapter.
+        Optional caller-provided authorization value. It is excluded from the
+        dataclass representation and never copied into operation diagnostics.
+
+    Methods
+    -------
+    as_tool_config()
+        Return the official SDK-shaped hosted MCP tool configuration.
     """
 
     server_label: str
@@ -62,6 +64,8 @@ class HostedMCPConfig:
         object.__setattr__(self, "allowed_tools", tools)
         if isinstance(self.require_approval, Mapping):
             object.__setattr__(self, "require_approval", dict(self.require_approval))
+        elif not isinstance(self.require_approval, str):
+            raise TypeError("require_approval must be a string or mapping")
         elif not self.require_approval.strip():
             raise ValueError("require_approval must not be empty")
         if self.server_description is not None:
@@ -71,7 +75,13 @@ class HostedMCPConfig:
             raise ValueError("authorization must not be empty")
 
     def as_tool_config(self) -> dict[str, Any]:
-        """Return the official SDK-shaped hosted MCP tool configuration."""
+        """Return the official SDK-shaped hosted MCP tool configuration.
+
+        Returns
+        -------
+        dict[str, Any]
+            Fresh mapping suitable for ``HostedMCPTool(tool_config=...)``.
+        """
         config: dict[str, Any] = {
             "type": "mcp",
             "server_label": self.server_label,
@@ -102,7 +112,8 @@ class StreamableHTTPMCPConfig:
     name : str or None, default=None
         Optional local server display name.
     headers : Mapping[str, str], default={}
-        Caller-owned request headers copied at construction.
+        Caller-owned request headers copied at construction. Values are excluded
+        from the dataclass representation.
     timeout_seconds : float, default=5.0
         Request timeout passed to the MCP transport.
     sse_read_timeout_seconds : float, default=300.0
@@ -111,6 +122,11 @@ class StreamableHTTPMCPConfig:
         Whether the transport should request session termination on cleanup.
     use_structured_content : bool, default=False
         Preserve structured MCP content where supported by the Agents SDK.
+
+    Methods
+    -------
+    as_params()
+        Return official Streamable HTTP transport parameters.
     """
 
     url: str
@@ -131,13 +147,22 @@ class StreamableHTTPMCPConfig:
             raise ValueError("timeout_seconds must be positive")
         if self.sse_read_timeout_seconds <= 0:
             raise ValueError("sse_read_timeout_seconds must be positive")
-        headers = {
-            _required(key, "header_name"): value for key, value in self.headers.items()
-        }
+        headers: dict[str, str] = {}
+        for key, value in self.headers.items():
+            normalized_key = _required(key, "header_name")
+            if not isinstance(value, str):
+                raise TypeError("header values must be strings")
+            headers[normalized_key] = value
         object.__setattr__(self, "headers", headers)
 
     def as_params(self) -> dict[str, Any]:
-        """Return official Streamable HTTP transport parameters."""
+        """Return official Streamable HTTP transport parameters.
+
+        Returns
+        -------
+        dict[str, Any]
+            Fresh parameters mapping for ``MCPServerStreamableHttp``.
+        """
         return {
             "url": self.url,
             "headers": dict(self.headers),
@@ -148,7 +173,15 @@ class StreamableHTTPMCPConfig:
 
 
 class MCPServerProtocol(Protocol):
-    """Minimal lifecycle exposed by official Agents SDK MCP servers."""
+    """Minimal lifecycle exposed by official Agents SDK MCP servers.
+
+    Methods
+    -------
+    connect()
+        Connect the server transport.
+    cleanup()
+        Clean up the server transport.
+    """
 
     async def connect(self) -> None:
         """Connect the server transport."""
@@ -169,6 +202,13 @@ class ManagedMCPServer:
         lifecycle, not credentials, application state, or remote server data.
     transport : MCPTransport
         Transport identity used for diagnostics.
+
+    Methods
+    -------
+    connect(*, operation_context=None)
+        Connect explicitly and return the original SDK server.
+    cleanup(*, operation_context=None)
+        Clean up explicitly; repeated cleanup is a no-op.
     """
 
     def __init__(self, server: MCPServerProtocol, transport: MCPTransport) -> None:
@@ -207,6 +247,11 @@ class ManagedMCPServer:
         -------
         MCPServerProtocol
             Underlying official server.
+
+        Raises
+        ------
+        BaseException
+            Original SDK connection error, cancellation, or process interrupt.
         """
         if self._connected:
             return self._server
@@ -223,7 +268,18 @@ class ManagedMCPServer:
         *,
         operation_context: OperationContext | None = None,
     ) -> None:
-        """Clean up explicitly; repeated cleanup is a no-op."""
+        """Clean up explicitly; repeated cleanup is a no-op.
+
+        Parameters
+        ----------
+        operation_context : OperationContext or None, default=None
+            Optional lifecycle observer context.
+
+        Raises
+        ------
+        BaseException
+            Original SDK cleanup error, cancellation, or process interrupt.
+        """
         if not self._connected:
             return
 
@@ -243,7 +299,23 @@ class ManagedMCPServer:
 
 
 def build_hosted_mcp_tool(config: HostedMCPConfig) -> object:
-    """Build the official Agents SDK hosted MCP tool without executing it."""
+    """Build the official Agents SDK hosted MCP tool without executing it.
+
+    Parameters
+    ----------
+    config : HostedMCPConfig
+        Explicit hosted MCP configuration.
+
+    Returns
+    -------
+    object
+        Original official Agents SDK ``HostedMCPTool`` instance.
+
+    Raises
+    ------
+    ImportError
+        If the installed MCP/Agents integration is unavailable.
+    """
     hosted_tool_type = _load_hosted_mcp_tool_type()
     return hosted_tool_type(tool_config=config.as_tool_config())
 
@@ -251,7 +323,23 @@ def build_hosted_mcp_tool(config: HostedMCPConfig) -> object:
 def build_streamable_http_server(
     config: StreamableHTTPMCPConfig,
 ) -> ManagedMCPServer:
-    """Build an unconnected official Streamable HTTP MCP server."""
+    """Build an unconnected official Streamable HTTP MCP server.
+
+    Parameters
+    ----------
+    config : StreamableHTTPMCPConfig
+        Explicit Streamable HTTP transport configuration.
+
+    Returns
+    -------
+    ManagedMCPServer
+        Lifecycle wrapper preserving access to the original SDK server.
+
+    Raises
+    ------
+    ImportError
+        If the installed MCP/Agents integration is unavailable.
+    """
     server_type = _load_streamable_http_server_type()
     kwargs: dict[str, Any] = {
         "params": config.as_params(),
@@ -268,7 +356,8 @@ def _load_hosted_mcp_tool_type() -> type[Any]:
         from agents import HostedMCPTool
     except ImportError as error:
         raise ImportError(
-            "Hosted MCP requires a compatible openai-agents installation."
+            'Hosted MCP is unavailable. Install with '
+            'pip install "openai-sdk-helpers[mcp]".'
         ) from error
     return HostedMCPTool
 
@@ -278,12 +367,15 @@ def _load_streamable_http_server_type() -> type[Any]:
         from agents.mcp import MCPServerStreamableHttp
     except ImportError as error:
         raise ImportError(
-            "Streamable HTTP MCP requires a compatible openai-agents installation."
+            'Streamable HTTP MCP is unavailable. Install with '
+            'pip install "openai-sdk-helpers[mcp]".'
         ) from error
     return MCPServerStreamableHttp
 
 
 def _required(value: str, name: str) -> str:
+    if not isinstance(value, str):
+        raise TypeError(f"{name} must be a string")
     normalized = value.strip()
     if not normalized:
         raise ValueError(f"{name} must not be empty")
