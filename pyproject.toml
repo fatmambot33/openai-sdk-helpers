@@ -42,9 +42,11 @@ dev = [
 ]
 extract = ["langextract"]
 ui = ["streamlit"]
+mcp = ["mcp>=1.19.0,<3"]
 all = [
     "langextract",
     "streamlit",
+    "mcp>=1.19.0,<3",
 ]
 
 [project.scripts]
