@@ -1,5 +1,46 @@
 # Release notes
 
+## 0.9.1 — 2026-08-25
+
+Version 0.9.1 is a corrective patch for the 0.9 retrieval surface based on
+delayed post-merge review of #162. It adds no new product scope and does not
+change the 0.8.x release line.
+
+### Retrieval correctness
+
+- Direct vector-store search now sends the same normalized query values exposed
+  through `RetrievalSearchPage.query`; blank sequence entries are removed before
+  SDK execution.
+- More than five normalized direct-search queries fail locally before either a
+  synchronous or asynchronous SDK request.
+- Strict result normalization now requires an actual filename rather than
+  substituting the file identifier; lenient mode omits malformed results.
+- Result attributes are validated against `Mapping[str, AttributeValue]` with
+  string keys and scalar string, boolean, integer, or float values. Malformed
+  attributes raise in strict mode and cause the result to be omitted in lenient
+  mode.
+
+### API and documentation compliance
+
+- Package-internal retrieval imports now use the repository-required relative
+  import style.
+- Public search filters, adapters, and search mixins now include the required
+  NumPy-style method and function documentation.
+- Added deterministic sync and async regression tests for every behavioral
+  delayed-review finding.
+
+### Compatibility
+
+No public symbols were removed, no dependencies were added, and legacy retrieval
+imports are unchanged. Python 3.10–3.13 and OpenAI Python
+`>=2.45.0,<4.0.0` remain supported.
+
+### Upgrade
+
+```bash
+pip install --upgrade openai-sdk-helpers==0.9.1
+```
+
 ## 0.9.0 — 2026-08-25
 
 Version 0.9.0 consolidates retrieval around one typed, SDK-first public surface
