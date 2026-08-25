@@ -170,6 +170,16 @@ def test_sync_search_forwards_explicit_settings_and_normalizes_page() -> None:
     ]
 
 
+def test_sync_search_forwards_only_normalized_query_values() -> None:
+    sdk = SyncClient()
+    client = OpenAIRetrievalClient(sdk)
+
+    page = client.search("vs_1", (" first ", " ", "second"))
+
+    assert page.query == ("first", "second")
+    assert sdk.vector_stores.calls[0][1]["query"] == ["first", "second"]
+
+
 @pytest.mark.parametrize("value", [0, 51])
 def test_search_rejects_invalid_result_limits_before_api_call(value: int) -> None:
     sdk = SyncClient()
@@ -177,6 +187,16 @@ def test_search_rejects_invalid_result_limits_before_api_call(value: int) -> Non
 
     with pytest.raises(ValueError, match="between 1 and 50"):
         client.search("vs_1", "question", max_num_results=value)
+
+    assert sdk.vector_stores.calls == []
+
+
+def test_sync_search_rejects_more_than_five_normalized_queries() -> None:
+    sdk = SyncClient()
+    client = OpenAIRetrievalClient(sdk)
+
+    with pytest.raises(ValueError, match="at most 5"):
+        client.search("vs_1", ("one", "two", "three", "four", "five", "six"))
 
     assert sdk.vector_stores.calls == []
 
@@ -191,6 +211,20 @@ async def test_async_search_matches_sync_result_contract() -> None:
     assert page.query == ("question",)
     assert page.data[0].file_id == "file_async"
     assert sdk.vector_stores.calls == [("vs_async", {"query": "question"})]
+
+
+@pytest.mark.asyncio
+async def test_async_search_rejects_more_than_five_normalized_queries() -> None:
+    sdk = AsyncClient()
+    client = AsyncOpenAIRetrievalClient(sdk)
+
+    with pytest.raises(ValueError, match="at most 5"):
+        await client.search(
+            "vs_async",
+            ("one", "two", "three", "four", "five", "six"),
+        )
+
+    assert sdk.vector_stores.calls == []
 
 
 def test_empty_search_results_are_valid() -> None:
@@ -214,6 +248,46 @@ def test_malformed_results_support_strict_and_lenient_modes() -> None:
     page = normalize_search_page(raw, query="question", strict=False)
     assert [result.file_id for result in page.data] == ["file_1"]
     assert page.raw is raw
+
+
+def test_missing_filename_is_malformed_in_strict_and_lenient_modes() -> None:
+    missing_filename = SimpleNamespace(
+        file_id="file_missing_name",
+        score=0.8,
+        attributes={},
+        content=(SimpleNamespace(type="text", text="content"),),
+    )
+    raw = SimpleNamespace(data=(missing_filename,), has_more=False)
+
+    with pytest.raises(RetrievalNormalizationError, match="filename"):
+        normalize_search_page(raw, query="question", strict=True)
+
+    page = normalize_search_page(raw, query="question", strict=False)
+    assert page.data == ()
+
+
+@pytest.mark.parametrize(
+    "attributes",
+    [
+        {1: "eu"},
+        {"tags": ["a"]},
+    ],
+)
+def test_malformed_attributes_are_rejected_or_omitted(attributes: object) -> None:
+    malformed = SimpleNamespace(
+        file_id="file_bad_attributes",
+        filename="bad.txt",
+        score=0.8,
+        attributes=attributes,
+        content=(SimpleNamespace(type="text", text="content"),),
+    )
+    raw = SimpleNamespace(data=(malformed,), has_more=False)
+
+    with pytest.raises(RetrievalNormalizationError, match="attribute"):
+        normalize_search_page(raw, query="question", strict=True)
+
+    page = normalize_search_page(raw, query="question", strict=False)
+    assert page.data == ()
 
 
 def test_responses_adapter_copies_and_appends_without_mutation() -> None:

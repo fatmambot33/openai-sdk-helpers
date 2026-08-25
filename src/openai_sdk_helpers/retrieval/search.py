@@ -7,12 +7,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Protocol, TypeAlias, cast
 
-from openai_sdk_helpers.runtime import (
-    OperationContext,
-    run_observed_async,
-    run_observed_sync,
-)
-
+from ..runtime import OperationContext, run_observed_async, run_observed_sync
 from .contracts import (
     AttributeValue,
     FileSearchConfig,
@@ -45,7 +40,13 @@ class CompoundOperator(str, Enum):
 
 
 class SearchFilter(Protocol):
-    """Serializable official vector-store attribute filter."""
+    """Serializable official vector-store attribute filter.
+
+    Methods
+    -------
+    as_dict()
+        Return the SDK-shaped filter mapping.
+    """
 
     def as_dict(self) -> dict[str, Any]:
         """Return the SDK-shaped filter mapping."""
@@ -65,6 +66,11 @@ class ComparisonFilter:
     value : AttributeValue or tuple[AttributeValue, ...]
         Scalar value for ordinary comparisons or a non-empty tuple for
         ``in``/``nin``.
+
+    Methods
+    -------
+    as_dict()
+        Return the SDK-shaped comparison filter.
     """
 
     key: str
@@ -103,7 +109,20 @@ class ComparisonFilter:
 
 @dataclass(frozen=True, slots=True)
 class CompoundFilter:
-    """Validated ``and`` or ``or`` group of attribute filters."""
+    """Validated ``and`` or ``or`` group of attribute filters.
+
+    Parameters
+    ----------
+    operator : CompoundOperator
+        Official compound operator.
+    filters : tuple[SearchFilter, ...]
+        At least two serializable child filters.
+
+    Methods
+    -------
+    as_dict()
+        Return the SDK-shaped compound filter.
+    """
 
     operator: CompoundOperator
     filters: tuple[SearchFilter, ...]
@@ -240,8 +259,15 @@ def normalize_search_page(
     -------
     RetrievalSearchPage
         Normalized page. Empty SDK data produces ``data=()``.
+
+    Raises
+    ------
+    ValueError
+        If the direct-search query is empty or contains more than five values.
+    RetrievalNormalizationError
+        If ``strict`` is true and an SDK result cannot be normalized.
     """
-    queries = _queries(query)
+    queries = _queries(query, max_items=5)
     normalized: list[RetrievalSearchResult] = []
     for index, raw_item in enumerate(_read(raw_page, "data", ()) or ()):
         try:
@@ -264,7 +290,28 @@ def normalize_file_search_call(
     *,
     strict: bool = True,
 ) -> FileSearchCall:
-    """Normalize one Responses File Search tool call and included results."""
+    """Normalize one Responses File Search tool call and included results.
+
+    Parameters
+    ----------
+    raw_call : object
+        Official SDK File Search tool call.
+    strict : bool, default=True
+        Raise when an included result is malformed. When false, malformed
+        included results are omitted and the raw call remains available.
+
+    Returns
+    -------
+    FileSearchCall
+        Normalized call preserving the original SDK object.
+
+    Raises
+    ------
+    ValueError
+        If the tool call does not contain at least one usable query.
+    RetrievalNormalizationError
+        If ``strict`` is true and an included result cannot be normalized.
+    """
     raw_results = _read(raw_call, "results", ()) or ()
     results: list[RetrievalSearchResult] = []
     for index, raw_item in enumerate(raw_results):
@@ -285,7 +332,18 @@ def normalize_file_search_call(
 
 
 def collect_file_citations(response: object) -> tuple[FileCitation, ...]:
-    """Collect file citation annotations from an SDK response in output order."""
+    """Collect file citation annotations from an SDK response in output order.
+
+    Parameters
+    ----------
+    response : object
+        Official SDK response or an SDK-shaped object with output annotations.
+
+    Returns
+    -------
+    tuple[FileCitation, ...]
+        Ordered normalized citations. Non-file annotations are ignored.
+    """
     citations: list[FileCitation] = []
     for output in _read(response, "output", ()) or ():
         for content in _read(output, "content", ()) or ():
@@ -312,7 +370,21 @@ def apply_file_search_to_response(
     request_kwargs: Mapping[str, Any],
     config: FileSearchConfig,
 ) -> dict[str, Any]:
-    """Copy Responses request kwargs and append explicit File Search settings."""
+    """Copy Responses request kwargs and append explicit File Search settings.
+
+    Parameters
+    ----------
+    request_kwargs : Mapping[str, Any]
+        Existing Responses request keyword arguments. The mapping is not
+        mutated.
+    config : FileSearchConfig
+        Explicit File Search configuration to append.
+
+    Returns
+    -------
+    dict[str, Any]
+        Copied request arguments with File Search tool and include settings.
+    """
     resolved = dict(request_kwargs)
     tools: list[Any] = list(cast(Sequence[Any], resolved.get("tools") or ()))
     tools.append(config.as_tool())
@@ -329,7 +401,18 @@ def apply_file_search_to_response(
 
 
 def build_agents_file_search_tool(config: FileSearchConfig) -> object:
-    """Create the official Agents SDK ``FileSearchTool`` from one config."""
+    """Create the official Agents SDK ``FileSearchTool`` from one config.
+
+    Parameters
+    ----------
+    config : FileSearchConfig
+        Explicit File Search configuration.
+
+    Returns
+    -------
+    object
+        Official Agents SDK ``FileSearchTool`` instance.
+    """
     from agents import FileSearchTool
 
     kwargs: dict[str, Any] = {
@@ -346,7 +429,13 @@ def build_agents_file_search_tool(config: FileSearchConfig) -> object:
 
 
 class SyncSearchMixin:
-    """Direct vector-store search for a synchronous retrieval client."""
+    """Direct vector-store search for a synchronous retrieval client.
+
+    Methods
+    -------
+    search(...)
+        Search one vector store and normalize results in SDK order.
+    """
 
     def search(
         self,
@@ -360,15 +449,49 @@ class SyncSearchMixin:
         strict: bool = True,
         operation_context: OperationContext | None = None,
     ) -> RetrievalSearchPage:
-        """Search one vector store and normalize results in SDK order."""
+        """Search one vector store and normalize results in SDK order.
+
+        Parameters
+        ----------
+        vector_store_id : str
+            Existing vector-store identifier.
+        query : str or Sequence[str]
+            One to five non-empty search queries. Blank sequence entries are
+            removed before the SDK request.
+        filters : SearchFilter, Mapping[str, Any], or None, default=None
+            Validated filter or explicit official SDK filter mapping.
+        max_num_results : int or None, default=None
+            Requested result count from 1 through 50.
+        ranking_options : Mapping[str, Any] or None, default=None
+            Official ranking options passed through unchanged.
+        rewrite_query : bool or None, default=None
+            Explicit query-rewrite setting passed through when provided.
+        strict : bool, default=True
+            Raise on malformed SDK result items instead of omitting them.
+        operation_context : OperationContext or None, default=None
+            Optional shared operation metadata and observer hooks.
+
+        Returns
+        -------
+        RetrievalSearchPage
+            Normalized page preserving the raw SDK page and result objects.
+
+        Raises
+        ------
+        ValueError
+            If the vector-store identifier, query count, or result limit is
+            invalid.
+        RetrievalNormalizationError
+            If ``strict`` is true and an SDK result cannot be normalized.
+        """
         vector_store_id = _identifier(vector_store_id, "vector_store_id")
-        queries = _queries(query)
+        queries = _queries(query, max_items=5)
         _validate_max_results(max_num_results)
         sdk_client = cast(Any, self).sdk_client
 
         def execute() -> RetrievalSearchPage:
             kwargs = _search_kwargs(
-                query=query,
+                query=queries,
                 filters=filters,
                 max_num_results=max_num_results,
                 ranking_options=ranking_options,
@@ -381,7 +504,13 @@ class SyncSearchMixin:
 
 
 class AsyncSearchMixin:
-    """Direct vector-store search for an asynchronous retrieval client."""
+    """Direct vector-store search for an asynchronous retrieval client.
+
+    Methods
+    -------
+    search(...)
+        Search one vector store and normalize results in SDK order.
+    """
 
     async def search(
         self,
@@ -395,15 +524,49 @@ class AsyncSearchMixin:
         strict: bool = True,
         operation_context: OperationContext | None = None,
     ) -> RetrievalSearchPage:
-        """Search one vector store and normalize results in SDK order."""
+        """Search one vector store and normalize results in SDK order.
+
+        Parameters
+        ----------
+        vector_store_id : str
+            Existing vector-store identifier.
+        query : str or Sequence[str]
+            One to five non-empty search queries. Blank sequence entries are
+            removed before the SDK request.
+        filters : SearchFilter, Mapping[str, Any], or None, default=None
+            Validated filter or explicit official SDK filter mapping.
+        max_num_results : int or None, default=None
+            Requested result count from 1 through 50.
+        ranking_options : Mapping[str, Any] or None, default=None
+            Official ranking options passed through unchanged.
+        rewrite_query : bool or None, default=None
+            Explicit query-rewrite setting passed through when provided.
+        strict : bool, default=True
+            Raise on malformed SDK result items instead of omitting them.
+        operation_context : OperationContext or None, default=None
+            Optional shared operation metadata and observer hooks.
+
+        Returns
+        -------
+        RetrievalSearchPage
+            Normalized page preserving the raw SDK page and result objects.
+
+        Raises
+        ------
+        ValueError
+            If the vector-store identifier, query count, or result limit is
+            invalid.
+        RetrievalNormalizationError
+            If ``strict`` is true and an SDK result cannot be normalized.
+        """
         vector_store_id = _identifier(vector_store_id, "vector_store_id")
-        queries = _queries(query)
+        queries = _queries(query, max_items=5)
         _validate_max_results(max_num_results)
         sdk_client = cast(Any, self).sdk_client
 
         async def execute() -> RetrievalSearchPage:
             kwargs = _search_kwargs(
-                query=query,
+                query=queries,
                 filters=filters,
                 max_num_results=max_num_results,
                 ranking_options=ranking_options,
@@ -416,27 +579,23 @@ class AsyncSearchMixin:
 
 
 def _normalize_result(raw_item: object) -> RetrievalSearchResult:
-    file_id = _read(raw_item, "file_id") or _read(raw_item, "id")
-    filename = _read(raw_item, "filename") or file_id
+    file_id = _read(raw_item, "file_id")
+    if file_id is None:
+        file_id = _read(raw_item, "id")
+    filename = _read(raw_item, "filename")
+    normalized_file_id = _required_text(file_id, "file_id")
+    normalized_filename = _required_text(filename, "filename")
     score = _read(raw_item, "score")
-    if not file_id:
-        raise ValueError("file_id is missing")
-    if not filename:
-        raise ValueError("filename is missing")
     if not isinstance(score, (int, float)) or isinstance(score, bool):
         raise TypeError("score must be numeric")
     if not 0 <= float(score) <= 1:
         raise ValueError("score must be between 0 and 1")
-    content = _content(raw_item)
-    attributes = _read(raw_item, "attributes", {}) or {}
-    if not isinstance(attributes, Mapping):
-        raise TypeError("attributes must be a mapping")
     return RetrievalSearchResult(
-        file_id=str(file_id),
-        filename=str(filename),
+        file_id=normalized_file_id,
+        filename=normalized_filename,
         score=float(score),
-        content=content,
-        attributes=dict(attributes),
+        content=_content(raw_item),
+        attributes=_attributes(raw_item),
         raw=raw_item,
     )
 
@@ -463,7 +622,23 @@ def _content(raw_item: object) -> tuple[RetrievalSearchContent, ...]:
     return tuple(content)
 
 
-def _queries(value: object) -> tuple[str, ...]:
+def _attributes(raw_item: object) -> dict[str, AttributeValue]:
+    attributes = _read(raw_item, "attributes", {}) or {}
+    if not isinstance(attributes, Mapping):
+        raise TypeError("attributes must be a mapping")
+    normalized: dict[str, AttributeValue] = {}
+    for key, value in attributes.items():
+        if not isinstance(key, str):
+            raise TypeError("attribute keys must be strings")
+        if not isinstance(value, (str, bool, int, float)):
+            raise TypeError(
+                "attribute values must be strings, booleans, integers, or floats"
+            )
+        normalized[key] = value
+    return normalized
+
+
+def _queries(value: object, *, max_items: int | None = None) -> tuple[str, ...]:
     if isinstance(value, str):
         values: Sequence[object] = (value,)
     elif isinstance(value, Sequence):
@@ -473,20 +648,21 @@ def _queries(value: object) -> tuple[str, ...]:
     queries = tuple(str(item).strip() for item in values if str(item).strip())
     if not queries:
         raise ValueError("query must not be empty")
+    if max_items is not None and len(queries) > max_items:
+        raise ValueError(f"query must contain at most {max_items} values")
     return queries
 
 
 def _search_kwargs(
     *,
-    query: str | Sequence[str],
+    query: Sequence[str],
     filters: SearchFilter | Mapping[str, Any] | None,
     max_num_results: int | None,
     ranking_options: Mapping[str, Any] | None,
     rewrite_query: bool | None,
 ) -> dict[str, Any]:
-    kwargs: dict[str, Any] = {
-        "query": query if isinstance(query, str) else list(query),
-    }
+    query_value: str | list[str] = query[0] if len(query) == 1 else list(query)
+    kwargs: dict[str, Any] = {"query": query_value}
     serialized_filter = serialize_filter(filters)
     if serialized_filter is not None:
         kwargs["filters"] = serialized_filter
@@ -508,6 +684,15 @@ def _identifier(value: str, name: str) -> str:
     normalized = value.strip()
     if not normalized:
         raise ValueError(f"{name} must not be empty")
+    return normalized
+
+
+def _required_text(value: object, name: str) -> str:
+    if not isinstance(value, str):
+        raise TypeError(f"{name} must be a string")
+    normalized = value.strip()
+    if not normalized:
+        raise ValueError(f"{name} is missing")
     return normalized
 
 
