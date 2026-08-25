@@ -356,7 +356,7 @@ def _load_hosted_mcp_tool_type() -> type[Any]:
         from agents import HostedMCPTool
     except ImportError as error:
         raise ImportError(
-            'Hosted MCP is unavailable. Install with '
+            "Hosted MCP is unavailable. Install with "
             'pip install "openai-sdk-helpers[mcp]".'
         ) from error
     return HostedMCPTool
@@ -367,7 +367,7 @@ def _load_streamable_http_server_type() -> type[Any]:
         from agents.mcp import MCPServerStreamableHttp
     except ImportError as error:
         raise ImportError(
-            'Streamable HTTP MCP is unavailable. Install with '
+            "Streamable HTTP MCP is unavailable. Install with "
             'pip install "openai-sdk-helpers[mcp]".'
         ) from error
     return MCPServerStreamableHttp
