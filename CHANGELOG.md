@@ -4,6 +4,9 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+- Harden direct vector-store search normalization by forwarding only normalized queries, rejecting more than five direct-search queries before the SDK call, requiring real filenames in strict mode, and validating result attribute keys and scalar values.
+- Complete NumPy-style documentation for the public File Search adapters, filters, and search mixins, and keep package-internal runtime imports relative.
+
 ## 0.9.0 - 2026-08-25
 
 - Added dependency-injected synchronous and asynchronous retrieval clients for explicit Files and Vector Stores lifecycle operations.
