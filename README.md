@@ -200,12 +200,12 @@ public behavior.
 ## Scope boundaries
 
 This project is not an end-user application, hosted platform, replacement SDK,
-universal agent framework, prompt catalog, or storage service. Application-
-specific business logic belongs in consuming projects.
+universal agent framework, prompt catalog, storage service, protocol
+implementation, or transport framework. Application-specific business logic
+belongs in consuming projects.
 
-MCP, consolidated retrieval, and Realtime helpers are roadmap items, not current
-package promises. Their issue order and release gates are tracked in
-[ROADMAP.md](ROADMAP.md).
+Realtime API helpers are the current roadmap item. Their issue order and release
+gates are tracked in [ROADMAP.md](ROADMAP.md).
 
 ## License
 
