@@ -37,10 +37,10 @@ building a parallel platform. Context is optional, diagnostics redact sensitive
 content by default, ambiguous state ownership fails before SDK execution, and
 local persistence remains explicitly caller-owned.
 
-## 0.9.0 — retrieval consolidation
+## 0.9.x — retrieval consolidation
 
-Published through the protected PyPI Trusted Publishing path and released as
-`v0.9.0` with wheel, source distribution, and SBOM evidence.
+0.9.0 was published through the protected PyPI Trusted Publishing path and
+0.9.1 hardened the retrieval contract after delayed review findings.
 
 - [x] #140 — approve one public retrieval API and migration map.
 - [x] #141 — implement typed file and vector-store lifecycle helpers.
@@ -53,21 +53,30 @@ adapters, normalized results and citations, and raw official SDK escape hatches.
 Legacy retrieval imports remain available for compatibility and migration is
 explicit rather than automatic.
 
-## 0.10.0 — MCP
+## Intentionally not planned — MCP
 
-- [ ] #143 — add optional typed hosted and Streamable HTTP MCP integration.
-- [ ] #144 — add filtering, approvals, caching, and failure isolation.
+- [x] #143 — closed as not planned.
+- [x] #144 — closed as not planned.
 
-MCP remains optional. Discovery must not imply trust or execution, and
-security-sensitive defaults require human review.
+PRs #163 and #164 were closed without merge. MCP transport, discovery, trust,
+approval, caching, retry, and failure-isolation policy are intentionally outside
+this package. Applications should use official OpenAI/Agents SDK MCP surfaces
+directly when needed.
 
-## 0.11.0 — Realtime
+This decision enforces the product rule that a helper must simplify repeated
+OpenAI API/SDK plumbing rather than primarily mirror or own a general-purpose
+protocol, transport, discovery, trust, or policy layer.
 
-- [ ] #145 — add typed server-side session configuration and lifecycle helpers.
-- [ ] #146 — add normalized events, tool execution, interruption, and test transport.
+## 0.10.0 — Realtime API helpers
 
-The scope excludes browser UI, audio-device management, and protocol
-reimplementation.
+- [ ] #145 — add thin typed server-side session configuration and lifecycle
+      helpers over official SDK objects.
+- [ ] #146 — add normalized events, explicit tool/cancellation helpers, and
+      deterministic recorded-event/fake-session fixtures.
+
+The scope excludes browser UI, audio-device management, a replacement transport,
+a parallel event/state framework, and protocol reimplementation. Raw official
+SDK sessions, clients, transports, and events remain accessible.
 
 ## Release gates
 
@@ -83,4 +92,6 @@ A milestone is complete only when:
 8. publication uses protected OIDC identity and verified immutable artifacts.
 
 Do not start a blocked phase, weaken a gate, or claim a release before external
-owner controls and publication verification are complete.
+owner controls and publication verification are complete. Do not add a helper
+that primarily duplicates a general-purpose protocol or transport layer already
+owned by the official SDK ecosystem.

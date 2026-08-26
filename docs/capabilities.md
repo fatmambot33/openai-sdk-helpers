@@ -18,15 +18,15 @@ Maturity meanings:
 | Shared operation context | `openai_sdk_helpers.runtime` | Vendor-neutral lifecycle metadata that complements, but does not replace, official SDK tracing | Preview | Core | Sync and async observers | Original results and exceptions remain unchanged; Agents SDK tracing remains directly configurable |
 | Explicit conversation state | `openai_sdk_helpers.state` and Agents runners | Validates official Agents session and server-continuation choices; provides explicit local `ResponseMessages` storage | Preview | Core | Local validation plus matching sync/async runner forwarding | Underlying session objects, response IDs, conversation IDs, request kwargs, and message collections remain accessible |
 | Retrieval lifecycle | `openai_sdk_helpers.retrieval` | Wraps injected official Files and Vector Stores resources without owning credentials or cleanup | Preview | Core | Matching sync/async clients; explicit SDK polling | Normalized outcomes preserve raw SDK resources and exceptions; `sdk_client` exposes the injected official client |
-| Retrieval search contracts | `openai_sdk_helpers.retrieval` | Models direct vector-store search and File Search configuration without request adapters yet | Preview | Core | Local contracts only until #142 | Every normalized search item and page preserves raw SDK resources |
+| Retrieval search and File Search | `openai_sdk_helpers.retrieval` | Wraps direct vector-store search and composes official Responses/Agents File Search configuration/results | Preview | Core | Sync/async direct search plus local Responses/Agents adapters | Normalized search items/pages preserve raw SDK resources; official filters, ranking options, response objects, and citations remain accessible |
 | Responses workflows | `openai_sdk_helpers.response` | Thin orchestration over the official Responses API | Supported | Core | Sync and async paths; websocket helpers are async/stream-oriented where appropriate | Callers retain SDK configuration, response identifiers, raw events, and result objects |
 | Agents workflows | `openai_sdk_helpers.agent` | Composes the official OpenAI Agents SDK | Supported | Core | Sync and async runners | Callers retain underlying Agents SDK objects, tools, sessions, and results |
 | Typed structures | `openai_sdk_helpers.structure` | Pydantic schemas for SDK inputs and outputs | Stable | Core; extraction structures require `extract` | Local | Pydantic models and generated schemas remain directly accessible |
 | Prompt rendering | `openai_sdk_helpers.prompt` | SDK-independent Jinja rendering | Stable | Core | Local | Callers control template directories and rendered strings |
 | Tool contracts and handlers | `openai_sdk_helpers.tools` | Reusable definitions for Responses and Agents integrations | Supported | Core | Sync and async handlers where declared | Raw tool definitions and handler exceptions remain accessible |
 | Codex plugin surface | `openai_sdk_helpers.codex` and `openai_sdk_helpers.codex_cli` | Package entry-point plugin contract | Stable for 0.8 | Core | Sync and async commands; startup and shutdown lifecycle | Registry, plugin metadata, discovery reports, and original command handlers remain accessible |
-| Files API helpers | `openai_sdk_helpers.files_api` | Legacy thin helpers over official Files resources | Supported; compatibility adapters planned for 0.9 | Core | Sync | Underlying OpenAI client and file resources remain accessible |
-| Vector-store helpers | `openai_sdk_helpers.vector_storage` and response vector-store helpers | Legacy helpers over official Vector Stores and File Search resources | Supported; compatibility adapters planned for 0.9 | Core | Primarily sync in the current public surface | Underlying client, store identifiers, and SDK resources remain accessible |
+| Files API helpers | `openai_sdk_helpers.files_api` | Legacy thin helpers over official Files resources | Supported; retrieval migration available | Core | Sync | Underlying OpenAI client and file resources remain accessible |
+| Vector-store helpers | `openai_sdk_helpers.vector_storage` and response vector-store helpers | Legacy helpers over official Vector Stores and File Search resources | Supported; retrieval migration available | Core | Primarily sync in the current public surface | Underlying client, store identifiers, and SDK resources remain accessible |
 | Responses websocket helpers | `openai_sdk_helpers.response.websocket` | Wraps the official Responses websocket connection | Preview | Core | Streaming / connection-oriented | Raw connection and events remain accessible |
 | Output validation | `openai_sdk_helpers.utils.output_validation` | SDK-independent validation adapters | Stable | Core | Local | Individual validators and original values remain accessible |
 | Document extraction | `openai_sdk_helpers.extract`, `ExtractorAgent`, extraction structures | Optional LangExtract integration plus Agents helpers | Supported | `openai-sdk-helpers[extract]` | Local and agent-driven paths | LangExtract objects, extraction models, and agent results remain accessible |
@@ -40,9 +40,11 @@ They must pass the feature acceptance test in `PRODUCT.md` before implementation
 
 | Capability | Target | Roadmap status | Constraint |
 | --- | --- | --- | --- |
-| File Search adapters and normalized results | `0.9.0` | Issue #142 | Consume the approved configuration and result models without hiding filters, ranking, content, or raw resources |
-| MCP integration | `0.10.0` | Issues #143–#144 | Optional extra; explicit filtering, approvals, lifecycle, and failure isolation |
-| Realtime integration | `0.11.0` | Issues #145–#146 | Server-side lifecycle and event helpers only; no browser or audio-device application layer |
+| Realtime API helpers | `0.10.0` | Issues #145–#146 | Thin server-side helpers over official SDK sessions/events only; no browser/audio application, replacement transport, protocol implementation, or parallel event framework |
+
+MCP is intentionally **not** a package capability. The official OpenAI/Agents SDK
+MCP surfaces should be used directly; this package does not own MCP transport,
+discovery, trust, approval, caching, retry, or isolation policy.
 
 Images and audio generation are not committed roadmap surfaces. They should be
 added only after repeated workflows demonstrate that a package-level helper is
@@ -60,8 +62,9 @@ Use **Codex plugins** when a separately packaged capability should register
 commands through deterministic entry-point discovery without modifying the core
 package.
 
-Use direct official SDK calls when a helper would only rename parameters or hide
-resource ownership. The package is not intended to replace either official SDK.
+Use direct official SDK calls when a helper would only rename parameters, hide
+resource ownership, or primarily mirror a general-purpose protocol/transport
+surface. The package is not intended to replace either official SDK.
 
 ## Documentation ownership
 
