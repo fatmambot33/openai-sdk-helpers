@@ -1,5 +1,37 @@
 # Release notes
 
+## 0.9.2 — 2026-08-26
+
+Version 0.9.2 is a dependency-compatibility patch for installations that enable
+LangExtract. It keeps pandas 3 out of the extraction dependency surface without
+adding pandas to the core package or the Streamlit-only UI profile.
+
+### Dependency compatibility
+
+- `openai-sdk-helpers[extract]` now constrains pandas to `<3` alongside
+  LangExtract, whose dependency metadata otherwise permits pandas 3.x.
+- The same constraint is applied to the `dev` and `all` profiles because they
+  include LangExtract.
+- The core package remains pandas-free, and `openai-sdk-helpers[ui]` remains a
+  Streamlit-only extra.
+
+### Repository scope
+
+- Current guidance and governance metadata are narrowed to thin OpenAI API/SDK
+  helpers; abandoned general-purpose protocol, transport, discovery, trust, and
+  policy surfaces are no longer treated as current product scope.
+
+### Compatibility
+
+No public Python symbols are removed. Python 3.10–3.13 and OpenAI Python
+`>=2.45.0,<4.0.0` remain supported.
+
+### Upgrade
+
+```bash
+pip install --upgrade openai-sdk-helpers==0.9.2
+```
+
 ## 0.9.1 — 2026-08-25
 
 Version 0.9.1 is a corrective patch for the 0.9 retrieval surface based on

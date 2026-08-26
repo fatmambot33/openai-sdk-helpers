@@ -4,6 +4,9 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 0.9.2 - 2026-08-26
+
+- Constrained pandas to `<3` wherever the optional LangExtract dependency is installed (`extract`, `dev`, and `all`) while keeping both the core package and Streamlit-only `ui` extra pandas-free.
 - Narrowed the product scope to thin OpenAI API/SDK helpers and removed abandoned general-purpose protocol, transport, discovery, trust, and policy surfaces from current repository guidance and governance metadata.
 
 ## 0.9.1 - 2026-08-25
