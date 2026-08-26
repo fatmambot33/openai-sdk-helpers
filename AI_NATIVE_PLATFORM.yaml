@@ -69,6 +69,7 @@ interfaces:
   cli: true
   plugin: true
   json_schema: true
+  mcp: false
   openapi: false
 evidence:
   mode: repository
