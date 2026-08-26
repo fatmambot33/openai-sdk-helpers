@@ -62,7 +62,6 @@ def required_evidence(data: Mapping[str, Any]) -> set[str]:
             "sdk": "sdk",
             "cli": "cli",
             "json_schema": "schemas",
-            "mcp": "mcp",
             "openapi": "openapi",
         }.items():
             if interfaces.get(capability) is True:
@@ -137,10 +136,8 @@ def validate() -> list[str]:
                 errors.append(f"{profile} requires {requirement}")
         interfaces = data.get("interfaces", {})
         if isinstance(interfaces, Mapping):
-            if profile == "agent-tool" and not (
-                interfaces.get("plugin") is True or interfaces.get("mcp") is True
-            ):
-                errors.append("agent-tool requires a plugin or MCP interface")
+            if profile == "agent-tool" and interfaces.get("plugin") is not True:
+                errors.append("agent-tool requires a plugin interface")
             if profile == "service" and not (
                 interfaces.get("openapi") is True or interfaces.get("sdk") is True
             ):
