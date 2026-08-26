@@ -53,20 +53,6 @@ adapters, normalized results and citations, and raw official SDK escape hatches.
 Legacy retrieval imports remain available for compatibility and migration is
 explicit rather than automatic.
 
-## Intentionally not planned — MCP
-
-- [x] #143 — closed as not planned.
-- [x] #144 — closed as not planned.
-
-PRs #163 and #164 were closed without merge. MCP transport, discovery, trust,
-approval, caching, retry, and failure-isolation policy are intentionally outside
-this package. Applications should use official OpenAI/Agents SDK MCP surfaces
-directly when needed.
-
-This decision enforces the product rule that a helper must simplify repeated
-OpenAI API/SDK plumbing rather than primarily mirror or own a general-purpose
-protocol, transport, discovery, trust, or policy layer.
-
 ## 0.10.0 — Realtime API helpers
 
 - [ ] #145 — add thin typed server-side session configuration and lifecycle
