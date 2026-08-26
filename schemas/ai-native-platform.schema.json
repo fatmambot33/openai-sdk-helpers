@@ -206,7 +206,6 @@
         "cli",
         "plugin",
         "json_schema",
-        "mcp",
         "openapi"
       ],
       "properties": {
@@ -220,9 +219,6 @@
           "type": "boolean"
         },
         "json_schema": {
-          "type": "boolean"
-        },
-        "mcp": {
           "type": "boolean"
         },
         "openapi": {
