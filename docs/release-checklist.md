@@ -24,7 +24,7 @@ Require named human review when a release changes any of the following:
   artifacts, or dependency bounds;
 - file upload, download, vector-store lifecycle, deletion, or cleanup;
 - plugin discovery, startup, shutdown, command execution, or entry points;
-- tool execution, approvals, MCP servers, external transports, or network trust;
+- tool execution, approvals, external transports, or network trust;
 - prompt, response, trace, diagnostic, log, or telemetry content;
 - Realtime sessions, cancellation, reconnection, audio buffers, or event handling;
 - sandboxing, subprocesses, filesystem access, or serialization of untrusted data.
