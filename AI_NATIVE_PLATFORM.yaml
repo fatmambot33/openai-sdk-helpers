@@ -1,7 +1,7 @@
 version: 1
 standard:
   repository: fatmambot33/ai-native-platform
-  ref: 585484a227741a9eac78393e631b9d3794b85ec8
+  ref: 597c6f90fca88bd68d53a62f57ccc556cfa05be7
 quality:
   typed: true
   tests: true
@@ -85,7 +85,7 @@ evidence:
     plugin_tests: tests
     docs: docs
     examples: examples
-    security_workflow: .github/SECURITY_ENFORCEMENT.md
+    security_evidence: .github/SECURITY_ENFORCEMENT.md
     env_example: plugins/openai-sdk-helpers/.env.example
     gitignore: .gitignore
     self_improvement_workflow: .github/workflows/ai-self-improvement.yml
