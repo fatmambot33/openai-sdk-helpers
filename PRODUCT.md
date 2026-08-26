@@ -20,7 +20,7 @@ Users should write less repeated SDK plumbing without losing access to official 
 
 This project is not an end-user application, hosted platform, universal agent framework, replacement SDK, home for customer-specific business logic, general-purpose protocol implementation, transport framework, discovery/trust layer, or policy engine.
 
-When the official OpenAI or Agents SDK already owns a protocol or transport surface, this package should prefer direct SDK use over wrapping that surface merely to rename configuration or lifecycle methods. MCP transport, discovery, trust, approval, caching, and isolation are intentionally outside this package.
+When the official OpenAI or Agents SDK already owns a protocol or transport surface, this package should prefer direct SDK use over wrapping that surface merely to rename configuration or lifecycle methods.
 
 ## Product principles
 
