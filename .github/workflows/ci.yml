@@ -147,3 +147,21 @@ jobs:
             .venv-wheel/bin/python examples/supported_agents.py
           env -u OPENAI_API_KEY -u PYTHONPATH \
             .venv-wheel/bin/python examples/codex_plugin.py
+
+  ci:
+    name: ci
+    if: ${{ always() }}
+    needs: [lint-and-type, test, install-profile, installed-wheel]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require successful CI
+        shell: bash
+        run: |
+          echo "lint-and-type=${{ needs.lint-and-type.result }}"
+          echo "test=${{ needs.test.result }}"
+          echo "install-profile=${{ needs.install-profile.result }}"
+          echo "installed-wheel=${{ needs.installed-wheel.result }}"
+          test "${{ needs.lint-and-type.result }}" = "success"
+          test "${{ needs.test.result }}" = "success"
+          test "${{ needs.install-profile.result }}" = "success"
+          test "${{ needs.installed-wheel.result }}" = "success"
