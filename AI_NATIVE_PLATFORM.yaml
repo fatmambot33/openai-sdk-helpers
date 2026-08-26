@@ -85,7 +85,7 @@ evidence:
     plugin_tests: tests
     docs: docs
     examples: examples
-    security_workflow: .github/workflows/security.yml
+    security_workflow: .github/SECURITY_ENFORCEMENT.md
     env_example: plugins/openai-sdk-helpers/.env.example
     gitignore: .gitignore
     self_improvement_workflow: .github/workflows/ai-self-improvement.yml
