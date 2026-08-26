@@ -4,7 +4,7 @@
 
 Build a production-ready Python toolkit that makes applications using the official OpenAI Python SDK and Agents SDK simpler, consistent, and type-safe.
 
-The package provides reusable primitives, not applications.
+The package provides reusable API/SDK primitives, not applications, protocol implementations, or transport frameworks.
 
 ## Product promise
 
@@ -18,7 +18,9 @@ Users should write less repeated SDK plumbing without losing access to official 
 
 ## Non-goals
 
-This project is not an end-user application, hosted platform, universal agent framework, replacement SDK, or home for customer-specific business logic.
+This project is not an end-user application, hosted platform, universal agent framework, replacement SDK, home for customer-specific business logic, general-purpose protocol implementation, transport framework, discovery/trust layer, or policy engine.
+
+When the official OpenAI or Agents SDK already owns a protocol or transport surface, this package should prefer direct SDK use over wrapping that surface merely to rename configuration or lifecycle methods. MCP transport, discovery, trust, approval, caching, and isolation are intentionally outside this package.
 
 ## Product principles
 
@@ -30,7 +32,7 @@ This project is not an end-user application, hosted platform, universal agent fr
 6. **Production readiness** — include validation, errors, logging, lifecycle handling, documentation, and tests as appropriate.
 7. **Clear escape hatches** — preserve access to underlying SDK clients and arguments.
 8. **Backward compatibility** — evolve public APIs deliberately under semantic versioning.
-9. **Focused scope** — accept only broadly reusable OpenAI integration helpers.
+9. **Focused scope** — accept only broadly reusable OpenAI API/SDK helpers.
 
 ## What belongs
 
@@ -39,7 +41,8 @@ This project is not an end-user application, hosted platform, universal agent fr
 - Prompt rendering and structured-output utilities
 - Tool execution and orchestration primitives
 - Vector-store and file-processing helpers
-- Retry, logging, lifecycle, and persistence utilities
+- Thin Realtime API helpers that preserve official session, transport, and event access
+- Retry, logging, lifecycle, and persistence utilities where they simplify repeated SDK plumbing rather than create a parallel framework
 - Supported examples and documentation
 
 ## API philosophy
@@ -59,6 +62,7 @@ Before adding a feature, confirm that it:
 5. Preserves access to the underlying SDK capability.
 6. Composes without mandatory framework coupling.
 7. Can be maintained without weakening compatibility.
+8. Does not primarily duplicate, own, or replace a general-purpose protocol, transport, trust/discovery layer, or application framework already provided by the official SDK ecosystem.
 
 ## Quality bar
 
@@ -78,4 +82,4 @@ Changes must pass formatting, documentation style, static typing, tests, and pac
 
 ## Using this document
 
-Every issue, pull request, architectural decision, and release should reinforce this product vision. Changes that do not fit should be reshaped or kept outside the core package.
+Every issue, pull request, architectural decision, and release should reinforce this product vision. Changes that do not fit should be reshaped or kept outside the package.
