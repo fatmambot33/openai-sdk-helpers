@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+- Narrowed the product scope to thin OpenAI API/SDK helpers and removed abandoned general-purpose protocol, transport, discovery, trust, and policy surfaces from current repository guidance and governance metadata.
+
 ## 0.9.1 - 2026-08-25
 
 - Harden direct vector-store search normalization by forwarding only normalized queries, rejecting more than five direct-search queries before the SDK call, requiring real filenames in strict mode, and validating result attribute keys and scalar values.
@@ -38,17 +40,3 @@ All notable changes to this project are documented here.
 - Added a security-aware release checklist covering credentials, publishing, files, plugins, tools, transports, diagnostics, and artifact verification.
 - Replaced a secret-shaped example value with an explicit non-secret placeholder.
 - Added built-wheel smoke tests for both CLI entry points, runtime package data, and credential-free Responses, Agents, and Codex examples.
-- Classified examples as supported, illustrative, or deprecated with an executable compatibility policy.
-- Added a canonical capability matrix covering maturity, installation, execution, and SDK escape hatches.
-- Replaced the duplicated README feature inventory with concise canonical documentation navigation.
-- Added deterministic internal Markdown file and anchor validation to CI.
-- Removed the legacy PyPI API-token publishing fallback in favor of OIDC-only Trusted Publishing.
-- Added a non-publishing release rehearsal mode and documented publisher setup, verification, and recovery.
-- Made LangExtract and Streamlit optional through the `extract`, `ui`, and `all` installation profiles.
-- Added lazy extraction exports with actionable missing-extra errors and clean-install CI coverage.
-- Completed Codex plugin production hardening.
-- Added optional structured plugin metadata and capability inspection.
-- Added isolated entry-point discovery reports without changing fail-fast discovery.
-- Added `openai-helpers codex plugins` and `openai-helpers codex commands`.
-- Added installed entry-point discovery coverage, compatibility policy, and a 0.8 migration guide.
-- Standardized repository documentation.
