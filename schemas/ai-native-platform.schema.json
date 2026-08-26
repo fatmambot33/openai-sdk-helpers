@@ -1,6 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/fatmambot33/ai-native-platform/schemas/ai-native-platform.schema.json",
+  "title": "AI Native Platform Product Manifest",
+  "description": "Versioned contract and repository-evidence declaration for an AI-native product.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -31,6 +33,15 @@
           },
           "uniqueItems": true
         }
+      ]
+    },
+    "agentGuarantee": {
+      "enum": [
+        "deterministic_tool_discovery",
+        "structured_outputs",
+        "issue_driven_improvement",
+        "ci_validated_changes",
+        "governed_autonomy"
       ]
     }
   },
@@ -194,7 +205,32 @@
                 }
               }
             }
-          }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "required": {
+                    "const": true
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "env_file",
+                  "env_example",
+                  "setup_command",
+                  "validation_command",
+                  "required_variables"
+                ],
+                "properties": {
+                  "required_variables": {
+                    "minItems": 1
+                  }
+                }
+              }
+            }
+          ]
         }
       }
     },
@@ -206,6 +242,7 @@
         "cli",
         "plugin",
         "json_schema",
+        "mcp",
         "openapi"
       ],
       "properties": {
@@ -219,6 +256,9 @@
           "type": "boolean"
         },
         "json_schema": {
+          "type": "boolean"
+        },
+        "mcp": {
           "type": "boolean"
         },
         "openapi": {
@@ -284,16 +324,10 @@
         "guarantees": {
           "type": "array",
           "uniqueItems": true,
-          "minItems": 5,
           "items": {
-            "enum": [
-              "ci_validated_changes",
-              "deterministic_tool_discovery",
-              "governed_autonomy",
-              "issue_driven_improvement",
-              "structured_outputs"
-            ]
-          }
+            "$ref": "#/$defs/agentGuarantee"
+          },
+          "minItems": 5
         }
       }
     },
@@ -402,6 +436,65 @@
         },
         "paths": {
           "type": "object",
+          "properties": {
+            "readme": {
+              "$ref": "#/$defs/pathValue"
+            },
+            "tests": {
+              "$ref": "#/$defs/pathValue"
+            },
+            "agent_instructions": {
+              "$ref": "#/$defs/pathValue"
+            },
+            "typing": {
+              "$ref": "#/$defs/pathValue"
+            },
+            "ci": {
+              "$ref": "#/$defs/pathValue"
+            },
+            "sdk": {
+              "$ref": "#/$defs/pathValue"
+            },
+            "cli": {
+              "$ref": "#/$defs/pathValue"
+            },
+            "schemas": {
+              "$ref": "#/$defs/pathValue"
+            },
+            "mcp": {
+              "$ref": "#/$defs/pathValue"
+            },
+            "openapi": {
+              "$ref": "#/$defs/pathValue"
+            },
+            "plugin_manifest": {
+              "$ref": "#/$defs/pathValue"
+            },
+            "plugin_tests": {
+              "$ref": "#/$defs/pathValue"
+            },
+            "docs": {
+              "$ref": "#/$defs/pathValue"
+            },
+            "examples": {
+              "$ref": "#/$defs/pathValue"
+            },
+            "security_evidence": {
+              "$ref": "#/$defs/pathValue"
+            },
+            "env_example": {
+              "$ref": "#/$defs/pathValue"
+            },
+            "gitignore": {
+              "$ref": "#/$defs/pathValue"
+            },
+            "self_improvement_workflow": {
+              "$ref": "#/$defs/pathValue"
+            },
+            "improvement_issue_template": {
+              "$ref": "#/$defs/pathValue"
+            }
+          },
           "additionalProperties": {
             "$ref": "#/$defs/pathValue"
           }
@@ -412,5 +505,104 @@
       "type": "object",
       "additionalProperties": true
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "product": {
+            "properties": {
+              "profile": {
+                "enum": [
+                  "library",
+                  "full-platform"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "interfaces": {
+            "properties": {
+              "sdk": {
+                "const": true
+              },
+              "json_schema": {
+                "const": true
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "product": {
+            "properties": {
+              "profile": {
+                "enum": [
+                  "cli",
+                  "full-platform"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "interfaces": {
+            "properties": {
+              "cli": {
+                "const": true
+              },
+              "json_schema": {
+                "const": true
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "product": {
+            "properties": {
+              "profile": {
+                "enum": [
+                  "plugin",
+                  "full-platform"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "plugin": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            }
+          },
+          "interfaces": {
+            "properties": {
+              "plugin": {
+                "const": true
+              },
+              "json_schema": {
+                "const": true
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }
