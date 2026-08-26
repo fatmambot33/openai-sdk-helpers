@@ -38,12 +38,14 @@ dev = [
     "pytest",
     "pytest-asyncio",
     "langextract",
+    "pandas<3",
     "streamlit",
 ]
-extract = ["langextract"]
+extract = ["langextract", "pandas<3"]
 ui = ["streamlit"]
 all = [
     "langextract",
+    "pandas<3",
     "streamlit",
 ]
 
