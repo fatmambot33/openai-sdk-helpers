@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+- Narrowed the product scope to thin OpenAI API/SDK helpers and removed abandoned general-purpose protocol, transport, discovery, trust, and policy surfaces from current repository guidance and governance metadata.
+
 ## 0.9.1 - 2026-08-25
 
 - Harden direct vector-store search normalization by forwarding only normalized queries, rejecting more than five direct-search queries before the SDK call, requiring real filenames in strict mode, and validating result attribute keys and scalar values.

@@ -7,7 +7,7 @@ description: Install and use openai-sdk-helpers from Git with OpenAI credentials
 
 ## Local-only credential policy
 
-Use only credentials stored in the user's local project `.env`. Never request secret values in chat, upload them, print them, or copy them into Codex, Git, plugin files, hosted configuration, MCP URLs, or command history.
+Use only credentials stored in the user's local project `.env`. Never request secret values in chat, upload them, print them, or copy them into Codex, Git, plugin files, hosted configuration, URLs, or command history.
 
 ## First-use setup
 

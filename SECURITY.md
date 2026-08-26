@@ -86,7 +86,7 @@ be granted broader trust merely because they were discovered successfully.
 
 ### Optional and external integrations
 
-Optional integrations remain outside the base installation. MCP, Realtime, UI,
+Optional integrations remain outside the base installation. Realtime, UI,
 extraction, and future external-service adapters must define trust boundaries,
 resource ownership, cancellation, failure behavior, and credential handling
 before becoming public capabilities.
