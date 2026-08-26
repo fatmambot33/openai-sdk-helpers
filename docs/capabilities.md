@@ -42,10 +42,6 @@ They must pass the feature acceptance test in `PRODUCT.md` before implementation
 | --- | --- | --- | --- |
 | Realtime API helpers | `0.10.0` | Issues #145–#146 | Thin server-side helpers over official SDK sessions/events only; no browser/audio application, replacement transport, protocol implementation, or parallel event framework |
 
-MCP is intentionally **not** a package capability. The official OpenAI/Agents SDK
-MCP surfaces should be used directly; this package does not own MCP transport,
-discovery, trust, approval, caching, retry, or isolation policy.
-
 Images and audio generation are not committed roadmap surfaces. They should be
 added only after repeated workflows demonstrate that a package-level helper is
 smaller and clearer than direct official SDK usage.
