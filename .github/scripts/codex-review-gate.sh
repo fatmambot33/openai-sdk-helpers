@@ -17,13 +17,13 @@ COMMENT_ID=""
 has_matching_review() {
   gh api "repos/${REPO}/pulls/${PR_NUMBER}/reviews?per_page=100" | jq -e \
     --arg login "$CODEX_LOGIN" --arg sha "$SHORT_SHA" \
-    'any(.[]; .user.login == $login and ((.body // "") | contains($sha)))' >/dev/null
+    'any(.[]; (.user.login == $login or .user.login == ($login + "[bot]")) and ((.body // "") | contains($sha)))' >/dev/null
 }
 
 has_pr_clean_reaction() {
   gh api -H "Accept: application/vnd.github+json" "repos/${REPO}/issues/${PR_NUMBER}/reactions?per_page=100" | jq -e \
     --arg login "$CODEX_LOGIN" --arg since "$HEAD_COMMIT_AT" \
-    'any(.[]; .user.login == $login and .content == "+1" and .created_at >= $since)' >/dev/null
+    'any(.[]; (.user.login == $login or .user.login == ($login + "[bot]")) and .content == "+1" and .created_at >= $since)' >/dev/null
 }
 
 find_trigger_comment() {
@@ -34,7 +34,8 @@ has_trigger_clean_reaction() {
   [[ -n "$COMMENT_ID" ]] || find_trigger_comment
   [[ -n "$COMMENT_ID" ]] || return 1
   gh api -H "Accept: application/vnd.github+json" "repos/${REPO}/issues/comments/${COMMENT_ID}/reactions?per_page=100" | jq -e \
-    --arg login "$CODEX_LOGIN" 'any(.[]; .user.login == $login and .content == "+1")' >/dev/null
+    --arg login "$CODEX_LOGIN" \
+    'any(.[]; (.user.login == $login or .user.login == ($login + "[bot]")) and .content == "+1")' >/dev/null
 }
 
 echo "Checking Codex evidence for HEAD ${SHORT_SHA}."
