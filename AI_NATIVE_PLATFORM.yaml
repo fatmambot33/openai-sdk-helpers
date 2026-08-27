@@ -85,6 +85,7 @@ evidence:
     plugin_tests: tests
     docs: docs
     examples: examples
+    ai_review_workflow: .github/workflows/ai-native-platform.yml
     security_evidence: .github/SECURITY_ENFORCEMENT.md
     env_example: plugins/openai-sdk-helpers/.env.example
     gitignore: .gitignore
