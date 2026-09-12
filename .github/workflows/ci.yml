@@ -146,6 +146,8 @@ jobs:
           env -u OPENAI_API_KEY -u PYTHONPATH \
             .venv-wheel/bin/python examples/supported_agents.py
           env -u OPENAI_API_KEY -u PYTHONPATH \
+            .venv-wheel/bin/python examples/supported_managed_agents.py
+          env -u OPENAI_API_KEY -u PYTHONPATH \
             .venv-wheel/bin/python examples/codex_plugin.py
 
   ci:

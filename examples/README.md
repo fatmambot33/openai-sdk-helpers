@@ -12,6 +12,7 @@ pull request.
 | --- | --- | --- |
 | `supported_responses.py` | Responses configuration and registry | No API call |
 | `supported_agents.py` | Agents configuration and official SDK agent construction | No API call |
+| `supported_managed_agents.py` | Managed Agents capability detection and facade construction | No API call |
 | `codex_plugin.py` | Codex plugin lifecycle plus sync and async commands | No API call |
 
 Run them after installing the package:
@@ -19,8 +20,13 @@ Run them after installing the package:
 ```bash
 python examples/supported_responses.py
 python examples/supported_agents.py
+python examples/supported_managed_agents.py
 python examples/codex_plugin.py
 ```
+
+The managed Agents example requires an installed OpenAI Python SDK that exposes
+`beta.agents.sessions` (3.13.0 or later). The package itself remains compatible
+with its lower declared SDK minimum for other surfaces.
 
 ## Illustrative examples
 

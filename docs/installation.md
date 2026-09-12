@@ -10,9 +10,23 @@ pip install openai-sdk-helpers
 ```
 
 The core profile includes the OpenAI Python SDK, the OpenAI Agents SDK,
-Pydantic, Jinja, settings helpers, Responses helpers, Agents helpers, vector
-storage, tools, validation, and the Codex plugin surface. It does not install
-LangExtract or Streamlit.
+Pydantic, Jinja, settings helpers, Responses helpers, Agents helpers, managed
+Agents capability detection and session helpers, vector storage, tools,
+validation, and the Codex plugin surface. It does not install LangExtract or
+Streamlit.
+
+The package-wide OpenAI Python SDK range remains `>=2.45.0,<4.0.0`. Managed
+Agents API helpers are import-safe across that range, but using them requires an
+SDK client exposing `beta.agents.sessions`, first shipped in `openai` 3.13.0.
+Applications pinned below that version can upgrade only when they need the
+managed Agents surface:
+
+```bash
+pip install "openai>=3.13.0,<4.0.0"
+```
+
+An incompatible client raises `ManagedAgentsUnavailableError` before any network
+request instead of silently changing the package-wide minimum dependency.
 
 ## Document extraction
 
