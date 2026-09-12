@@ -115,6 +115,20 @@ def test_capability_detection_and_error_are_actionable() -> None:
     assert error.value.context["minimum_openai_version"] == "3.13.0"
 
 
+def test_create_rejects_bare_string_vault_ids_before_sdk_call() -> None:
+    """Reject a string that would otherwise be split into vault characters."""
+    sessions = _SyncSessions()
+    helper = ManagedAgentsClient(_client_with_sessions(sessions))  # type: ignore[arg-type]
+
+    with pytest.raises(TypeError, match="non-string sequence"):
+        helper.create_session(
+            environment={"type": "openai_hosted"},
+            vault_ids="vault_1",  # type: ignore[arg-type]
+        )
+
+    assert sessions.calls == []
+
+
 def test_sync_facade_preserves_resources_results_and_observability() -> None:
     """Forward sync lifecycle operations without normalizing SDK results."""
     sessions = _SyncSessions()
