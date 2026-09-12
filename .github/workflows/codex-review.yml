@@ -55,24 +55,11 @@ jobs:
           fi
 
           if [[ "${HEAD_REPO}" == "${GITHUB_REPOSITORY}" ]]; then
-            if [[ "${AUTHOR_LOGIN}" == "${GITHUB_REPOSITORY_OWNER}" || "${AUTHOR_LOGIN}" == "dependabot[bot]" ]]; then
-              echo "Trusted same-repository PR source: ${AUTHOR_LOGIN}."
-            else
-              permission="$(
-                gh api \
-                  "repos/${GITHUB_REPOSITORY}/collaborators/${AUTHOR_LOGIN}/permission" \
-                  --jq '.permission'
-              )"
-              case "${permission}" in
-                admin|maintain|write)
-                  echo "Trusted same-repository collaborator: ${AUTHOR_LOGIN} (${permission})."
-                  ;;
-                *)
-                  echo "::error::Same-repository PR author ${AUTHOR_LOGIN} does not have trusted write permission."
-                  exit 1
-                  ;;
-              esac
+            if [[ "${AUTHOR_LOGIN}" != "${GITHUB_REPOSITORY_OWNER}" && "${AUTHOR_LOGIN}" != "dependabot[bot]" ]]; then
+              echo "::error::Solo-maintainer policy allows same-repository PRs only from the repository owner or Dependabot."
+              exit 1
             fi
+            echo "Trusted same-repository PR source: ${AUTHOR_LOGIN}."
           else
             echo "Fork PR source detected; pull_request workflows cannot publish repository write statuses."
           fi
