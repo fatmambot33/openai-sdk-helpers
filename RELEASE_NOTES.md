@@ -1,6 +1,6 @@
 # Release notes
 
-## Unreleased — 0.10.0
+## 0.10.0 — 2026-09-12
 
 Version 0.10.0 adds a first-class, thin helper surface for the OpenAI-managed
 Agents API without turning `openai-sdk-helpers` into a second agent framework.
@@ -34,6 +34,12 @@ required by pull-request CI.
 
 Review [docs/managed-agents.md](docs/managed-agents.md) for the boundary between
 Responses, the application-run Agents SDK, and the managed Agents API.
+
+### Upgrade
+
+```bash
+pip install --upgrade openai-sdk-helpers==0.10.0
+```
 
 ## 0.9.2 — 2026-08-26
 
@@ -118,8 +124,8 @@ results.
 
 ### Retrieval lifecycle
 
-- Added dependency-injected `OpenAIRetrievalClient` and
-  `AsyncOpenAIRetrievalClient` lifecycle operations over caller-configured
+- Added dependency-injected synchronous and asynchronous `OpenAIRetrievalClient`
+  and `AsyncOpenAIRetrievalClient` lifecycle operations over caller-configured
   official OpenAI clients.
 - Added explicit Files upload/delete and Vector Stores create, retrieve, list,
   update, and delete operations.
