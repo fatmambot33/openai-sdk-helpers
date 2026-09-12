@@ -1,8 +1,6 @@
 name: Codex review governance
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review, edited]
   pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review, edited]
 
@@ -10,19 +8,33 @@ permissions:
   contents: read
 
 concurrency:
-  group: codex-review-${{ github.event_name }}-${{ github.event.pull_request.number }}
+  group: codex-review-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
-  request:
-    if: github.event_name == 'pull_request_target' && github.event.pull_request.draft == false
+  trusted-gate:
+    if: >-
+      github.event.pull_request.draft == false &&
+      (github.event.action != 'edited' || github.event.changes.base != null)
     permissions:
       contents: read
       issues: write
       pull-requests: read
+      statuses: write
     runs-on: ubuntu-latest
     steps:
-      - name: Request Codex review of current HEAD
+      - name: Mark Codex review pending
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: >-
+          gh api --method POST
+          "repos/${{ github.repository }}/statuses/${HEAD_SHA}"
+          -f state=pending
+          -f context=codex-review
+          -f description='Waiting for Codex review of the current PR context'
+
+      - name: Request Codex review of current HEAD and base
         uses: fatmambot33/ai-native-platform/actions/codex-review-gate@62cd11e4048f1e157e0b19936dca3fc389d232fb
         with:
           token: ${{ github.token }}
@@ -31,15 +43,7 @@ jobs:
           review-context: ${{ github.event.pull_request.base.sha }}
           mode: request
 
-  codex-review:
-    if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
-    permissions:
-      contents: read
-      issues: read
-      pull-requests: read
-    runs-on: ubuntu-latest
-    steps:
-      - name: Require Codex review of current HEAD
+      - name: Require Codex review of current HEAD and base
         uses: fatmambot33/ai-native-platform/actions/codex-review-gate@62cd11e4048f1e157e0b19936dca3fc389d232fb
         with:
           token: ${{ github.token }}
@@ -47,3 +51,27 @@ jobs:
           head-sha: ${{ github.event.pull_request.head.sha }}
           review-context: ${{ github.event.pull_request.base.sha }}
           mode: wait
+
+      - name: Mark Codex review successful
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: >-
+          gh api --method POST
+          "repos/${{ github.repository }}/statuses/${HEAD_SHA}"
+          -f state=success
+          -f context=codex-review
+          -f description='Codex reviewed the current PR context'
+
+      - name: Mark Codex review failed
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: >-
+          gh api --method POST
+          "repos/${{ github.repository }}/statuses/${HEAD_SHA}"
+          -f state=failure
+          -f context=codex-review
+          -f description='Codex review gate did not pass'
