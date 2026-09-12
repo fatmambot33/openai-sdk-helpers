@@ -124,7 +124,7 @@ def test_sync_facade_preserves_resources_results_and_observability() -> None:
     context = OperationContext("managed_agents.create", observers=(observed.append,))
 
     created = helper.create_session(
-        environment={"type": "computer", "name": "default"},  # type: ignore[arg-type]
+        environment={"type": "openai_hosted"},
         agent_id="agent_123",
         input="Inspect the repository",
         metadata={"source": "test"},
@@ -140,7 +140,7 @@ def test_sync_facade_preserves_resources_results_and_observability() -> None:
         "create",
         (),
         {
-            "environment": {"type": "computer", "name": "default"},
+            "environment": {"type": "openai_hosted"},
             "agent_id": "agent_123",
             "input": "Inspect the repository",
             "metadata": {"source": "test"},
@@ -162,16 +162,27 @@ def test_sync_facade_preserves_resources_results_and_observability() -> None:
     ) is sessions.page
     assert helper.delete_session("session_1") is sessions.deleted
 
+    events = (
+        {
+            "type": "agent.session.input.message",
+            "input": [
+                {
+                    "role": "user",
+                    "content": [{"type": "input_text", "text": "Continue."}],
+                }
+            ],
+        },
+    )
     helper.submit_events(
         "session_1",
-        events=({"type": "message", "content": []},),  # type: ignore[arg-type]
+        events=events,
         idempotency_key="idem_1",
     )
     assert sessions.events.calls == [
         (
             "session_1",
             {
-                "events": ({"type": "message", "content": []},),
+                "events": events,
                 "idempotency_key": "idem_1",
             },
         )
@@ -202,7 +213,7 @@ async def test_async_facade_preserves_results_and_event_submission() -> None:
     )
 
     assert await helper.create_session(
-        environment={"type": "computer", "name": "default"},  # type: ignore[arg-type]
+        environment={"type": "openai_hosted"},
         agent_id="agent_123",
     ) is sessions.created
     assert await helper.retrieve_session(
@@ -214,10 +225,8 @@ async def test_async_facade_preserves_results_and_event_submission() -> None:
     assert await helper.list_sessions(limit=5, order="desc") is sessions.page
     assert await helper.delete_session("session_1") is sessions.deleted
 
-    await helper.submit_events(
-        "session_1",
-        events=({"type": "cancel"},),  # type: ignore[arg-type]
-    )
+    events = ({"type": "agent.session.input.cancel"},)
+    await helper.submit_events("session_1", events=events)
 
     assert helper.sdk_client is sdk_client
     assert helper.sessions is sessions
@@ -226,6 +235,4 @@ async def test_async_facade_preserves_results_and_event_submission() -> None:
         OperationPhase.SUCCESS,
     ]
     assert observed[-1].result is sessions.retrieved
-    assert sessions.events.calls == [
-        ("session_1", {"events": ({"type": "cancel"},)})
-    ]
+    assert sessions.events.calls == [("session_1", {"events": events})]
