@@ -1,5 +1,40 @@
 # Release notes
 
+## Unreleased — 0.10.0
+
+Version 0.10.0 adds a first-class, thin helper surface for the OpenAI-managed
+Agents API without turning `openai-sdk-helpers` into a second agent framework.
+
+### Managed Agents API
+
+- Added `ManagedAgentsClient` and `AsyncManagedAgentsClient` for discrete managed
+  session create, retrieve, metadata update, list, delete, and input-event
+  submission operations.
+- Added `managed_agents_available()` and `ManagedAgentsUnavailableError` so
+  feature availability is explicit before network execution.
+- Preserves the original official SDK session pages, deletion confirmations,
+  exceptions, and other results without normalization.
+- Exposes the original `sdk_client`, `agents`, and `sessions` resources as escape
+  hatches for streaming, artifacts, subagents, items, turns, environments, and
+  other evolving beta capabilities.
+- Reuses optional `OperationContext` lifecycle observation only for discrete
+  requests; official stream objects and events remain untouched.
+
+### Compatibility
+
+The package-wide OpenAI Python requirement remains `>=2.45.0,<4.0.0`. Managed
+Agents API use specifically requires a client exposing `beta.agents.sessions`,
+first shipped in OpenAI Python 3.13.0. The managed Agents module is import-safe
+on earlier supported SDK versions and raises an actionable capability/version
+error when the feature is unavailable.
+
+The feature includes deterministic synchronous/asynchronous unit tests and a
+credential-free installed-wheel construction smoke example. No paid API call is
+required by pull-request CI.
+
+Review [docs/managed-agents.md](docs/managed-agents.md) for the boundary between
+Responses, the application-run Agents SDK, and the managed Agents API.
+
 ## 0.9.2 — 2026-08-26
 
 Version 0.9.2 is a dependency-compatibility patch for installations that enable
