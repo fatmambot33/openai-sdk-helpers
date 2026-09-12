@@ -53,7 +53,29 @@ adapters, normalized results and citations, and raw official SDK escape hatches.
 Legacy retrieval imports remain available for compatibility and migration is
 explicit rather than automatic.
 
-## 0.10.0 — Realtime API helpers
+## 0.10.0 — Managed Agents API
+
+- [x] #191 — add thin typed helpers for the OpenAI-managed Agents API.
+- [ ] #194 — prepare, publish, and verify 0.10.0.
+
+The managed Agents API is a distinct execution surface from the application-run
+Agents SDK already supported by this package. The implemented helpers preserve
+official SDK terminology, resources, results, events, and escape hatches rather
+than build a parallel agent framework, orchestration engine, sandbox abstraction,
+transport, or session store. Existing package capabilities remain usable on
+supported pre-Agents-API OpenAI SDK versions; using this surface requires an SDK
+version that provides the API and fails early with an actionable capability
+error otherwise.
+
+Implementation #191 landed through PR #193 with required CI, AI-native
+validation, Python 3.10–3.13 tests, all installation profiles, installed-wheel
+examples, Pyright, formatting, documentation checks, and resolved Codex review
+threads. The milestone is not released until #194 completes protected OIDC
+publication and post-release verification.
+
+## 0.11.0 — Realtime API helpers
+
+Blocked until 0.10.0 is published and verified through #194.
 
 - [ ] #145 — add thin typed server-side session configuration and lifecycle
       helpers over official SDK objects.
@@ -70,7 +92,8 @@ A milestone is complete only when:
 
 1. tests, type checks, docstring checks, link checks, and package builds pass;
 2. public APIs are typed, documented, and represented by runnable examples;
-3. backward compatibility and migration impact are explicit;
+3. backward compatibility, feature-specific SDK requirements, and migration
+   impact are explicit;
 4. network calls, destructive actions, ownership, and cleanup are explicit;
 5. the core package remains usable without optional integrations;
 6. built-wheel and supported-example smoke tests pass without credentials;

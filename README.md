@@ -52,8 +52,8 @@ pip install "openai-sdk-helpers[all]"      # All current optional capabilities
 ```
 
 Python 3.10–3.13 is validated in CI. The distribution includes `py.typed`.
-See [docs/installation.md](docs/installation.md) for profile details and
-missing-extra behavior.
+See [docs/installation.md](docs/installation.md) for profile details,
+feature-specific SDK requirements, and missing-extra behavior.
 
 ## Choose a surface
 
@@ -94,6 +94,31 @@ result = agent.run_sync("Summarize this text in one sentence.")
 print(result.text)
 ```
 
+### Managed Agents API
+
+Use `openai_sdk_helpers.managed_agents` when the application needs OpenAI-managed
+durable agent sessions and the managed execution harness. This surface requires
+an OpenAI Python SDK exposing `beta.agents.sessions` (3.13.0 or later) without
+raising the package-wide SDK minimum for other helpers.
+
+```python
+from openai import OpenAI
+from openai_sdk_helpers.managed_agents import ManagedAgentsClient
+
+client = OpenAI()
+managed = ManagedAgentsClient(client)
+session = managed.create_session(
+    environment={"type": "openai_hosted"},
+    agent_id="agent_123",
+    input="Inspect the repository.",
+)
+```
+
+Streaming, artifacts, subagents, and other evolving beta resources remain
+available directly through `managed.sessions` and `managed.agents`. See
+[docs/managed-agents.md](docs/managed-agents.md) for compatibility and execution
+boundaries.
+
 ### Codex plugins
 
 Use `openai_sdk_helpers.codex` when a separately packaged capability should
@@ -124,6 +149,7 @@ The canonical inventory of shipped and planned surfaces is
 - explicit conversation-state ownership and persistence contracts;
 - Responses API orchestration, structured outputs, files, tools, and websocket helpers;
 - Agents SDK wrappers, runners, search workflows, and reusable text agents;
+- capability-gated managed Agents API session lifecycle helpers;
 - typed Pydantic structures and Jinja prompt rendering;
 - file and vector-store helpers;
 - output validation and shared tool contracts;
@@ -165,7 +191,8 @@ and trust boundaries.
 - [Public API](docs/public-api.md) — intentional import surface
 - [Operation context](docs/operation-context.md) — lifecycle hooks, usage, diagnostics, and SDK boundaries
 - [Conversation state](docs/conversation-state.md) — ownership modes, compatibility, persistence, and migration
-- [Installation profiles](docs/installation.md) — core and optional dependencies
+- [Managed Agents API](docs/managed-agents.md) — managed session helpers, compatibility, streaming, and escape hatches
+- [Installation profiles](docs/installation.md) — core, optional dependencies, and feature-specific SDK requirements
 - [Supported examples](examples/README.md) — executable and illustrative example policy
 - [Security policy](SECURITY.md) — confidential reporting and supported versions
 - [Release checklist](docs/release-checklist.md) — security and publication gates
@@ -204,8 +231,9 @@ universal agent framework, prompt catalog, storage service, protocol
 implementation, or transport framework. Application-specific business logic
 belongs in consuming projects.
 
-Realtime API helpers are the current roadmap item. Their issue order and release
-gates are tracked in [ROADMAP.md](ROADMAP.md).
+Managed Agents API helpers are the 0.10.0 release target. Realtime API helpers
+follow in 0.11.0; issue order and release gates are tracked in
+[ROADMAP.md](ROADMAP.md).
 
 ## License
 

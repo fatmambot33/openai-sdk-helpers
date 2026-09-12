@@ -9,6 +9,8 @@ prepare the code, artifacts, and release notes.
 - [ ] The release contains only approved issue scope.
 - [ ] Public additions satisfy the feature acceptance test in `PRODUCT.md`.
 - [ ] Breaking changes and deprecations have explicit migration guidance.
+- [ ] Feature-specific SDK requirements, capability detection, and actionable
+      unsupported-version errors are documented where applicable.
 - [ ] `docs/capabilities.md`, `docs/public-api.md`, focused guides, README, and
       changelog agree with the shipped surface.
 - [ ] Optional integrations remain outside the base installation.
@@ -49,6 +51,7 @@ For an applicable change, confirm:
 - [ ] tests pass with the configured coverage threshold.
 - [ ] Python 3.10–3.13 pass.
 - [ ] minimum and latest supported OpenAI SDK dependency sets pass.
+- [ ] feature-specific SDK version/capability gates are exercised where applicable.
 - [ ] internal Markdown links and anchors pass.
 - [ ] `core`, `extract`, `ui`, and `all` clean-install profiles pass.
 - [ ] wheel and source distributions build and pass metadata validation.

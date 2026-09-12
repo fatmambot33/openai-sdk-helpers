@@ -69,6 +69,41 @@ jobs:
       - name: Run tests with coverage
         run: pytest -q --cov=src --cov-report=term-missing --cov-fail-under=70
 
+  minimum-sdk:
+    name: Minimum OpenAI SDK
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install minimum SDK dependency set
+        run: |
+          python -m pip install --upgrade pip
+          printf '%s\n' \
+            'openai==2.45.0' \
+            'openai-agents==0.18.1' \
+            > /tmp/minimum-sdk-constraints.txt
+          python -m pip install -e ".[dev]" -c /tmp/minimum-sdk-constraints.txt
+          python -m pip check
+
+      - name: Verify resolved SDK versions
+        run: |
+          python - <<'PY'
+          from importlib.metadata import version
+
+          assert version("openai") == "2.45.0"
+          assert version("openai-agents") == "0.18.1"
+          PY
+
+      - name: Run tests with minimum SDKs
+        run: pytest -q --cov=src --cov-report=term-missing --cov-fail-under=70
+
   install-profile:
     name: Install ${{ matrix.profile }} profile
     runs-on: ubuntu-latest
@@ -146,12 +181,14 @@ jobs:
           env -u OPENAI_API_KEY -u PYTHONPATH \
             .venv-wheel/bin/python examples/supported_agents.py
           env -u OPENAI_API_KEY -u PYTHONPATH \
+            .venv-wheel/bin/python examples/supported_managed_agents.py
+          env -u OPENAI_API_KEY -u PYTHONPATH \
             .venv-wheel/bin/python examples/codex_plugin.py
 
   ci:
     name: ci
     if: ${{ always() }}
-    needs: [lint-and-type, test, install-profile, installed-wheel]
+    needs: [lint-and-type, test, minimum-sdk, install-profile, installed-wheel]
     runs-on: ubuntu-latest
     steps:
       - name: Require successful CI
@@ -159,9 +196,11 @@ jobs:
         run: |
           echo "lint-and-type=${{ needs.lint-and-type.result }}"
           echo "test=${{ needs.test.result }}"
+          echo "minimum-sdk=${{ needs.minimum-sdk.result }}"
           echo "install-profile=${{ needs.install-profile.result }}"
           echo "installed-wheel=${{ needs.installed-wheel.result }}"
           test "${{ needs.lint-and-type.result }}" = "success"
           test "${{ needs.test.result }}" = "success"
+          test "${{ needs.minimum-sdk.result }}" = "success"
           test "${{ needs.install-profile.result }}" = "success"
           test "${{ needs.installed-wheel.result }}" = "success"

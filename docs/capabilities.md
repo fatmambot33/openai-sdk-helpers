@@ -21,6 +21,7 @@ Maturity meanings:
 | Retrieval search and File Search | `openai_sdk_helpers.retrieval` | Wraps direct vector-store search and composes official Responses/Agents File Search configuration/results | Preview | Core | Sync/async direct search plus local Responses/Agents adapters | Normalized search items/pages preserve raw SDK resources; official filters, ranking options, response objects, and citations remain accessible |
 | Responses workflows | `openai_sdk_helpers.response` | Thin orchestration over the official Responses API | Supported | Core | Sync and async paths; websocket helpers are async/stream-oriented where appropriate | Callers retain SDK configuration, response identifiers, raw events, and result objects |
 | Agents workflows | `openai_sdk_helpers.agent` | Composes the official OpenAI Agents SDK | Supported | Core | Sync and async runners | Callers retain underlying Agents SDK objects, tools, sessions, and results |
+| Managed Agents API sessions | `openai_sdk_helpers.managed_agents` | Adds capability-gated convenience around official managed Agents session lifecycle calls without owning orchestration or session state | Preview | Core; this surface requires `openai>=3.13.0` | Sync and async discrete requests; streaming remains official-SDK-native | `sdk_client`, `agents`, and `sessions` expose original SDK resources; results and exceptions remain unchanged |
 | Typed structures | `openai_sdk_helpers.structure` | Pydantic schemas for SDK inputs and outputs | Stable | Core; extraction structures require `extract` | Local | Pydantic models and generated schemas remain directly accessible |
 | Prompt rendering | `openai_sdk_helpers.prompt` | SDK-independent Jinja rendering | Stable | Core | Local | Callers control template directories and rendered strings |
 | Tool contracts and handlers | `openai_sdk_helpers.tools` | Reusable definitions for Responses and Agents integrations | Supported | Core | Sync and async handlers where declared | Raw tool definitions and handler exceptions remain accessible |
@@ -40,7 +41,7 @@ They must pass the feature acceptance test in `PRODUCT.md` before implementation
 
 | Capability | Target | Roadmap status | Constraint |
 | --- | --- | --- | --- |
-| Realtime API helpers | `0.10.0` | Issues #145–#146 | Thin server-side helpers over official SDK sessions/events only; no browser/audio application, replacement transport, protocol implementation, or parallel event framework |
+| Realtime API helpers | `0.11.0` | Issues #145–#146 | Thin server-side helpers over official SDK sessions/events only; no browser/audio application, replacement transport, protocol implementation, or parallel event framework |
 
 Images and audio generation are not committed roadmap surfaces. They should be
 added only after repeated workflows demonstrate that a package-level helper is
@@ -53,6 +54,12 @@ response identifiers, message history, tool dispatch, or raw events.
 
 Use **Agents** when the application benefits from the official Agents SDK's
 agent loop, handoffs, tools, sessions, guardrails, and tracing.
+
+Use **Managed Agents** when the application needs OpenAI-managed durable agent
+sessions and the managed execution harness. The package only simplifies repeated
+session lifecycle plumbing; use the official `agents` and `sessions` resources
+directly for streaming, artifacts, subagents, environments, and other evolving
+beta surfaces.
 
 Use **Codex plugins** when a separately packaged capability should register
 commands through deterministic entry-point discovery without modifying the core
