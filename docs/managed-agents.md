@@ -77,9 +77,13 @@ managed.submit_events(
     session.id,
     events=[
         {
-            "type": "message",
-            "role": "user",
-            "content": [{"type": "input_text", "text": "Continue."}],
+            "type": "agent.session.input.message",
+            "input": [
+                {
+                    "role": "user",
+                    "content": [{"type": "input_text", "text": "Continue."}],
+                }
+            ],
         }
     ],
     idempotency_key="continue-review-1",
