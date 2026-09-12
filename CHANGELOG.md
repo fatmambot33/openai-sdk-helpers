@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 0.10.0 - 2026-09-12
+
 - Added capability-gated synchronous and asynchronous helpers for discrete OpenAI-managed Agents API session lifecycle operations while preserving original SDK resources, results, exceptions, streaming, artifacts, and subagent escape hatches.
 - Added early `openai>=3.13.0` feature detection for managed Agents without raising the package-wide `openai>=2.45.0,<4.0.0` minimum, plus deterministic sync/async tests and an installed-wheel no-network smoke example.
 - Documented the execution-surface boundary between Responses, the application-run Agents SDK, and the managed Agents API, including feature-specific compatibility and release gates.
