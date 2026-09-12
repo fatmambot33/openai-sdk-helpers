@@ -7,15 +7,14 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: codex-review-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
-
 jobs:
   trusted-gate:
     if: >-
       github.event.pull_request.draft == false &&
       (github.event.action != 'edited' || github.event.changes.base != null)
+    concurrency:
+      group: codex-review-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
     permissions:
       contents: read
       issues: write
@@ -34,6 +33,50 @@ jobs:
           -f context=codex-review
           -f description='Waiting for Codex review of the current PR context'
 
+      - name: Validate trusted PR status boundary
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          AUTHOR_LOGIN: ${{ github.event.pull_request.user.login }}
+        run: |
+          set -euo pipefail
+
+          mapfile -t matching_prs < <(
+            gh api --paginate \
+              "repos/${GITHUB_REPOSITORY}/pulls?state=open&per_page=100" \
+              --jq ".[] | select(.head.sha == \"${HEAD_SHA}\") | .number"
+          )
+
+          if [[ "${#matching_prs[@]}" -ne 1 || "${matching_prs[0]}" != "${PR_NUMBER}" ]]; then
+            echo "::error::The codex-review commit status is safe only when exactly one open PR uses HEAD ${HEAD_SHA}."
+            exit 1
+          fi
+
+          if [[ "${HEAD_REPO}" == "${GITHUB_REPOSITORY}" ]]; then
+            if [[ "${AUTHOR_LOGIN}" == "${GITHUB_REPOSITORY_OWNER}" || "${AUTHOR_LOGIN}" == "dependabot[bot]" ]]; then
+              echo "Trusted same-repository PR source: ${AUTHOR_LOGIN}."
+            else
+              permission="$(
+                gh api \
+                  "repos/${GITHUB_REPOSITORY}/collaborators/${AUTHOR_LOGIN}/permission" \
+                  --jq '.permission'
+              )"
+              case "${permission}" in
+                admin|maintain|write)
+                  echo "Trusted same-repository collaborator: ${AUTHOR_LOGIN} (${permission})."
+                  ;;
+                *)
+                  echo "::error::Same-repository PR author ${AUTHOR_LOGIN} does not have trusted write permission."
+                  exit 1
+                  ;;
+              esac
+            fi
+          else
+            echo "Fork PR source detected; pull_request workflows cannot publish repository write statuses."
+          fi
+
       - name: Request Codex review of current HEAD and base
         uses: fatmambot33/ai-native-platform/actions/codex-review-gate@62cd11e4048f1e157e0b19936dca3fc389d232fb
         with:
@@ -51,6 +94,24 @@ jobs:
           head-sha: ${{ github.event.pull_request.head.sha }}
           review-context: ${{ github.event.pull_request.base.sha }}
           mode: wait
+
+      - name: Recheck PR context before success
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+
+          pr="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}")"
+          current_head_sha="$(jq -r '.head.sha' <<<"${pr}")"
+          current_base_sha="$(jq -r '.base.sha' <<<"${pr}")"
+
+          if [[ "${current_head_sha}" != "${EXPECTED_HEAD_SHA}" || "${current_base_sha}" != "${EXPECTED_BASE_SHA}" ]]; then
+            echo "::error::PR head or base changed while Codex review was running; fresh evidence is required."
+            exit 1
+          fi
 
       - name: Mark Codex review successful
         if: success()
