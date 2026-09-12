@@ -53,7 +53,20 @@ adapters, normalized results and citations, and raw official SDK escape hatches.
 Legacy retrieval imports remain available for compatibility and migration is
 explicit rather than automatic.
 
-## 0.10.0 — Realtime API helpers
+## 0.10.0 — Managed Agents API
+
+- [ ] #191 — add thin typed helpers for the OpenAI-managed Agents API.
+
+The managed Agents API is a distinct execution surface from the application-run
+Agents SDK already supported by this package. Helpers must preserve official SDK
+terminology, resources, results, events, and escape hatches rather than build a
+parallel agent framework, orchestration engine, sandbox abstraction, transport,
+or session store. Existing package capabilities must remain usable on supported
+pre-Agents-API OpenAI SDK versions; using this surface requires an SDK version
+that provides the API and must fail early with an actionable capability error
+otherwise.
+
+## 0.11.0 — Realtime API helpers
 
 - [ ] #145 — add thin typed server-side session configuration and lifecycle
       helpers over official SDK objects.
@@ -70,7 +83,8 @@ A milestone is complete only when:
 
 1. tests, type checks, docstring checks, link checks, and package builds pass;
 2. public APIs are typed, documented, and represented by runnable examples;
-3. backward compatibility and migration impact are explicit;
+3. backward compatibility, feature-specific SDK requirements, and migration
+   impact are explicit;
 4. network calls, destructive actions, ownership, and cleanup are explicit;
 5. the core package remains usable without optional integrations;
 6. built-wheel and supported-example smoke tests pass without credentials;
