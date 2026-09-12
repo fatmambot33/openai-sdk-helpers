@@ -1,0 +1,343 @@
+name: Codex review governance
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review, edited, closed]
+
+permissions:
+  contents: read
+
+jobs:
+  review-gate:
+    if: >-
+      github.event.action != 'closed' &&
+      github.event.pull_request.draft == false &&
+      (github.event.action != 'edited' || github.event.changes.base != null)
+    concurrency:
+      group: codex-review-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+      statuses: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark Codex review pending
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: >-
+          gh api --method POST
+          "repos/${{ github.repository }}/statuses/${HEAD_SHA}"
+          -f state=pending
+          -f context=codex-review
+          -f description='Waiting for Codex review of the current PR context'
+
+      - name: Validate trusted PR status boundary
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          AUTHOR_LOGIN: ${{ github.event.pull_request.user.login }}
+        run: |
+          set -euo pipefail
+
+          matching_prs_text="$(
+            gh api --paginate \
+              "repos/${GITHUB_REPOSITORY}/pulls?state=open&per_page=100" \
+              --jq ".[] | select(.head.sha == \"${HEAD_SHA}\") | .number"
+          )"
+          matching_prs=()
+          if [[ -n "${matching_prs_text}" ]]; then
+            mapfile -t matching_prs <<<"${matching_prs_text}"
+          fi
+
+          if [[ "${#matching_prs[@]}" -ne 1 || "${matching_prs[0]}" != "${PR_NUMBER}" ]]; then
+            echo "::error::The codex-review commit status is safe only when exactly one open PR uses HEAD ${HEAD_SHA}."
+            exit 1
+          fi
+
+          if [[ "${HEAD_REPO}" == "${GITHUB_REPOSITORY}" ]]; then
+            if [[ "${AUTHOR_LOGIN}" != "${GITHUB_REPOSITORY_OWNER}" && "${AUTHOR_LOGIN}" != "dependabot[bot]" ]]; then
+              echo "::error::Solo-maintainer policy allows same-repository PRs only from the repository owner or Dependabot."
+              exit 1
+            fi
+            echo "Trusted same-repository PR source: ${AUTHOR_LOGIN}."
+          else
+            echo "Fork PR source detected; pull_request workflows cannot publish repository write statuses."
+          fi
+
+      - name: Request Codex review of current HEAD and base
+        uses: fatmambot33/ai-native-platform/actions/codex-review-gate@62cd11e4048f1e157e0b19936dca3fc389d232fb
+        with:
+          token: ${{ github.token }}
+          pr-number: ${{ github.event.pull_request.number }}
+          head-sha: ${{ github.event.pull_request.head.sha }}
+          review-context: ${{ github.event.pull_request.base.sha }}
+          mode: request
+
+      - name: Require Codex review of current HEAD and base
+        uses: fatmambot33/ai-native-platform/actions/codex-review-gate@62cd11e4048f1e157e0b19936dca3fc389d232fb
+        with:
+          token: ${{ github.token }}
+          pr-number: ${{ github.event.pull_request.number }}
+          head-sha: ${{ github.event.pull_request.head.sha }}
+          review-context: ${{ github.event.pull_request.base.sha }}
+          mode: wait
+
+      - name: Recheck PR context before status publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+
+          pr="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}")"
+          current_state="$(jq -r '.state' <<<"${pr}")"
+          current_head_sha="$(jq -r '.head.sha' <<<"${pr}")"
+          current_base_sha="$(jq -r '.base.sha' <<<"${pr}")"
+
+          if [[ "${current_state}" != "open" || "${current_head_sha}" != "${EXPECTED_HEAD_SHA}" || "${current_base_sha}" != "${EXPECTED_BASE_SHA}" ]]; then
+            echo "::error::PR state, head, or base changed while Codex review was running; fresh evidence is required."
+            exit 1
+          fi
+
+          matching_prs_text="$(
+            gh api --paginate \
+              "repos/${GITHUB_REPOSITORY}/pulls?state=open&per_page=100" \
+              --jq ".[] | select(.head.sha == \"${EXPECTED_HEAD_SHA}\") | .number"
+          )"
+          matching_prs=()
+          if [[ -n "${matching_prs_text}" ]]; then
+            mapfile -t matching_prs <<<"${matching_prs_text}"
+          fi
+
+          if [[ "${#matching_prs[@]}" -ne 1 || "${matching_prs[0]}" != "${PR_NUMBER}" ]]; then
+            echo "::error::Another open PR uses HEAD ${EXPECTED_HEAD_SHA}; refusing a shared success status."
+            exit 1
+          fi
+
+  publish-status:
+    needs: review-gate
+    if: >-
+      always() &&
+      github.event.action != 'closed' &&
+      github.event.pull_request.draft == false &&
+      (github.event.action != 'edited' || github.event.changes.base != null)
+    concurrency:
+      group: codex-review-head-${{ github.event.pull_request.head.sha }}
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish trusted Codex review status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GATE_RESULT: ${{ needs.review-gate.result }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -u
+
+          state=failure
+          description='Codex review gate did not pass'
+
+          if [[ "${GATE_RESULT}" == "success" ]]; then
+            if pr="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}")"; then
+              current_state="$(jq -r '.state' <<<"${pr}")"
+              current_head_sha="$(jq -r '.head.sha' <<<"${pr}")"
+              current_base_sha="$(jq -r '.base.sha' <<<"${pr}")"
+
+              if [[ "${current_state}" == "open" && "${current_head_sha}" == "${EXPECTED_HEAD_SHA}" && "${current_base_sha}" == "${EXPECTED_BASE_SHA}" ]]; then
+                if matching_prs_text="$(
+                  gh api --paginate \
+                    "repos/${GITHUB_REPOSITORY}/pulls?state=open&per_page=100" \
+                    --jq ".[] | select(.head.sha == \"${EXPECTED_HEAD_SHA}\") | .number"
+                )"; then
+                  matching_prs=()
+                  if [[ -n "${matching_prs_text}" ]]; then
+                    mapfile -t matching_prs <<<"${matching_prs_text}"
+                  fi
+                  if [[ "${#matching_prs[@]}" -eq 1 && "${matching_prs[0]}" == "${PR_NUMBER}" ]]; then
+                    state=success
+                    description='Codex reviewed the current PR context'
+                  else
+                    description='Another open PR uses this HEAD; Codex status is not unique'
+                  fi
+                else
+                  description='Unable to prove unique PR context for Codex review'
+                fi
+              else
+                description='PR state, head, or base changed after Codex review'
+              fi
+            else
+              description='Unable to re-read PR context after Codex review'
+            fi
+          fi
+
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/statuses/${EXPECTED_HEAD_SHA}" \
+            -f state="${state}" \
+            -f context=codex-review \
+            -f description="${description}"
+
+          [[ "${state}" == "success" ]]
+
+  refresh-after-close:
+    if: github.event.action == 'closed'
+    concurrency:
+      group: codex-review-head-${{ github.event.pull_request.head.sha }}
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+      statuses: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve surviving PR context
+        id: survivor
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLOSED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          matching_prs_text="$(
+            gh api --paginate \
+              "repos/${GITHUB_REPOSITORY}/pulls?state=open&per_page=100" \
+              --jq ".[] | select(.head.sha == \"${CLOSED_HEAD_SHA}\") | .number"
+          )"
+          matching_prs=()
+          if [[ -n "${matching_prs_text}" ]]; then
+            mapfile -t matching_prs <<<"${matching_prs_text}"
+          fi
+
+          if [[ "${#matching_prs[@]}" -eq 0 ]]; then
+            echo 'exists=false' >>"${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          if [[ "${#matching_prs[@]}" -ne 1 ]]; then
+            echo "::error::Multiple open PRs still use HEAD ${CLOSED_HEAD_SHA}."
+            exit 1
+          fi
+
+          pr_number="${matching_prs[0]}"
+          pr="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${pr_number}")"
+          echo 'exists=true' >>"${GITHUB_OUTPUT}"
+          echo "pr_number=${pr_number}" >>"${GITHUB_OUTPUT}"
+          echo "head_sha=$(jq -r '.head.sha' <<<"${pr}")" >>"${GITHUB_OUTPUT}"
+          echo "base_sha=$(jq -r '.base.sha' <<<"${pr}")" >>"${GITHUB_OUTPUT}"
+          echo "head_repo=$(jq -r '.head.repo.full_name // ""' <<<"${pr}")" >>"${GITHUB_OUTPUT}"
+          echo "author=$(jq -r '.user.login' <<<"${pr}")" >>"${GITHUB_OUTPUT}"
+          echo "draft=$(jq -r '.draft' <<<"${pr}")" >>"${GITHUB_OUTPUT}"
+
+      - name: Validate surviving PR trust boundary
+        if: steps.survivor.outputs.exists == 'true'
+        env:
+          HEAD_REPO: ${{ steps.survivor.outputs.head_repo }}
+          AUTHOR_LOGIN: ${{ steps.survivor.outputs.author }}
+          DRAFT: ${{ steps.survivor.outputs.draft }}
+        run: |
+          set -euo pipefail
+          if [[ "${DRAFT}" == "true" ]]; then
+            echo "::error::The surviving PR is a draft; wait for ready_for_review."
+            exit 1
+          fi
+          if [[ "${HEAD_REPO}" == "${GITHUB_REPOSITORY}" && "${AUTHOR_LOGIN}" != "${GITHUB_REPOSITORY_OWNER}" && "${AUTHOR_LOGIN}" != "dependabot[bot]" ]]; then
+            echo "::error::Solo-maintainer policy allows same-repository PRs only from the repository owner or Dependabot."
+            exit 1
+          fi
+
+      - name: Mark surviving PR pending
+        if: steps.survivor.outputs.exists == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ steps.survivor.outputs.head_sha }}
+        run: >-
+          gh api --method POST
+          "repos/${{ github.repository }}/statuses/${HEAD_SHA}"
+          -f state=pending
+          -f context=codex-review
+          -f description='Re-evaluating Codex review after duplicate PR closure'
+
+      - name: Request Codex review for surviving PR
+        if: steps.survivor.outputs.exists == 'true'
+        uses: fatmambot33/ai-native-platform/actions/codex-review-gate@62cd11e4048f1e157e0b19936dca3fc389d232fb
+        with:
+          token: ${{ github.token }}
+          pr-number: ${{ steps.survivor.outputs.pr_number }}
+          head-sha: ${{ steps.survivor.outputs.head_sha }}
+          review-context: ${{ steps.survivor.outputs.base_sha }}
+          mode: request
+
+      - name: Require Codex review for surviving PR
+        if: steps.survivor.outputs.exists == 'true'
+        uses: fatmambot33/ai-native-platform/actions/codex-review-gate@62cd11e4048f1e157e0b19936dca3fc389d232fb
+        with:
+          token: ${{ github.token }}
+          pr-number: ${{ steps.survivor.outputs.pr_number }}
+          head-sha: ${{ steps.survivor.outputs.head_sha }}
+          review-context: ${{ steps.survivor.outputs.base_sha }}
+          mode: wait
+
+      - name: Recheck surviving PR context
+        if: steps.survivor.outputs.exists == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.survivor.outputs.pr_number }}
+          EXPECTED_HEAD_SHA: ${{ steps.survivor.outputs.head_sha }}
+          EXPECTED_BASE_SHA: ${{ steps.survivor.outputs.base_sha }}
+        run: |
+          set -euo pipefail
+
+          pr="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}")"
+          current_state="$(jq -r '.state' <<<"${pr}")"
+          current_head_sha="$(jq -r '.head.sha' <<<"${pr}")"
+          current_base_sha="$(jq -r '.base.sha' <<<"${pr}")"
+          [[ "${current_state}" == "open" ]]
+          [[ "${current_head_sha}" == "${EXPECTED_HEAD_SHA}" ]]
+          [[ "${current_base_sha}" == "${EXPECTED_BASE_SHA}" ]]
+
+          matching_prs_text="$(
+            gh api --paginate \
+              "repos/${GITHUB_REPOSITORY}/pulls?state=open&per_page=100" \
+              --jq ".[] | select(.head.sha == \"${EXPECTED_HEAD_SHA}\") | .number"
+          )"
+          matching_prs=()
+          if [[ -n "${matching_prs_text}" ]]; then
+            mapfile -t matching_prs <<<"${matching_prs_text}"
+          fi
+          [[ "${#matching_prs[@]}" -eq 1 && "${matching_prs[0]}" == "${PR_NUMBER}" ]]
+
+      - name: Mark surviving PR successful
+        if: success() && steps.survivor.outputs.exists == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ steps.survivor.outputs.head_sha }}
+        run: >-
+          gh api --method POST
+          "repos/${{ github.repository }}/statuses/${HEAD_SHA}"
+          -f state=success
+          -f context=codex-review
+          -f description='Codex reviewed the surviving PR context'
+
+      - name: Mark closed-head Codex status failed
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: >-
+          gh api --method POST
+          "repos/${{ github.repository }}/statuses/${HEAD_SHA}"
+          -f state=failure
+          -f context=codex-review
+          -f description='Codex review context could not be re-established after PR closure'
