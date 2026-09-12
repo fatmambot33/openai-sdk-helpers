@@ -2,9 +2,9 @@ name: Codex review governance
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, edited]
   pull_request_target:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, edited]
 
 permissions:
   contents: read
@@ -23,11 +23,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Request Codex review of current HEAD
-        uses: fatmambot33/ai-native-platform/actions/codex-review-gate@e1eb223d546407310b7a1aaeae2b7a703155434d
+        uses: fatmambot33/ai-native-platform/actions/codex-review-gate@7ac9b53e8a1d00ef8be59d0d64620cecb356f88d
         with:
           token: ${{ github.token }}
           pr-number: ${{ github.event.pull_request.number }}
           head-sha: ${{ github.event.pull_request.head.sha }}
+          review-context: ${{ github.event.pull_request.base.sha }}
           mode: request
 
   codex-review:
@@ -39,9 +40,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Require Codex review of current HEAD
-        uses: fatmambot33/ai-native-platform/actions/codex-review-gate@e1eb223d546407310b7a1aaeae2b7a703155434d
+        uses: fatmambot33/ai-native-platform/actions/codex-review-gate@7ac9b53e8a1d00ef8be59d0d64620cecb356f88d
         with:
           token: ${{ github.token }}
           pr-number: ${{ github.event.pull_request.number }}
           head-sha: ${{ github.event.pull_request.head.sha }}
+          review-context: ${{ github.event.pull_request.base.sha }}
           mode: wait
