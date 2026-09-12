@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import AsyncIterable, Iterable, Mapping, Sequence
 from importlib.metadata import PackageNotFoundError, version
 from typing import TYPE_CHECKING, Any, Literal, cast
 
@@ -11,7 +11,7 @@ from .runtime import OperationContext, run_observed_async, run_observed_sync
 
 if TYPE_CHECKING:
     from openai import AsyncOpenAI, OpenAI
-    from openai.pagination import AsyncCursorPage, SyncCursorPage
+    from openai.pagination import SyncCursorPage
     from openai.types.beta.agent_session import AgentSession
     from openai.types.beta.agent_session_deleted import AgentSessionDeleted
     from openai.types.beta.agent_session_input_message_param import (
@@ -123,17 +123,14 @@ class ManagedAgentsClient:
         Use ``sessions.create(..., stream=True)`` or ``sessions.stream(...)``
         directly for streaming so the official stream lifecycle remains intact.
         """
-        kwargs: dict[str, Any] = {"environment": environment}
-        if agent is not None:
-            kwargs["agent"] = agent
-        if agent_id is not None:
-            kwargs["agent_id"] = agent_id
-        if input is not None:
-            kwargs["input"] = input
-        if metadata is not None:
-            kwargs["metadata"] = dict(metadata)
-        if vault_ids is not None:
-            kwargs["vault_ids"] = list(vault_ids)
+        kwargs = _create_session_kwargs(
+            environment=environment,
+            agent=agent,
+            agent_id=agent_id,
+            input=input,
+            metadata=metadata,
+            vault_ids=vault_ids,
+        )
         return run_observed_sync(
             operation_context,
             lambda: cast("AgentSession", self.sessions.create(**kwargs)),
@@ -145,7 +142,20 @@ class ManagedAgentsClient:
         *,
         operation_context: OperationContext | None = None,
     ) -> AgentSession:
-        """Retrieve one managed-agent session by identifier."""
+        """Retrieve one managed-agent session.
+
+        Parameters
+        ----------
+        session_id : str
+            Managed session identifier.
+        operation_context : OperationContext or None, default=None
+            Optional lifecycle observer context for this request.
+
+        Returns
+        -------
+        AgentSession
+            Original official SDK session object.
+        """
         session_id = _required_session_id(session_id)
         return run_observed_sync(
             operation_context,
@@ -159,7 +169,22 @@ class ManagedAgentsClient:
         metadata: Mapping[str, str] | None,
         operation_context: OperationContext | None = None,
     ) -> AgentSession:
-        """Replace or clear metadata for one managed-agent session."""
+        """Replace or clear metadata for one managed-agent session.
+
+        Parameters
+        ----------
+        session_id : str
+            Managed session identifier.
+        metadata : Mapping[str, str] or None
+            Replacement metadata. ``None`` clears metadata.
+        operation_context : OperationContext or None, default=None
+            Optional lifecycle observer context for this request.
+
+        Returns
+        -------
+        AgentSession
+            Updated original SDK session object.
+        """
         session_id = _required_session_id(session_id)
         normalized_metadata = None if metadata is None else dict(metadata)
         return run_observed_sync(
@@ -179,16 +204,32 @@ class ManagedAgentsClient:
         order: Literal["asc", "desc"] | None = None,
         operation_context: OperationContext | None = None,
     ) -> SyncCursorPage[AgentSession]:
-        """List managed-agent sessions using official cursor pagination."""
-        kwargs: dict[str, Any] = {}
-        if after is not None:
-            kwargs["after"] = after
-        if agent_id is not None:
-            kwargs["agent_id"] = agent_id
-        if limit is not None:
-            kwargs["limit"] = limit
-        if order is not None:
-            kwargs["order"] = order
+        """List managed-agent sessions with official cursor pagination.
+
+        Parameters
+        ----------
+        after : str or None, default=None
+            Return resources after this session identifier.
+        agent_id : str or None, default=None
+            Restrict results to sessions for this saved agent.
+        limit : int or None, default=None
+            Maximum resources requested from the SDK.
+        order : {"asc", "desc"} or None, default=None
+            Requested creation-time sort order.
+        operation_context : OperationContext or None, default=None
+            Optional lifecycle observer context for this request.
+
+        Returns
+        -------
+        SyncCursorPage[AgentSession]
+            Original official SDK cursor page.
+        """
+        kwargs = _list_session_kwargs(
+            after=after,
+            agent_id=agent_id,
+            limit=limit,
+            order=order,
+        )
         return run_observed_sync(
             operation_context,
             lambda: cast(
@@ -203,7 +244,20 @@ class ManagedAgentsClient:
         *,
         operation_context: OperationContext | None = None,
     ) -> AgentSessionDeleted:
-        """Delete one managed-agent session and return SDK confirmation."""
+        """Delete one managed-agent session.
+
+        Parameters
+        ----------
+        session_id : str
+            Managed session identifier.
+        operation_context : OperationContext or None, default=None
+            Optional lifecycle observer context for this request.
+
+        Returns
+        -------
+        AgentSessionDeleted
+            Original official SDK deletion confirmation.
+        """
         session_id = _required_session_id(session_id)
         return run_observed_sync(
             operation_context,
@@ -218,7 +272,19 @@ class ManagedAgentsClient:
         idempotency_key: str | None = None,
         operation_context: OperationContext | None = None,
     ) -> None:
-        """Submit message, cancellation, or tool-result events to a session."""
+        """Submit message, cancellation, or tool-result input events.
+
+        Parameters
+        ----------
+        session_id : str
+            Managed session identifier.
+        events : Iterable[AgentSessionInputParam]
+            Official SDK input events to submit.
+        idempotency_key : str or None, default=None
+            Optional idempotency key forwarded to the SDK.
+        operation_context : OperationContext or None, default=None
+            Optional lifecycle observer context for this request.
+        """
         session_id = _required_session_id(session_id)
         kwargs: dict[str, Any] = {"events": events}
         if idempotency_key is not None:
@@ -274,18 +340,38 @@ class AsyncManagedAgentsClient:
         vault_ids: Sequence[str] | None = None,
         operation_context: OperationContext | None = None,
     ) -> AgentSession:
-        """Create a non-streaming managed-agent session asynchronously."""
-        kwargs: dict[str, Any] = {"environment": environment}
-        if agent is not None:
-            kwargs["agent"] = agent
-        if agent_id is not None:
-            kwargs["agent_id"] = agent_id
-        if input is not None:
-            kwargs["input"] = input
-        if metadata is not None:
-            kwargs["metadata"] = dict(metadata)
-        if vault_ids is not None:
-            kwargs["vault_ids"] = list(vault_ids)
+        """Create a non-streaming managed-agent session asynchronously.
+
+        Parameters
+        ----------
+        environment : EnvironmentParam
+            Official SDK environment configuration or template reference.
+        agent : session_create_params.Agent or None, default=None
+            Inline agent configuration. Omitted when ``None``.
+        agent_id : str or None, default=None
+            Saved reusable agent identifier. Omitted when ``None``.
+        input : str, Iterable[AgentSessionInputMessageParam], or None, default=None
+            Optional initial input. Omitted when ``None``.
+        metadata : Mapping[str, str] or None, default=None
+            Optional session metadata. Omitted when ``None``.
+        vault_ids : Sequence[str] or None, default=None
+            Optional vault identifiers. Omitted when ``None``.
+        operation_context : OperationContext or None, default=None
+            Optional lifecycle observer context for this request.
+
+        Returns
+        -------
+        AgentSession
+            Original official SDK session object.
+        """
+        kwargs = _create_session_kwargs(
+            environment=environment,
+            agent=agent,
+            agent_id=agent_id,
+            input=input,
+            metadata=metadata,
+            vault_ids=vault_ids,
+        )
         return await run_observed_async(
             operation_context,
             lambda: self.sessions.create(**kwargs),
@@ -297,7 +383,20 @@ class AsyncManagedAgentsClient:
         *,
         operation_context: OperationContext | None = None,
     ) -> AgentSession:
-        """Retrieve one managed-agent session asynchronously."""
+        """Retrieve one managed-agent session asynchronously.
+
+        Parameters
+        ----------
+        session_id : str
+            Managed session identifier.
+        operation_context : OperationContext or None, default=None
+            Optional lifecycle observer context for this request.
+
+        Returns
+        -------
+        AgentSession
+            Original official SDK session object.
+        """
         session_id = _required_session_id(session_id)
         return await run_observed_async(
             operation_context,
@@ -311,7 +410,22 @@ class AsyncManagedAgentsClient:
         metadata: Mapping[str, str] | None,
         operation_context: OperationContext | None = None,
     ) -> AgentSession:
-        """Replace or clear session metadata asynchronously."""
+        """Replace or clear session metadata asynchronously.
+
+        Parameters
+        ----------
+        session_id : str
+            Managed session identifier.
+        metadata : Mapping[str, str] or None
+            Replacement metadata. ``None`` clears metadata.
+        operation_context : OperationContext or None, default=None
+            Optional lifecycle observer context for this request.
+
+        Returns
+        -------
+        AgentSession
+            Updated original SDK session object.
+        """
         session_id = _required_session_id(session_id)
         normalized_metadata = None if metadata is None else dict(metadata)
         return await run_observed_async(
@@ -322,29 +436,47 @@ class AsyncManagedAgentsClient:
             ),
         )
 
-    async def list_sessions(
+    def list_sessions(
         self,
         *,
         after: str | None = None,
         agent_id: str | None = None,
         limit: int | None = None,
         order: Literal["asc", "desc"] | None = None,
-        operation_context: OperationContext | None = None,
-    ) -> AsyncCursorPage[AgentSession]:
-        """List managed-agent sessions asynchronously."""
-        kwargs: dict[str, Any] = {}
-        if after is not None:
-            kwargs["after"] = after
-        if agent_id is not None:
-            kwargs["agent_id"] = agent_id
-        if limit is not None:
-            kwargs["limit"] = limit
-        if order is not None:
-            kwargs["order"] = order
-        return await run_observed_async(
-            operation_context,
-            lambda: self.sessions.list(**kwargs),
+    ) -> AsyncIterable[AgentSession]:
+        """Return the official lazy async session paginator.
+
+        Parameters
+        ----------
+        after : str or None, default=None
+            Return resources after this session identifier.
+        agent_id : str or None, default=None
+            Restrict results to sessions for this saved agent.
+        limit : int or None, default=None
+            Maximum resources requested from the SDK.
+        order : {"asc", "desc"} or None, default=None
+            Requested creation-time sort order.
+
+        Returns
+        -------
+        AsyncIterable[AgentSession]
+            Original SDK async paginator, typed by its iteration contract.
+
+        Notes
+        -----
+        The official async SDK returns a lazy paginator immediately. This helper
+        deliberately does not wrap paginator creation in ``OperationContext``
+        because the network lifecycle occurs during asynchronous iteration.
+        Access :attr:`sessions` when the paginator's full SDK-specific type or
+        methods are required.
+        """
+        kwargs = _list_session_kwargs(
+            after=after,
+            agent_id=agent_id,
+            limit=limit,
+            order=order,
         )
+        return cast("AsyncIterable[AgentSession]", self.sessions.list(**kwargs))
 
     async def delete_session(
         self,
@@ -352,7 +484,20 @@ class AsyncManagedAgentsClient:
         *,
         operation_context: OperationContext | None = None,
     ) -> AgentSessionDeleted:
-        """Delete one managed-agent session asynchronously."""
+        """Delete one managed-agent session asynchronously.
+
+        Parameters
+        ----------
+        session_id : str
+            Managed session identifier.
+        operation_context : OperationContext or None, default=None
+            Optional lifecycle observer context for this request.
+
+        Returns
+        -------
+        AgentSessionDeleted
+            Original official SDK deletion confirmation.
+        """
         session_id = _required_session_id(session_id)
         return await run_observed_async(
             operation_context,
@@ -367,7 +512,19 @@ class AsyncManagedAgentsClient:
         idempotency_key: str | None = None,
         operation_context: OperationContext | None = None,
     ) -> None:
-        """Submit input events to a managed-agent session asynchronously."""
+        """Submit managed-agent input events asynchronously.
+
+        Parameters
+        ----------
+        session_id : str
+            Managed session identifier.
+        events : Iterable[AgentSessionInputParam]
+            Official SDK input events to submit.
+        idempotency_key : str or None, default=None
+            Optional idempotency key forwarded to the SDK.
+        operation_context : OperationContext or None, default=None
+            Optional lifecycle observer context for this request.
+        """
         session_id = _required_session_id(session_id)
         kwargs: dict[str, Any] = {"events": events}
         if idempotency_key is not None:
@@ -376,6 +533,48 @@ class AsyncManagedAgentsClient:
             operation_context,
             lambda: self.sessions.events.create(session_id, **kwargs),
         )
+
+
+def _create_session_kwargs(
+    *,
+    environment: EnvironmentParam,
+    agent: session_create_params.Agent | None,
+    agent_id: str | None,
+    input: str | Iterable[AgentSessionInputMessageParam] | None,
+    metadata: Mapping[str, str] | None,
+    vault_ids: Sequence[str] | None,
+) -> dict[str, Any]:
+    kwargs: dict[str, Any] = {"environment": environment}
+    if agent is not None:
+        kwargs["agent"] = agent
+    if agent_id is not None:
+        kwargs["agent_id"] = agent_id
+    if input is not None:
+        kwargs["input"] = input
+    if metadata is not None:
+        kwargs["metadata"] = dict(metadata)
+    if vault_ids is not None:
+        kwargs["vault_ids"] = list(vault_ids)
+    return kwargs
+
+
+def _list_session_kwargs(
+    *,
+    after: str | None,
+    agent_id: str | None,
+    limit: int | None,
+    order: Literal["asc", "desc"] | None,
+) -> dict[str, Any]:
+    kwargs: dict[str, Any] = {}
+    if after is not None:
+        kwargs["after"] = after
+    if agent_id is not None:
+        kwargs["agent_id"] = agent_id
+    if limit is not None:
+        kwargs["limit"] = limit
+    if order is not None:
+        kwargs["order"] = order
+    return kwargs
 
 
 def _find_managed_agents_resource(client: object) -> Any | None:
