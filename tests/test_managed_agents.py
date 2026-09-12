@@ -154,12 +154,15 @@ def test_sync_facade_preserves_resources_results_and_observability() -> None:
     assert observed[-1].result is sessions.created
 
     assert helper.retrieve_session(" session_1 ") is sessions.retrieved
-    assert helper.update_session_metadata(
-        "session_1", metadata=None
-    ) is sessions.updated
-    assert helper.list_sessions(
-        after="session_0", agent_id="agent_123", limit=10, order="asc"
-    ) is sessions.page
+    assert (
+        helper.update_session_metadata("session_1", metadata=None) is sessions.updated
+    )
+    assert (
+        helper.list_sessions(
+            after="session_0", agent_id="agent_123", limit=10, order="asc"
+        )
+        is sessions.page
+    )
     assert helper.delete_session("session_1") is sessions.deleted
 
     events = (
@@ -212,16 +215,21 @@ async def test_async_facade_preserves_results_and_event_submission() -> None:
         observers=(observed.append,),
     )
 
-    assert await helper.create_session(
-        environment={"type": "openai_hosted"},
-        agent_id="agent_123",
-    ) is sessions.created
-    assert await helper.retrieve_session(
-        "session_1", operation_context=context
-    ) is sessions.retrieved
-    assert await helper.update_session_metadata(
-        "session_1", metadata={"stage": "test"}
-    ) is sessions.updated
+    assert (
+        await helper.create_session(
+            environment={"type": "openai_hosted"},
+            agent_id="agent_123",
+        )
+        is sessions.created
+    )
+    assert (
+        await helper.retrieve_session("session_1", operation_context=context)
+        is sessions.retrieved
+    )
+    assert (
+        await helper.update_session_metadata("session_1", metadata={"stage": "test"})
+        is sessions.updated
+    )
     assert helper.list_sessions(limit=5, order="desc") is sessions.page
     assert await helper.delete_session("session_1") is sessions.deleted
 
