@@ -45,7 +45,7 @@ def managed_agents_available(client: object) -> bool:
 
 
 class ManagedAgentsClient:
-    """Synchronous facade for discrete managed-agent session operations.
+    """Provide synchronous helpers for discrete managed-agent session operations.
 
     The facade preserves official SDK resources and results. Streaming,
     artifacts, subagents, items, turns, and other fast-moving beta surfaces stay
@@ -61,6 +61,21 @@ class ManagedAgentsClient:
     ------
     ManagedAgentsUnavailableError
         If the supplied client does not expose ``beta.agents.sessions``.
+
+    Methods
+    -------
+    create_session
+        Create a non-streaming managed-agent session.
+    retrieve_session
+        Retrieve one managed-agent session.
+    update_session_metadata
+        Replace or clear metadata for one managed-agent session.
+    list_sessions
+        List managed-agent sessions with official cursor pagination.
+    delete_session
+        Delete one managed-agent session.
+    submit_events
+        Submit message, cancellation, or tool-result input events.
     """
 
     def __init__(self, sdk_client: OpenAI) -> None:
@@ -109,7 +124,8 @@ class ManagedAgentsClient:
         metadata : Mapping[str, str] or None, default=None
             Optional session metadata. Omitted when ``None``.
         vault_ids : Sequence[str] or None, default=None
-            Optional vault identifiers. Omitted when ``None``.
+            Optional non-string sequence of vault identifiers. Omitted when
+            ``None``. A bare string is rejected.
         operation_context : OperationContext or None, default=None
             Optional lifecycle observer context for this request.
 
@@ -117,6 +133,11 @@ class ManagedAgentsClient:
         -------
         AgentSession
             Original official SDK session object.
+
+        Raises
+        ------
+        TypeError
+            If ``vault_ids`` is passed as a bare string.
 
         Notes
         -----
@@ -296,7 +317,7 @@ class ManagedAgentsClient:
 
 
 class AsyncManagedAgentsClient:
-    """Asynchronous facade for discrete managed-agent session operations.
+    """Provide asynchronous helpers for discrete managed-agent operations.
 
     Parameters
     ----------
@@ -307,6 +328,21 @@ class AsyncManagedAgentsClient:
     ------
     ManagedAgentsUnavailableError
         If the supplied client does not expose ``beta.agents.sessions``.
+
+    Methods
+    -------
+    create_session
+        Create a non-streaming managed-agent session asynchronously.
+    retrieve_session
+        Retrieve one managed-agent session asynchronously.
+    update_session_metadata
+        Replace or clear session metadata asynchronously.
+    list_sessions
+        Return the official lazy async session paginator.
+    delete_session
+        Delete one managed-agent session asynchronously.
+    submit_events
+        Submit managed-agent input events asynchronously.
     """
 
     def __init__(self, sdk_client: AsyncOpenAI) -> None:
@@ -355,7 +391,8 @@ class AsyncManagedAgentsClient:
         metadata : Mapping[str, str] or None, default=None
             Optional session metadata. Omitted when ``None``.
         vault_ids : Sequence[str] or None, default=None
-            Optional vault identifiers. Omitted when ``None``.
+            Optional non-string sequence of vault identifiers. Omitted when
+            ``None``. A bare string is rejected.
         operation_context : OperationContext or None, default=None
             Optional lifecycle observer context for this request.
 
@@ -363,6 +400,11 @@ class AsyncManagedAgentsClient:
         -------
         AgentSession
             Original official SDK session object.
+
+        Raises
+        ------
+        TypeError
+            If ``vault_ids`` is passed as a bare string.
         """
         kwargs = _create_session_kwargs(
             environment=environment,
@@ -554,8 +596,14 @@ def _create_session_kwargs(
     if metadata is not None:
         kwargs["metadata"] = dict(metadata)
     if vault_ids is not None:
-        kwargs["vault_ids"] = list(vault_ids)
+        kwargs["vault_ids"] = _normalize_vault_ids(vault_ids)
     return kwargs
+
+
+def _normalize_vault_ids(vault_ids: Sequence[str]) -> list[str]:
+    if isinstance(vault_ids, str):
+        raise TypeError("vault_ids must be a non-string sequence of strings")
+    return list(vault_ids)
 
 
 def _list_session_kwargs(
