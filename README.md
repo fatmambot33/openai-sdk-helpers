@@ -108,7 +108,7 @@ from openai_sdk_helpers.managed_agents import ManagedAgentsClient
 client = OpenAI()
 managed = ManagedAgentsClient(client)
 session = managed.create_session(
-    environment={"type": "computer", "name": "default"},
+    environment={"type": "openai_hosted"},
     agent_id="agent_123",
     input="Inspect the repository.",
 )
