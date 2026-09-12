@@ -40,7 +40,8 @@ They must pass the feature acceptance test in `PRODUCT.md` before implementation
 
 | Capability | Target | Roadmap status | Constraint |
 | --- | --- | --- | --- |
-| Realtime API helpers | `0.10.0` | Issues #145–#146 | Thin server-side helpers over official SDK sessions/events only; no browser/audio application, replacement transport, protocol implementation, or parallel event framework |
+| Managed Agents API helpers | `0.10.0` | Issue #191 | Thin typed helpers over the official OpenAI-managed Agents API; preserve official resources, events, and capability/version boundaries without introducing parallel orchestration, sandbox, transport, or session frameworks |
+| Realtime API helpers | `0.11.0` | Issues #145–#146 | Thin server-side helpers over official SDK sessions/events only; no browser/audio application, replacement transport, protocol implementation, or parallel event framework |
 
 Images and audio generation are not committed roadmap surfaces. They should be
 added only after repeated workflows demonstrate that a package-level helper is

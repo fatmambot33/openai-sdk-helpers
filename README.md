@@ -204,8 +204,9 @@ universal agent framework, prompt catalog, storage service, protocol
 implementation, or transport framework. Application-specific business logic
 belongs in consuming projects.
 
-Realtime API helpers are the current roadmap item. Their issue order and release
-gates are tracked in [ROADMAP.md](ROADMAP.md).
+Managed Agents API helpers are the current roadmap item for 0.10.0. Realtime API
+helpers follow in 0.11.0; issue order and release gates are tracked in
+[ROADMAP.md](ROADMAP.md).
 
 ## License
 
