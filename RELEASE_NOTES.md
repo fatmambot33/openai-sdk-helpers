@@ -124,8 +124,8 @@ results.
 
 ### Retrieval lifecycle
 
-- Added dependency-injected synchronous and asynchronous `OpenAIRetrievalClient`
-  and `AsyncOpenAIRetrievalClient` lifecycle operations over caller-configured
+- Added dependency-injected `OpenAIRetrievalClient` and
+  `AsyncOpenAIRetrievalClient` lifecycle operations over caller-configured
   official OpenAI clients.
 - Added explicit Files upload/delete and Vector Stores create, retrieve, list,
   update, and delete operations.
