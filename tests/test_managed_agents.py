@@ -85,7 +85,7 @@ class _AsyncSessions:
         self.calls.append(("update", args, kwargs))
         return self.updated
 
-    async def list(self, **kwargs: Any) -> object:
+    def list(self, **kwargs: Any) -> object:
         self.calls.append(("list", (), kwargs))
         return self.page
 
@@ -222,7 +222,7 @@ async def test_async_facade_preserves_results_and_event_submission() -> None:
     assert await helper.update_session_metadata(
         "session_1", metadata={"stage": "test"}
     ) is sessions.updated
-    assert await helper.list_sessions(limit=5, order="desc") is sessions.page
+    assert helper.list_sessions(limit=5, order="desc") is sessions.page
     assert await helper.delete_session("session_1") is sessions.deleted
 
     events = ({"type": "agent.session.input.cancel"},)
