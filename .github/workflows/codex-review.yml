@@ -13,7 +13,7 @@ jobs:
       github.event.pull_request.draft == false &&
       (github.event.action != 'edited' || github.event.changes.base != null)
     concurrency:
-      group: codex-review-${{ github.event.pull_request.number }}
+      group: codex-review-${{ github.event.pull_request.head.sha }}
       cancel-in-progress: true
     permissions:
       contents: read
@@ -97,6 +97,17 @@ jobs:
 
           if [[ "${current_head_sha}" != "${EXPECTED_HEAD_SHA}" || "${current_base_sha}" != "${EXPECTED_BASE_SHA}" ]]; then
             echo "::error::PR head or base changed while Codex review was running; fresh evidence is required."
+            exit 1
+          fi
+
+          mapfile -t matching_prs < <(
+            gh api --paginate \
+              "repos/${GITHUB_REPOSITORY}/pulls?state=open&per_page=100" \
+              --jq ".[] | select(.head.sha == \"${EXPECTED_HEAD_SHA}\") | .number"
+          )
+
+          if [[ "${#matching_prs[@]}" -ne 1 || "${matching_prs[0]}" != "${PR_NUMBER}" ]]; then
+            echo "::error::Another open PR began using HEAD ${EXPECTED_HEAD_SHA}; refusing to publish a shared success status."
             exit 1
           fi
 
