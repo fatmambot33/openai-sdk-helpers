@@ -4,6 +4,13 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+- Added capability-gated synchronous and asynchronous OpenAI Decisions API helpers
+  for native predicate, choice, and score requests, including single-question
+  conveniences, raw SDK escape hatches, refusals, and optional operation
+  observability.
+- Kept the package-wide `openai>=2.45.0,<4.0.0` compatibility range while
+  documenting `openai>=3.26.0` as the feature minimum for Decisions.
+
 ## 0.10.0 - 2026-09-12
 
 - Added capability-gated synchronous and asynchronous helpers for discrete OpenAI-managed Agents API session lifecycle operations while preserving original SDK resources, results, exceptions, streaming, artifacts, and subagent escape hatches.
