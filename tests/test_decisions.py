@@ -24,7 +24,9 @@ class _DecisionResult:
 class _SyncDecisions:
     def __init__(self) -> None:
         self.calls: list[dict[str, Any]] = []
-        self.answers: list[object] = [SimpleNamespace(type="predicate", probability=0.9)]
+        self.answers: list[object] = [
+            SimpleNamespace(type="predicate", probability=0.9)
+        ]
 
     def create(self, **kwargs: Any) -> _DecisionResult:
         self.calls.append(kwargs)
@@ -34,7 +36,9 @@ class _SyncDecisions:
 class _AsyncDecisions:
     def __init__(self) -> None:
         self.calls: list[dict[str, Any]] = []
-        self.answers: list[object] = [SimpleNamespace(type="predicate", probability=0.8)]
+        self.answers: list[object] = [
+            SimpleNamespace(type="predicate", probability=0.8)
+        ]
 
     async def create(self, **kwargs: Any) -> _DecisionResult:
         self.calls.append(kwargs)
