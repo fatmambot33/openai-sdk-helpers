@@ -119,6 +119,29 @@ available directly through `managed.sessions` and `managed.agents`. See
 [docs/managed-agents.md](docs/managed-agents.md) for compatibility and execution
 boundaries.
 
+### Decisions
+
+Use `openai_sdk_helpers.decisions` for fast typed predicates, fixed choices,
+and ordered scoring when generation or an agent loop would be unnecessary.
+This surface requires an OpenAI Python SDK exposing `client.decisions.create`
+(3.26.0 or later) without raising the package-wide SDK minimum.
+
+```python
+from openai import OpenAI
+from openai_sdk_helpers.decisions import DecisionsClient
+
+decision = DecisionsClient(OpenAI())
+answer = decision.predicate(
+    "The request asks for a routine account lookup.",
+    instructions="Should this request use the standard support path?",
+    name="standard_path",
+)
+```
+
+Batch questions, multimodal inputs, usage, refusals, and future model identifiers
+remain available through the official SDK-shaped interface. See
+[docs/decisions.md](docs/decisions.md) for the execution boundary and examples.
+
 ### Codex plugins
 
 Use `openai_sdk_helpers.codex` when a separately packaged capability should
@@ -150,6 +173,7 @@ The canonical inventory of shipped and planned surfaces is
 - Responses API orchestration, structured outputs, files, tools, and websocket helpers;
 - Agents SDK wrappers, runners, search workflows, and reusable text agents;
 - capability-gated managed Agents API session lifecycle helpers;
+- capability-gated Decisions API helpers for predicates, choices, and scores;
 - typed Pydantic structures and Jinja prompt rendering;
 - file and vector-store helpers;
 - output validation and shared tool contracts;
@@ -192,6 +216,7 @@ and trust boundaries.
 - [Operation context](docs/operation-context.md) — lifecycle hooks, usage, diagnostics, and SDK boundaries
 - [Conversation state](docs/conversation-state.md) — ownership modes, compatibility, persistence, and migration
 - [Managed Agents API](docs/managed-agents.md) — managed session helpers, compatibility, streaming, and escape hatches
+- [Decisions API](docs/decisions.md) — fast predicate, choice, and score helpers with compatibility boundaries
 - [Installation profiles](docs/installation.md) — core, optional dependencies, and feature-specific SDK requirements
 - [Supported examples](examples/README.md) — executable and illustrative example policy
 - [Security policy](SECURITY.md) — confidential reporting and supported versions
@@ -231,8 +256,9 @@ universal agent framework, prompt catalog, storage service, protocol
 implementation, or transport framework. Application-specific business logic
 belongs in consuming projects.
 
-Managed Agents API helpers are the 0.10.0 release target. Realtime API helpers
-follow in 0.11.0; issue order and release gates are tracked in
+Managed Agents API helpers shipped in 0.10.0. Decisions API helpers are the next
+priority because they add a distinct OpenAI execution primitive; Realtime API
+helpers follow afterward. Issue order and release gates are tracked in
 [ROADMAP.md](ROADMAP.md).
 
 ## License
