@@ -13,6 +13,7 @@ pull request.
 | `supported_responses.py` | Responses configuration and registry | No API call |
 | `supported_agents.py` | Agents configuration and official SDK agent construction | No API call |
 | `supported_managed_agents.py` | Managed Agents capability detection and facade construction | No API call |
+| `supported_decisions.py` | Decisions capability detection, facade construction, and predicate forwarding | No API call |
 | `codex_plugin.py` | Codex plugin lifecycle plus sync and async commands | No API call |
 
 Run them after installing the package:
@@ -21,12 +22,15 @@ Run them after installing the package:
 python examples/supported_responses.py
 python examples/supported_agents.py
 python examples/supported_managed_agents.py
+python examples/supported_decisions.py
 python examples/codex_plugin.py
 ```
 
 The managed Agents example requires an installed OpenAI Python SDK that exposes
-`beta.agents.sessions` (3.13.0 or later). The package itself remains compatible
-with its lower declared SDK minimum for other surfaces.
+`beta.agents.sessions` (3.13.0 or later). The Decisions example uses a fake
+resource and therefore remains credential-free even though live Decisions calls
+require `openai>=3.26.0`. The package itself remains compatible with its lower
+declared SDK minimum for other surfaces.
 
 ## Illustrative examples
 
