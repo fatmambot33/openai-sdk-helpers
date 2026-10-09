@@ -19,6 +19,7 @@ the installed SDK exposes it.
 - **Minimum package-wide supported version:** 2.45.0
 - **Supported range:** 2.45.0 and later, below 4.0
 - **Managed Agents API feature minimum:** 3.13.0
+- **Decisions API feature minimum:** 3.26.0
 
 Existing package surfaces remain supported on the package-wide minimum. The
 `openai_sdk_helpers.managed_agents` module is safe to import on earlier supported
@@ -29,6 +30,12 @@ version and feature minimum in its context.
 
 This feature-specific requirement avoids raising the dependency floor for users
 that do not need the managed Agents API.
+
+The Decisions API follows the same capability-gated policy. The
+`openai_sdk_helpers.decisions` module is safe to import across the package-wide
+supported SDK range, while constructing a Decisions facade requires
+`client.decisions.create`, first available in `openai>=3.26.0`. An
+incompatible client raises `DecisionsUnavailableError` before network execution.
 
 ### OpenAI Agents SDK (`openai-agents`)
 
@@ -61,7 +68,13 @@ Managed Agents applications additionally need:
 openai>=3.13.0,<4.0.0
 ```
 
-This is a feature capability requirement, not a package-wide dependency change.
+Decisions applications additionally need:
+
+```text
+openai>=3.26.0,<4.0.0
+```
+
+These are feature capability requirements, not package-wide dependency changes.
 
 ## Testing Strategy
 
@@ -69,8 +82,8 @@ Compatibility validation covers:
 
 1. **Package minimum:** existing helpers remain importable and functional with
    the declared minimum OpenAI SDK dependency set.
-2. **Current supported SDK:** managed Agents helpers are tested against clients
-   exposing the official `beta.agents.sessions` resource.
+2. **Current supported SDK:** managed Agents and Decisions helpers are tested
+   against clients exposing their official SDK resources.
 3. **Capability failure:** an incompatible client fails before network execution
    with an actionable feature/version error.
 4. **Python matrix:** Python 3.10 through 3.13 remains supported.
@@ -101,6 +114,9 @@ avoids duplicating fast-moving SDK APIs.
   behavioral reproducibility.
 - A package-compatible `openai` version below 3.13.0 does not provide the managed
   Agents API; use `managed_agents_available()` before constructing that facade
+  when applications support multiple SDK generations.
+- A package-compatible `openai` version below 3.26.0 does not provide the
+  Decisions API; use `decisions_available()` before constructing that facade
   when applications support multiple SDK generations.
 - Use minimum-dependency CI before raising either package-wide lower bound.
 
