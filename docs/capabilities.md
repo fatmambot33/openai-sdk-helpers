@@ -42,7 +42,6 @@ They must pass the feature acceptance test in `PRODUCT.md` before implementation
 
 | Capability | Target | Roadmap status | Constraint |
 | --- | --- | --- | --- |
-| Decisions API helpers | `0.11.0` | Issue #198 | Thin capability-gated helpers over official Decisions requests; no routing framework, policy engine, replacement schema, or explanation layer |
 | Realtime API helpers | `0.12.0` | Issues #145–#146 | Thin server-side helpers over official SDK sessions/events only; no browser/audio application, replacement transport, protocol implementation, or parallel event framework |
 
 Images and audio generation are not committed roadmap surfaces. They should be
