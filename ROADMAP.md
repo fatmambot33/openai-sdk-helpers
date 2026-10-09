@@ -73,9 +73,20 @@ examples, Pyright, formatting, documentation checks, and resolved Codex review
 threads. The milestone is not released until #194 completes protected OIDC
 publication and post-release verification.
 
-## 0.11.0 — Realtime API helpers
+## 0.11.0 — Decisions API
 
-Blocked until 0.10.0 is published and verified through #194.
+- [ ] #198 — add capability-gated synchronous and asynchronous Decisions API
+      helpers for predicate, choice, and score requests.
+
+The Decisions surface preserves official SDK question/answer objects, usage,
+refusals, exceptions, and raw resource access. It remains import-safe on the
+package-wide OpenAI SDK minimum and requires `openai>=3.26.0` only when the
+surface is used. The scope excludes routing frameworks, policy engines,
+replacement schemas, and generated explanation layers.
+
+## 0.12.0 — Realtime API helpers
+
+Blocked until the Decisions milestone is complete.
 
 - [ ] #145 — add thin typed server-side session configuration and lifecycle
       helpers over official SDK objects.
