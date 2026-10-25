@@ -123,8 +123,9 @@ boundaries.
 
 Use `openai_sdk_helpers.decisions` for fast typed predicates, fixed choices,
 and ordered scoring when generation or an agent loop would be unnecessary.
-This surface requires an OpenAI Python SDK exposing `client.decisions.create`
-(3.26.0 or later) without raising the package-wide SDK minimum.
+The GA-compatible Decisions surface uses the package-wide OpenAI Python SDK
+minimum (`openai>=3.37.0`). It accepts JSON/tool history, structured
+instructions, and native prompt caching parameters.
 
 ```python
 from openai import OpenAI

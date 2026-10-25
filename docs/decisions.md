@@ -9,24 +9,13 @@ classification, prioritization, or scoring step.
 
 ## Compatibility
 
-The package-wide OpenAI Python SDK range remains:
+The package-wide OpenAI Python SDK requirement is `openai>=3.37.0,<4.0.0`.
+OpenAI Decisions became generally available on October 22, 2026. SDK 3.37.0
+provides GA input types and native prompt caching parameters.
 
-```text
-openai>=2.45.0,<4.0.0
-```
-
-The Decisions API helper surface requires an SDK client exposing
-`client.decisions.create`, first available in `openai>=3.26.0`.
-
-Applications that need Decisions can upgrade only that dependency:
-
-```bash
-pip install "openai>=3.26.0,<4.0.0"
-```
-
-Importing `openai_sdk_helpers.decisions` remains safe on older package-supported
-SDK versions. Constructing a Decisions helper with an incompatible client raises
-`DecisionsUnavailableError` before any network request.
+The helper still checks for `client.decisions.create` and raises
+`DecisionsUnavailableError` before network execution for incompatible injected
+clients. Earlier `openai` releases are no longer package-supported.
 
 ## Choosing Decisions versus other surfaces
 
@@ -197,8 +186,46 @@ or exception.
 
 ## Input boundary
 
-The helper forwards Decisions input unchanged. The official API currently
-supports a string or user messages containing text and inline images. Callers
-should use the official SDK types for multimodal message construction so new
-upstream fields remain visible instead of being hidden behind a second package
-schema.
+The helper forwards Decisions input unchanged. The GA API supports a string or ordered native messages (system, developer,
+assistant, user), function/custom-tool calls, and matched outputs. User content
+may include text, images, and `input_json` blocks. Question `instructions`
+accept a string or native text, image, and JSON parts. No parallel schema
+is introduced.
+
+## Native GA input
+
+```python
+decision = client.create(
+    input=(
+        {"role": "user", "content": [{"type": "input_json", "data": {"status": "ready"}}]},
+        {"role": "assistant", "content": "The job appears ready."},
+    ),
+    questions=(
+        {"type": "predicate", "instructions": [
+            {"type": "input_text", "text": "Is the job ready to run?"},
+        ]},
+    ),
+)
+```
+
+The GA API permits 1–400 questions; a choice question permits 2–255 distinct
+choices. The helper forwards inputs unchanged.
+
+## Native prompt caching
+
+Both `create` and the `predicate`, `choose`, `score` shortcuts support
+`prompt_cache_key` and `prompt_cache_options` without adding cache management.
+Unset options are omitted from the SDK call.
+
+```python
+answer = client.predicate(
+    "Customer requested account help.",
+    instructions="Is this a routine request?",
+    prompt_cache_key="support-policy-v1",
+    prompt_cache_options={"mode": "implicit", "ttl": "30m"},
+)
+```
+
+Cache `mode` can be `implicit` or `explicit`; `ttl` currently accepts
+`30m`. Use official SDK content parts for explicit breakpoints. The async
+facade supports the same parameters. Cache billing remains upstream.

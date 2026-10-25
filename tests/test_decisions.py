@@ -56,9 +56,9 @@ def test_capability_detection_and_error_are_actionable() -> None:
     with pytest.raises(DecisionsUnavailableError) as error:
         DecisionsClient(unsupported)  # type: ignore[arg-type]
 
-    assert "openai>=3.26.0" in str(error.value)
+    assert "openai>=3.37.0" in str(error.value)
     assert error.value.context["feature"] == "decisions"
-    assert error.value.context["minimum_openai_version"] == "3.26.0"
+    assert error.value.context["minimum_openai_version"] == "3.37.0"
 
 
 def test_generic_create_preserves_resource_result_and_observability() -> None:
@@ -235,3 +235,88 @@ async def test_async_facade_has_parity_and_preserves_native_answer() -> None:
         OperationPhase.START,
         OperationPhase.SUCCESS,
     ]
+
+
+def test_ga_input_json_tool_history_and_maximum_question_batch() -> None:
+    """Forward GA JSON/tool history and 400 questions unchanged."""
+    resource = _SyncDecisions()
+    client = DecisionsClient(SimpleNamespace(decisions=resource))  # type: ignore[arg-type]
+    evidence = (
+        {"role": "system", "content": "Evaluate the supplied evidence."},
+        {"role": "user", "content": [{"type": "input_json", "data": {"risk": "low"}}]},
+        {"type": "function_call", "call_id": "c1", "name": "lookup", "arguments": "{}"},
+        {"type": "function_call_output", "call_id": "c1", "output": "verified"},
+    )
+    questions = tuple(
+        {"type": "predicate", "name": f"check_{i}", "instructions": "Is it safe?"}
+        for i in range(400)
+    )
+
+    result = client.create(input=evidence, questions=questions)  # type: ignore[arg-type]
+
+    assert result.answers is resource.answers
+    assert resource.calls[0]["input"] is evidence
+    assert resource.calls[0]["questions"] is questions
+    assert len(resource.calls[0]["questions"]) == 400
+    assert "prompt_cache_key" not in resource.calls[0]
+    assert "prompt_cache_options" not in resource.calls[0]
+
+
+@pytest.mark.parametrize("method", ["predicate", "choose", "score"])
+def test_ga_structured_instructions_and_cache_forwarding(method: str) -> None:
+    """Forward structured instructions and caching for every shortcut."""
+    resource = _SyncDecisions()
+    client = DecisionsClient(SimpleNamespace(decisions=resource))  # type: ignore[arg-type]
+    instructions = (
+        {"type": "input_text", "text": "Evaluate the attached policy."},
+        {"type": "input_json", "data": {"policy": "approve"}},
+    )
+    cache_options = {"mode": "explicit", "ttl": "30m"}
+    extra: dict[str, Any] = {}
+    if method == "choose":
+        extra["choices"] = ({"value": "yes"}, {"value": "no"})
+    elif method == "score":
+        extra["levels"] = ({"label": "low"}, {"label": "high"})
+
+    getattr(client, method)(
+        "Test input",
+        instructions=instructions,
+        prompt_cache_key="account-workflow",
+        prompt_cache_options=cache_options,
+        **extra,
+    )
+
+    assert resource.calls[0]["questions"][0]["instructions"] is instructions
+    assert resource.calls[0]["prompt_cache_key"] == "account-workflow"
+    assert resource.calls[0]["prompt_cache_options"] is cache_options
+
+
+@pytest.mark.asyncio
+async def test_ga_async_structured_instruction_and_cache_parity() -> None:
+    """Preserve GA parameters through asynchronous calls."""
+    resource = _AsyncDecisions()
+    client = AsyncDecisionsClient(SimpleNamespace(decisions=resource))  # type: ignore[arg-type]
+    instructions = ({"type": "input_text", "text": "Should this be processed?"},)
+    cache_options = {"mode": "implicit", "ttl": "30m"}
+
+    await client.predicate(
+        "Message",
+        instructions=instructions,
+        prompt_cache_key="shared-policy",
+        prompt_cache_options=cache_options,
+    )
+    assert resource.calls[0]["questions"][0]["instructions"] is instructions
+    assert resource.calls[0]["prompt_cache_key"] == "shared-policy"
+    assert resource.calls[0]["prompt_cache_options"] is cache_options
+
+    questions = ({"type": "predicate", "instructions": "Is this correct?"},)
+    messages = ({"role": "user", "content": [{"type": "input_json", "data": {"ok": True}}]},)
+    decision = await client.create(
+        input=messages,  # type: ignore[arg-type]
+        questions=questions,  # type: ignore[arg-type]
+        prompt_cache_options=cache_options,  # type: ignore[arg-type]
+    )
+    assert decision.answers is resource.answers
+    assert resource.calls[1]["input"] is messages
+    assert resource.calls[1]["questions"] is questions
+    assert resource.calls[1]["prompt_cache_options"] is cache_options

@@ -86,7 +86,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           printf '%s\n' \
-            'openai==2.45.0' \
+            'openai==3.37.0' \
             'openai-agents==0.18.1' \
             > /tmp/minimum-sdk-constraints.txt
           python -m pip install -e ".[dev]" -c /tmp/minimum-sdk-constraints.txt
@@ -97,7 +97,7 @@ jobs:
           python - <<'PY'
           from importlib.metadata import version
 
-          assert version("openai") == "2.45.0"
+          assert version("openai") == "3.37.0"
           assert version("openai-agents") == "0.18.1"
           PY
 
