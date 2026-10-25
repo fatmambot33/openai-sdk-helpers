@@ -41,3 +41,18 @@ assert resource.calls[0]["questions"] == (
         "name": "safe",
     },
 )
+
+
+# GA JSON input and caching remain native SDK parameters, without network access.
+json_input = (
+    {"role": "user", "content": [{"type": "input_json", "data": {"ok": True}}]},
+)
+cache_options = {"mode": "explicit", "ttl": "30m"}
+client.create(  # type: ignore[arg-type]
+    input=json_input,
+    questions=({"type": "predicate", "instructions": "Is ok true?"},),
+    prompt_cache_key="smoke",
+    prompt_cache_options=cache_options,
+)
+assert resource.calls[1]["input"] is json_input
+assert resource.calls[1]["prompt_cache_options"] is cache_options

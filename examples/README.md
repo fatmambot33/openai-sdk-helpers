@@ -28,9 +28,8 @@ python examples/codex_plugin.py
 
 The managed Agents example requires an installed OpenAI Python SDK that exposes
 `beta.agents.sessions` (3.13.0 or later). The Decisions example uses a fake
-resource and therefore remains credential-free even though live Decisions calls
-require `openai>=3.26.0`. The package itself remains compatible with its lower
-declared SDK minimum for other surfaces.
+resource and therefore remains credential-free. All package installs now require
+`openai>=3.37.0` for the Decisions GA-compatible baseline.
 
 ## Illustrative examples
 

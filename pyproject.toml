@@ -1,6 +1,6 @@
 [project]
 name = "openai-sdk-helpers"
-version = "0.11.0"
+version = "0.11.1"
 requires-python = ">=3.10"
 readme = "README.md"
 description = "Composable helpers for OpenAI SDK agents, prompts, and storage"
@@ -24,8 +24,8 @@ dependencies = [
     "typing_extensions>=4.15.0,<5",
     "python-dotenv",
     "tqdm",
-    "openai>=2.45.0,<4.0.0",
-    "openai-agents>=0.18.1,<1.0.0",
+    "openai>=3.37.0,<4.0.0",
+    "openai-agents>=0.24.0,<1.0.0",
 ]
 
 [project.optional-dependencies]

@@ -12,10 +12,12 @@ from .runtime import OperationContext, run_observed_async, run_observed_sync
 if TYPE_CHECKING:
     from openai import AsyncOpenAI, OpenAI
     from openai.types.decision import Answer, Decision
-    from openai.types.decision_input_message_param import DecisionInputMessageParam
+    from openai.types.shared_params.decision_question_input_part import (
+        DecisionQuestionInputPart,
+    )
     from openai.types import decision_create_params
 
-MIN_DECISIONS_OPENAI_VERSION = "3.26.0"
+MIN_DECISIONS_OPENAI_VERSION = "3.37.0"
 DEFAULT_DECISIONS_MODEL = "gpt-6-luna"
 
 
@@ -86,17 +88,19 @@ class DecisionsClient:
     def create(
         self,
         *,
-        input: str | Iterable[DecisionInputMessageParam],
+        input: str | Iterable[decision_create_params.InputUnionMember1],
         questions: Iterable[decision_create_params.Question],
         model: str = DEFAULT_DECISIONS_MODEL,
         safety_identifier: str | None = None,
+        prompt_cache_key: str | None = None,
+        prompt_cache_options: decision_create_params.PromptCacheOptions | None = None,
         operation_context: OperationContext | None = None,
     ) -> Decision:
         """Evaluate one or more Decisions API questions.
 
         Parameters
         ----------
-        input : str or Iterable[DecisionInputMessageParam]
+        input : str or Iterable[decision_create_params.InputUnionMember1]
             Shared evidence forwarded unchanged to the official SDK.
         questions : Iterable[decision_create_params.Question]
             Official predicate, choice, or score question definitions.
@@ -104,6 +108,10 @@ class DecisionsClient:
             Decisions model identifier.
         safety_identifier : str or None, default=None
             Optional opaque end-user safety identifier.
+        prompt_cache_key : str or None, default=None
+            Optional upstream prompt cache partition key.
+        prompt_cache_options : decision_create_params.PromptCacheOptions or None, default=None
+            Optional native prompt caching options.
         operation_context : OperationContext or None, default=None
             Optional lifecycle observer context for this request.
 
@@ -119,6 +127,10 @@ class DecisionsClient:
         }
         if safety_identifier is not None:
             kwargs["safety_identifier"] = safety_identifier
+        if prompt_cache_key is not None:
+            kwargs["prompt_cache_key"] = prompt_cache_key
+        if prompt_cache_options is not None:
+            kwargs["prompt_cache_options"] = prompt_cache_options
         return run_observed_sync(
             operation_context,
             lambda: cast("Decision", self.decisions.create(**kwargs)),
@@ -126,21 +138,23 @@ class DecisionsClient:
 
     def predicate(
         self,
-        input: str | Iterable[DecisionInputMessageParam],
+        input: str | Iterable[decision_create_params.InputUnionMember1],
         *,
-        instructions: str,
+        instructions: str | Iterable[DecisionQuestionInputPart],
         name: str | None = None,
         model: str = DEFAULT_DECISIONS_MODEL,
         safety_identifier: str | None = None,
+        prompt_cache_key: str | None = None,
+        prompt_cache_options: decision_create_params.PromptCacheOptions | None = None,
         operation_context: OperationContext | None = None,
     ) -> Answer:
         """Evaluate one predicate question.
 
         Parameters
         ----------
-        input : str or Iterable[DecisionInputMessageParam]
+        input : str or Iterable[decision_create_params.InputUnionMember1]
             Shared evidence for the decision.
-        instructions : str
+        instructions : str or Iterable[DecisionQuestionInputPart]
             Predicate instructions forwarded to the Decisions API.
         name : str or None, default=None
             Optional question name.
@@ -148,6 +162,10 @@ class DecisionsClient:
             Decisions model identifier.
         safety_identifier : str or None, default=None
             Optional opaque end-user safety identifier.
+        prompt_cache_key : str or None, default=None
+            Optional upstream prompt cache partition key.
+        prompt_cache_options : decision_create_params.PromptCacheOptions or None, default=None
+            Optional native prompt caching options.
         operation_context : OperationContext or None, default=None
             Optional lifecycle observer context for this request.
 
@@ -167,27 +185,31 @@ class DecisionsClient:
             question=cast("decision_create_params.Question", question),
             model=model,
             safety_identifier=safety_identifier,
+            prompt_cache_key=prompt_cache_key,
+            prompt_cache_options=prompt_cache_options,
             operation_context=operation_context,
         )
 
     def choose(
         self,
-        input: str | Iterable[DecisionInputMessageParam],
+        input: str | Iterable[decision_create_params.InputUnionMember1],
         *,
-        instructions: str,
+        instructions: str | Iterable[DecisionQuestionInputPart],
         choices: Iterable[decision_create_params.QuestionQuestionParamChoiceChoice],
         name: str | None = None,
         model: str = DEFAULT_DECISIONS_MODEL,
         safety_identifier: str | None = None,
+        prompt_cache_key: str | None = None,
+        prompt_cache_options: decision_create_params.PromptCacheOptions | None = None,
         operation_context: OperationContext | None = None,
     ) -> Answer:
         """Evaluate one fixed-choice question.
 
         Parameters
         ----------
-        input : str or Iterable[DecisionInputMessageParam]
+        input : str or Iterable[decision_create_params.InputUnionMember1]
             Shared evidence for the decision.
-        instructions : str
+        instructions : str or Iterable[DecisionQuestionInputPart]
             Choice instructions forwarded to the Decisions API.
         choices : Iterable[decision_create_params.QuestionQuestionParamChoiceChoice]
             Official typed choice values and optional descriptions.
@@ -197,6 +219,10 @@ class DecisionsClient:
             Decisions model identifier.
         safety_identifier : str or None, default=None
             Optional opaque end-user safety identifier.
+        prompt_cache_key : str or None, default=None
+            Optional upstream prompt cache partition key.
+        prompt_cache_options : decision_create_params.PromptCacheOptions or None, default=None
+            Optional native prompt caching options.
         operation_context : OperationContext or None, default=None
             Optional lifecycle observer context for this request.
 
@@ -217,27 +243,31 @@ class DecisionsClient:
             question=cast("decision_create_params.Question", question),
             model=model,
             safety_identifier=safety_identifier,
+            prompt_cache_key=prompt_cache_key,
+            prompt_cache_options=prompt_cache_options,
             operation_context=operation_context,
         )
 
     def score(
         self,
-        input: str | Iterable[DecisionInputMessageParam],
+        input: str | Iterable[decision_create_params.InputUnionMember1],
         *,
-        instructions: str,
+        instructions: str | Iterable[DecisionQuestionInputPart],
         levels: Iterable[decision_create_params.QuestionQuestionParamScoreLevel],
         name: str | None = None,
         model: str = DEFAULT_DECISIONS_MODEL,
         safety_identifier: str | None = None,
+        prompt_cache_key: str | None = None,
+        prompt_cache_options: decision_create_params.PromptCacheOptions | None = None,
         operation_context: OperationContext | None = None,
     ) -> Answer:
         """Evaluate one ordered-score question.
 
         Parameters
         ----------
-        input : str or Iterable[DecisionInputMessageParam]
+        input : str or Iterable[decision_create_params.InputUnionMember1]
             Shared evidence for the decision.
-        instructions : str
+        instructions : str or Iterable[DecisionQuestionInputPart]
             Score instructions forwarded to the Decisions API.
         levels : Iterable[decision_create_params.QuestionQuestionParamScoreLevel]
             Official ordered score labels and optional descriptions.
@@ -247,6 +277,10 @@ class DecisionsClient:
             Decisions model identifier.
         safety_identifier : str or None, default=None
             Optional opaque end-user safety identifier.
+        prompt_cache_key : str or None, default=None
+            Optional upstream prompt cache partition key.
+        prompt_cache_options : decision_create_params.PromptCacheOptions or None, default=None
+            Optional native prompt caching options.
         operation_context : OperationContext or None, default=None
             Optional lifecycle observer context for this request.
 
@@ -267,16 +301,20 @@ class DecisionsClient:
             question=cast("decision_create_params.Question", question),
             model=model,
             safety_identifier=safety_identifier,
+            prompt_cache_key=prompt_cache_key,
+            prompt_cache_options=prompt_cache_options,
             operation_context=operation_context,
         )
 
     def _single_answer(
         self,
         *,
-        input: str | Iterable[DecisionInputMessageParam],
+        input: str | Iterable[decision_create_params.InputUnionMember1],
         question: decision_create_params.Question,
         model: str,
         safety_identifier: str | None,
+        prompt_cache_key: str | None,
+        prompt_cache_options: decision_create_params.PromptCacheOptions | None,
         operation_context: OperationContext | None,
     ) -> Answer:
         decision = self.create(
@@ -284,6 +322,8 @@ class DecisionsClient:
             questions=(question,),
             model=model,
             safety_identifier=safety_identifier,
+            prompt_cache_key=prompt_cache_key,
+            prompt_cache_options=prompt_cache_options,
             operation_context=operation_context,
         )
         return cast("Answer", decision.answers[0])
@@ -332,17 +372,19 @@ class AsyncDecisionsClient:
     async def create(
         self,
         *,
-        input: str | Iterable[DecisionInputMessageParam],
+        input: str | Iterable[decision_create_params.InputUnionMember1],
         questions: Iterable[decision_create_params.Question],
         model: str = DEFAULT_DECISIONS_MODEL,
         safety_identifier: str | None = None,
+        prompt_cache_key: str | None = None,
+        prompt_cache_options: decision_create_params.PromptCacheOptions | None = None,
         operation_context: OperationContext | None = None,
     ) -> Decision:
         """Evaluate one or more Decisions API questions asynchronously.
 
         Parameters
         ----------
-        input : str or Iterable[DecisionInputMessageParam]
+        input : str or Iterable[decision_create_params.InputUnionMember1]
             Shared evidence forwarded unchanged to the official SDK.
         questions : Iterable[decision_create_params.Question]
             Official predicate, choice, or score question definitions.
@@ -350,6 +392,10 @@ class AsyncDecisionsClient:
             Decisions model identifier.
         safety_identifier : str or None, default=None
             Optional opaque end-user safety identifier.
+        prompt_cache_key : str or None, default=None
+            Optional upstream prompt cache partition key.
+        prompt_cache_options : decision_create_params.PromptCacheOptions or None, default=None
+            Optional native prompt caching options.
         operation_context : OperationContext or None, default=None
             Optional lifecycle observer context for this request.
 
@@ -365,6 +411,10 @@ class AsyncDecisionsClient:
         }
         if safety_identifier is not None:
             kwargs["safety_identifier"] = safety_identifier
+        if prompt_cache_key is not None:
+            kwargs["prompt_cache_key"] = prompt_cache_key
+        if prompt_cache_options is not None:
+            kwargs["prompt_cache_options"] = prompt_cache_options
         return await run_observed_async(
             operation_context,
             lambda: self.decisions.create(**kwargs),
@@ -372,21 +422,23 @@ class AsyncDecisionsClient:
 
     async def predicate(
         self,
-        input: str | Iterable[DecisionInputMessageParam],
+        input: str | Iterable[decision_create_params.InputUnionMember1],
         *,
-        instructions: str,
+        instructions: str | Iterable[DecisionQuestionInputPart],
         name: str | None = None,
         model: str = DEFAULT_DECISIONS_MODEL,
         safety_identifier: str | None = None,
+        prompt_cache_key: str | None = None,
+        prompt_cache_options: decision_create_params.PromptCacheOptions | None = None,
         operation_context: OperationContext | None = None,
     ) -> Answer:
         """Evaluate one predicate question asynchronously.
 
         Parameters
         ----------
-        input : str or Iterable[DecisionInputMessageParam]
+        input : str or Iterable[decision_create_params.InputUnionMember1]
             Shared evidence for the decision.
-        instructions : str
+        instructions : str or Iterable[DecisionQuestionInputPart]
             Predicate instructions forwarded to the Decisions API.
         name : str or None, default=None
             Optional question name.
@@ -394,6 +446,10 @@ class AsyncDecisionsClient:
             Decisions model identifier.
         safety_identifier : str or None, default=None
             Optional opaque end-user safety identifier.
+        prompt_cache_key : str or None, default=None
+            Optional upstream prompt cache partition key.
+        prompt_cache_options : decision_create_params.PromptCacheOptions or None, default=None
+            Optional native prompt caching options.
         operation_context : OperationContext or None, default=None
             Optional lifecycle observer context for this request.
 
@@ -413,27 +469,31 @@ class AsyncDecisionsClient:
             question=cast("decision_create_params.Question", question),
             model=model,
             safety_identifier=safety_identifier,
+            prompt_cache_key=prompt_cache_key,
+            prompt_cache_options=prompt_cache_options,
             operation_context=operation_context,
         )
 
     async def choose(
         self,
-        input: str | Iterable[DecisionInputMessageParam],
+        input: str | Iterable[decision_create_params.InputUnionMember1],
         *,
-        instructions: str,
+        instructions: str | Iterable[DecisionQuestionInputPart],
         choices: Iterable[decision_create_params.QuestionQuestionParamChoiceChoice],
         name: str | None = None,
         model: str = DEFAULT_DECISIONS_MODEL,
         safety_identifier: str | None = None,
+        prompt_cache_key: str | None = None,
+        prompt_cache_options: decision_create_params.PromptCacheOptions | None = None,
         operation_context: OperationContext | None = None,
     ) -> Answer:
         """Evaluate one fixed-choice question asynchronously.
 
         Parameters
         ----------
-        input : str or Iterable[DecisionInputMessageParam]
+        input : str or Iterable[decision_create_params.InputUnionMember1]
             Shared evidence for the decision.
-        instructions : str
+        instructions : str or Iterable[DecisionQuestionInputPart]
             Choice instructions forwarded to the Decisions API.
         choices : Iterable[decision_create_params.QuestionQuestionParamChoiceChoice]
             Official typed choice values and optional descriptions.
@@ -443,6 +503,10 @@ class AsyncDecisionsClient:
             Decisions model identifier.
         safety_identifier : str or None, default=None
             Optional opaque end-user safety identifier.
+        prompt_cache_key : str or None, default=None
+            Optional upstream prompt cache partition key.
+        prompt_cache_options : decision_create_params.PromptCacheOptions or None, default=None
+            Optional native prompt caching options.
         operation_context : OperationContext or None, default=None
             Optional lifecycle observer context for this request.
 
@@ -463,27 +527,31 @@ class AsyncDecisionsClient:
             question=cast("decision_create_params.Question", question),
             model=model,
             safety_identifier=safety_identifier,
+            prompt_cache_key=prompt_cache_key,
+            prompt_cache_options=prompt_cache_options,
             operation_context=operation_context,
         )
 
     async def score(
         self,
-        input: str | Iterable[DecisionInputMessageParam],
+        input: str | Iterable[decision_create_params.InputUnionMember1],
         *,
-        instructions: str,
+        instructions: str | Iterable[DecisionQuestionInputPart],
         levels: Iterable[decision_create_params.QuestionQuestionParamScoreLevel],
         name: str | None = None,
         model: str = DEFAULT_DECISIONS_MODEL,
         safety_identifier: str | None = None,
+        prompt_cache_key: str | None = None,
+        prompt_cache_options: decision_create_params.PromptCacheOptions | None = None,
         operation_context: OperationContext | None = None,
     ) -> Answer:
         """Evaluate one ordered-score question asynchronously.
 
         Parameters
         ----------
-        input : str or Iterable[DecisionInputMessageParam]
+        input : str or Iterable[decision_create_params.InputUnionMember1]
             Shared evidence for the decision.
-        instructions : str
+        instructions : str or Iterable[DecisionQuestionInputPart]
             Score instructions forwarded to the Decisions API.
         levels : Iterable[decision_create_params.QuestionQuestionParamScoreLevel]
             Official ordered score labels and optional descriptions.
@@ -493,6 +561,10 @@ class AsyncDecisionsClient:
             Decisions model identifier.
         safety_identifier : str or None, default=None
             Optional opaque end-user safety identifier.
+        prompt_cache_key : str or None, default=None
+            Optional upstream prompt cache partition key.
+        prompt_cache_options : decision_create_params.PromptCacheOptions or None, default=None
+            Optional native prompt caching options.
         operation_context : OperationContext or None, default=None
             Optional lifecycle observer context for this request.
 
@@ -513,16 +585,20 @@ class AsyncDecisionsClient:
             question=cast("decision_create_params.Question", question),
             model=model,
             safety_identifier=safety_identifier,
+            prompt_cache_key=prompt_cache_key,
+            prompt_cache_options=prompt_cache_options,
             operation_context=operation_context,
         )
 
     async def _single_answer(
         self,
         *,
-        input: str | Iterable[DecisionInputMessageParam],
+        input: str | Iterable[decision_create_params.InputUnionMember1],
         question: decision_create_params.Question,
         model: str,
         safety_identifier: str | None,
+        prompt_cache_key: str | None,
+        prompt_cache_options: decision_create_params.PromptCacheOptions | None,
         operation_context: OperationContext | None,
     ) -> Answer:
         decision = await self.create(
@@ -530,6 +606,8 @@ class AsyncDecisionsClient:
             questions=(question,),
             model=model,
             safety_identifier=safety_identifier,
+            prompt_cache_key=prompt_cache_key,
+            prompt_cache_options=prompt_cache_options,
             operation_context=operation_context,
         )
         return cast("Answer", decision.answers[0])

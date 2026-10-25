@@ -15,29 +15,16 @@ Agents capability detection and session helpers, Decisions capability detection
 and helpers, vector storage, tools, validation, and the Codex plugin surface. It does not install LangExtract or
 Streamlit.
 
-The package-wide OpenAI Python SDK range remains `>=2.45.0,<4.0.0`. Managed
-Agents API helpers are import-safe across that range, but using them requires an
-SDK client exposing `beta.agents.sessions`, first shipped in `openai` 3.13.0.
-Applications pinned below that version can upgrade only when they need the
-managed Agents surface:
+The package-wide OpenAI Python SDK range is `>=3.37.0,<4.0.0` for every
+installation profile, including Managed Agents and Decisions.
+
+The Managed Agents facade checks `client.beta.agents.sessions`, and the
+Decisions facade checks `client.decisions.create`. Both fail before sending a
+network request if an injected client lacks the required capability.
 
 ```bash
-pip install "openai>=3.13.0,<4.0.0"
+pip install "openai>=3.37.0,<4.0.0"
 ```
-
-An incompatible client raises `ManagedAgentsUnavailableError` before any network
-request instead of silently changing the package-wide minimum dependency.
-
-The Decisions helpers follow the same policy. They require an SDK client exposing
-`client.decisions.create`, first shipped in `openai` 3.26.0:
-
-```bash
-pip install "openai>=3.26.0,<4.0.0"
-```
-
-Importing `openai_sdk_helpers.decisions` remains safe on older package-supported
-SDK versions. An incompatible client raises `DecisionsUnavailableError` before
-any request.
 
 ## Document extraction
 

@@ -1,5 +1,26 @@
 # Release notes
 
+## 0.11.1 — Planned patch
+
+Aligns the shipped Decisions helpers with the October 22, 2026 GA schema
+and OpenAI Python SDK 3.37.0.
+
+- Requires `openai>=3.37.0,<4.0.0` and compatible
+  `openai-agents>=0.24.0,<1.0.0` package-wide.
+- Updates GA typed JSON, conversation/tool history and question instructions.
+- Forwards native prompt cache parameters through sync/async helpers.
+- Preserves original results, refusals, exceptions, and raw SDK access.
+- Adds no-network tests and moves minimum-SDK CI to 3.37.0.
+- Coordinates package and bundled Codex plugin version 0.11.1.
+
+Publication requires green CI, approval of protected PyPI OIDC publishing,
+and artifact verification. This planned release is not yet published.
+
+## 0.11.0 — 2026-10-09
+
+Shipped initial Decisions API helpers with native predicate, choice, and
+score shortcuts, batch create, and credential-free smoke examples.
+
 ## 0.10.0 — 2026-09-12
 
 Version 0.10.0 adds a first-class, thin helper surface for the OpenAI-managed
