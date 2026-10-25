@@ -71,6 +71,19 @@ Direct API control with `openai` SDK.
 
 **Design Pattern**: Builder pattern for constructing API calls.
 
+### Decisions Module (`decisions.py`)
+
+Capability-gated access to the official Decisions API for predicate, choice, and
+score requests.
+
+**Design constraints**:
+- preserve official SDK question and answer types;
+- preserve raw `client.decisions` access and native `Decision` results;
+- provide matching sync/async facades;
+- keep feature availability structural so older package-supported SDKs remain
+  import-safe;
+- avoid building a routing framework or policy engine on top of the API.
+
 ### Infrastructure
 
 #### Logging (`logging_config.py`)

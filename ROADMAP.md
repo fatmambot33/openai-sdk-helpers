@@ -73,9 +73,21 @@ examples, Pyright, formatting, documentation checks, and resolved Codex review
 threads. The milestone is not released until #194 completes protected OIDC
 publication and post-release verification.
 
-## 0.11.0 — Realtime API helpers
+## 0.11.0 — Decisions API
 
-Blocked until 0.10.0 is published and verified through #194.
+- [x] #198 — ship capability-gated sync/async Decisions predicate, choice,
+      and score helpers in v0.11.0 (2026-10-09).
+- [ ] #200 — align GA input, caching, types, and package-wide SDK minimum
+      with OpenAI Python 3.37.0 in v0.11.1.
+
+The Decisions surface preserves official SDK question/answer objects, usage,
+refusals, exceptions, and raw resource access. The v0.11.1 GA update raises the package-wide OpenAI Python SDK requirement
+to `openai>=3.37.0` and forwards native caching, JSON, and conversation input. The scope excludes routing frameworks, policy engines,
+replacement schemas, and generated explanation layers.
+
+## 0.12.0 — Realtime API helpers
+
+Next after the v0.11.1 Decisions GA compatibility and release gates.
 
 - [ ] #145 — add thin typed server-side session configuration and lifecycle
       helpers over official SDK objects.

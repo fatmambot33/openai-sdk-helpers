@@ -4,6 +4,27 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 0.11.1 — Unreleased
+
+- Raised the package-wide OpenAI Python SDK minimum to `3.37.0` and the
+  Agents SDK minimum to `0.24.0` so the dependency range resolves on all
+  installation profiles.
+- Updated Decisions native GA input and structured question-instruction types;
+  added optional prompt-cache forwarding to synchronous and asynchronous helpers.
+- Added regression tests for JSON/tool history, 400-question batches,
+  structured instructions, and caching parity without live API calls.
+- Updated minimum-SDK CI, compatibility docs, installed-wheel examples, and
+  synchronized the Codex plugin manifest version.
+
+## 0.11.0 — 2026-10-09
+
+- Added capability-gated synchronous and asynchronous OpenAI Decisions API helpers
+  for native predicate, choice, and score requests, including single-question
+  conveniences, raw SDK escape hatches, refusals, and optional operation
+  observability.
+- Kept the package-wide `openai>=2.45.0,<4.0.0` compatibility range while
+  documenting `openai>=3.26.0` as the feature minimum for Decisions.
+
 ## 0.10.0 - 2026-09-12
 
 - Added capability-gated synchronous and asynchronous helpers for discrete OpenAI-managed Agents API session lifecycle operations while preserving original SDK resources, results, exceptions, streaming, artifacts, and subagent escape hatches.

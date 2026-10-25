@@ -173,6 +173,20 @@ This surface is import-safe across the package-wide supported OpenAI SDK range.
 Using it requires a client exposing `beta.agents.sessions`; see
 [managed Agents API](managed-agents.md) for the feature-specific SDK requirement.
 
+### Decisions API (`openai_sdk_helpers.decisions`)
+
+- `AsyncDecisionsClient`
+- `DEFAULT_DECISIONS_MODEL`
+- `DecisionsClient`
+- `DecisionsUnavailableError`
+- `MIN_DECISIONS_OPENAI_VERSION`
+- `decisions_available`
+
+This surface is import-safe across the package-wide supported OpenAI SDK range.
+Using it requires a client exposing `decisions.create`; see
+[Decisions API](decisions.md) for the feature-specific SDK requirement and
+execution boundary.
+
 ## Compatibility policy
 
 The package-root export list is defined by `openai_sdk_helpers.__all__` and is

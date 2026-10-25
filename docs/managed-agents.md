@@ -10,16 +10,11 @@ subagents are owned by the official API.
 
 ## Compatibility
 
-The package-wide OpenAI Python SDK constraint remains `>=2.45.0,<4.0.0` so
-existing Responses, Agents SDK, retrieval, files, and other helpers continue to
-work on the supported minimum dependency set.
-
-Managed Agents helpers specifically require an SDK client exposing
-`client.beta.agents.sessions`, first shipped in `openai` 3.13.0. Importing the
-module remains safe on older supported SDK versions. Constructing a managed
-Agents facade against an incompatible client raises
-`ManagedAgentsUnavailableError` before any API call with the installed SDK
-version and required capability in the error context.
+The package-wide SDK requirement is `openai>=3.37.0,<4.0.0`. Managed
+Agents was introduced in OpenAI Python SDK 3.13.0, but that earlier SDK is
+no longer supported by the package. The facade still checks that injected
+clients expose `client.beta.agents.sessions` and raises
+`ManagedAgentsUnavailableError` before any API call when absent.
 
 Applications can check explicitly:
 
@@ -31,12 +26,6 @@ from openai_sdk_helpers.managed_agents import managed_agents_available
 client = OpenAI()
 if managed_agents_available(client):
     ...
-```
-
-For an environment pinned below 3.13.0, upgrade only when this feature is needed:
-
-```bash
-pip install "openai>=3.13.0,<4.0.0"
 ```
 
 ## Session lifecycle
