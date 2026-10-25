@@ -4,6 +4,19 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 0.11.1 — Unreleased
+
+- Raised the package-wide OpenAI Python SDK minimum to `3.37.0` so all
+  installation profiles share the Decisions GA-compatible baseline.
+- Updated Decisions native GA input and structured question-instruction types;
+  added optional prompt-cache forwarding to synchronous and asynchronous helpers.
+- Added regression tests for JSON/tool history, 400-question batches,
+  structured instructions, and caching parity without live API calls.
+- Updated minimum-SDK CI, compatibility docs, installed-wheel examples, and
+  synchronized the Codex plugin manifest version.
+
+## 0.11.0 — 2026-10-09
+
 - Added capability-gated synchronous and asynchronous OpenAI Decisions API helpers
   for native predicate, choice, and score requests, including single-question
   conveniences, raw SDK escape hatches, refusals, and optional operation
