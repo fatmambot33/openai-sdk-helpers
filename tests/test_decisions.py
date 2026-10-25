@@ -240,7 +240,8 @@ async def test_async_facade_has_parity_and_preserves_native_answer() -> None:
 def test_ga_input_json_tool_history_and_maximum_question_batch() -> None:
     """Forward GA JSON/tool history and 400 questions unchanged."""
     resource = _SyncDecisions()
-    client = DecisionsClient(SimpleNamespace(decisions=resource))  # type: ignore[arg-type]
+    sdk_client = SimpleNamespace(decisions=resource)
+    client = DecisionsClient(sdk_client)  # type: ignore[arg-type]
     evidence = (
         {"role": "system", "content": "Evaluate the supplied evidence."},
         {"role": "user", "content": [{"type": "input_json", "data": {"risk": "low"}}]},
@@ -252,7 +253,9 @@ def test_ga_input_json_tool_history_and_maximum_question_batch() -> None:
         for i in range(400)
     )
 
-    result = client.create(input=evidence, questions=questions)  # type: ignore[arg-type]
+    result = client.create(  # type: ignore[arg-type]
+        input=evidence, questions=questions
+    )
 
     assert result.answers is resource.answers
     assert resource.calls[0]["input"] is evidence
@@ -266,7 +269,8 @@ def test_ga_input_json_tool_history_and_maximum_question_batch() -> None:
 def test_ga_structured_instructions_and_cache_forwarding(method: str) -> None:
     """Forward structured instructions and caching for every shortcut."""
     resource = _SyncDecisions()
-    client = DecisionsClient(SimpleNamespace(decisions=resource))  # type: ignore[arg-type]
+    sdk_client = SimpleNamespace(decisions=resource)
+    client = DecisionsClient(sdk_client)  # type: ignore[arg-type]
     instructions = (
         {"type": "input_text", "text": "Evaluate the attached policy."},
         {"type": "input_json", "data": {"policy": "approve"}},
@@ -295,7 +299,8 @@ def test_ga_structured_instructions_and_cache_forwarding(method: str) -> None:
 async def test_ga_async_structured_instruction_and_cache_parity() -> None:
     """Preserve GA parameters through asynchronous calls."""
     resource = _AsyncDecisions()
-    client = AsyncDecisionsClient(SimpleNamespace(decisions=resource))  # type: ignore[arg-type]
+    sdk_client = SimpleNamespace(decisions=resource)
+    client = AsyncDecisionsClient(sdk_client)  # type: ignore[arg-type]
     instructions = ({"type": "input_text", "text": "Should this be processed?"},)
     cache_options = {"mode": "implicit", "ttl": "30m"}
 
@@ -310,7 +315,9 @@ async def test_ga_async_structured_instruction_and_cache_parity() -> None:
     assert resource.calls[0]["prompt_cache_options"] is cache_options
 
     questions = ({"type": "predicate", "instructions": "Is this correct?"},)
-    messages = ({"role": "user", "content": [{"type": "input_json", "data": {"ok": True}}]},)
+    messages = (
+        {"role": "user", "content": [{"type": "input_json", "data": {"ok": True}}]},
+    )
     decision = await client.create(
         input=messages,  # type: ignore[arg-type]
         questions=questions,  # type: ignore[arg-type]

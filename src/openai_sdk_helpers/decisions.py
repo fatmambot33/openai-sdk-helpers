@@ -12,7 +12,9 @@ from .runtime import OperationContext, run_observed_async, run_observed_sync
 if TYPE_CHECKING:
     from openai import AsyncOpenAI, OpenAI
     from openai.types.decision import Answer, Decision
-    from openai.types.shared_params.decision_question_input_part import DecisionQuestionInputPart
+    from openai.types.shared_params.decision_question_input_part import (
+        DecisionQuestionInputPart,
+    )
     from openai.types import decision_create_params
 
 MIN_DECISIONS_OPENAI_VERSION = "3.37.0"
