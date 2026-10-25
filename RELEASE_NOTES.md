@@ -5,7 +5,8 @@
 Aligns the shipped Decisions helpers with the October 22, 2026 GA schema
 and OpenAI Python SDK 3.37.0.
 
-- Requires `openai>=3.37.0,<4.0.0` package-wide.
+- Requires `openai>=3.37.0,<4.0.0` and compatible
+  `openai-agents>=0.24.0,<1.0.0` package-wide.
 - Updates GA typed JSON, conversation/tool history and question instructions.
 - Forwards native prompt cache parameters through sync/async helpers.
 - Preserves original results, refusals, exceptions, and raw SDK access.

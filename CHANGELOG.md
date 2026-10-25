@@ -6,8 +6,9 @@ All notable changes to this project are documented here.
 
 ## 0.11.1 — Unreleased
 
-- Raised the package-wide OpenAI Python SDK minimum to `3.37.0` so all
-  installation profiles share the Decisions GA-compatible baseline.
+- Raised the package-wide OpenAI Python SDK minimum to `3.37.0` and the
+  Agents SDK minimum to `0.24.0` so the dependency range resolves on all
+  installation profiles.
 - Updated Decisions native GA input and structured question-instruction types;
   added optional prompt-cache forwarding to synchronous and asynchronous helpers.
 - Added regression tests for JSON/tool history, 400-question batches,
