@@ -191,8 +191,8 @@ jobs:
 
           [[ "${state}" == "success" ]]
 
-  refresh-after-close:
-    if: github.event.action == 'closed'
+  refresh-released-head:
+    if: github.event.action == 'closed' || github.event.action == 'synchronize'
     concurrency:
       group: codex-review-head-${{ github.event.pull_request.head.sha }}
       cancel-in-progress: true
@@ -207,14 +207,14 @@ jobs:
         id: survivor
         env:
           GH_TOKEN: ${{ github.token }}
-          CLOSED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RELEASED_HEAD_SHA: ${{ github.event.action == 'closed' && github.event.pull_request.head.sha || github.event.before }}
         run: |
           set -euo pipefail
 
           matching_prs_text="$(
             gh api --paginate \
               "repos/${GITHUB_REPOSITORY}/pulls?state=open&per_page=100" \
-              --jq ".[] | select(.head.sha == \"${CLOSED_HEAD_SHA}\") | .number"
+              --jq ".[] | select(.head.sha == \"${RELEASED_HEAD_SHA}\") | .number"
           )"
           matching_prs=()
           if [[ -n "${matching_prs_text}" ]]; then
@@ -226,7 +226,7 @@ jobs:
             exit 0
           fi
           if [[ "${#matching_prs[@]}" -ne 1 ]]; then
-            echo "::error::Multiple open PRs still use HEAD ${CLOSED_HEAD_SHA}."
+            echo "::error::Multiple open PRs still use HEAD ${RELEASED_HEAD_SHA}."
             exit 1
           fi
 
@@ -330,7 +330,7 @@ jobs:
           -f context=codex-review
           -f description='Codex reviewed the surviving PR context'
 
-      - name: Mark closed-head Codex status failed
+      - name: Mark released-head Codex status failed
         if: failure()
         env:
           GH_TOKEN: ${{ github.token }}
@@ -340,4 +340,4 @@ jobs:
           "repos/${{ github.repository }}/statuses/${HEAD_SHA}"
           -f state=failure
           -f context=codex-review
-          -f description='Codex review context could not be re-established after PR closure'
+          -f description='Codex review context could not be re-established after a duplicate PR released its head'
