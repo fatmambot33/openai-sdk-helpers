@@ -4,7 +4,9 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
-## 0.11.1 — Unreleased
+No unreleased changes.
+
+## 0.11.1 — 2026-10-26
 
 - Raised the package-wide OpenAI Python SDK minimum to `3.37.0` and the
   Agents SDK minimum to `0.24.0` so the dependency range resolves on all

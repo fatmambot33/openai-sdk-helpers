@@ -1,6 +1,6 @@
 # Release notes
 
-## 0.11.1 — Planned patch
+## 0.11.1 — 2026-10-26
 
 Aligns the shipped Decisions helpers with the October 22, 2026 GA schema
 and OpenAI Python SDK 3.37.0.
@@ -13,8 +13,13 @@ and OpenAI Python SDK 3.37.0.
 - Adds no-network tests and moves minimum-SDK CI to 3.37.0.
 - Coordinates package and bundled Codex plugin version 0.11.1.
 
-Publication requires green CI, approval of protected PyPI OIDC publishing,
-and artifact verification. This planned release is not yet published.
+Published on PyPI through the protected GitHub OIDC Trusted Publishing workflow
+on 2026-10-26, after required CI passed. The matching GitHub release contains
+the wheel, source distribution, and CycloneDX SBOM. The original artifacts are
+immutable; documentation-only updates do not change the published version.
+
+- [PyPI 0.11.1](https://pypi.org/project/openai-sdk-helpers/0.11.1/)
+- [GitHub v0.11.1](https://github.com/fatmambot33/openai-sdk-helpers/releases/tag/v0.11.1)
 
 ## 0.11.0 — 2026-10-09
 
