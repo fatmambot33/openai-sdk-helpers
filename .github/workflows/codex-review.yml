@@ -344,8 +344,34 @@ jobs:
           -f context=codex-review
           -f description='Codex reviewed the surviving PR context'
 
-      - name: Mark released-head Codex status failed
-        if: failure()
+      - name: Mark current surviving context failed
+        if: failure() && steps.survivor.outputs.exists == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.survivor.outputs.pr_number }}
+          EXPECTED_HEAD_SHA: ${{ steps.survivor.outputs.head_sha }}
+          EXPECTED_BASE_SHA: ${{ steps.survivor.outputs.base_sha }}
+        run: |
+          set -euo pipefail
+          if ! pr="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}")"; then
+            echo 'Unable to verify surviving PR context; leaving its existing status unchanged.'
+            exit 0
+          fi
+          current_state="$(jq -r '.state' <<<"${pr}")"
+          current_head_sha="$(jq -r '.head.sha' <<<"${pr}")"
+          current_base_sha="$(jq -r '.base.sha' <<<"${pr}")"
+          if [[ "${current_state}" != 'open' || "${current_head_sha}" != "${EXPECTED_HEAD_SHA}" || "${current_base_sha}" != "${EXPECTED_BASE_SHA}" ]]; then
+            echo 'Surviving PR context changed; a current gate run owns the status.'
+            exit 0
+          fi
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/statuses/${EXPECTED_HEAD_SHA}" \
+            -f state=failure \
+            -f context=codex-review \
+            -f description='Codex review context could not be re-established after a duplicate PR released its head'
+
+      - name: Mark released head failed when no survivor was resolved
+        if: failure() && steps.survivor.outputs.exists != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.action == 'closed' && github.event.pull_request.head.sha || github.event.before }}
