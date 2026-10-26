@@ -147,6 +147,17 @@ jobs:
         run: |
           set -u
 
+          if pr="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}")"; then
+            current_state="$(jq -r '.state' <<<"${pr}")"
+            current_head_sha="$(jq -r '.head.sha' <<<"${pr}")"
+            current_base_sha="$(jq -r '.base.sha' <<<"${pr}")"
+
+            if [[ "${current_state}" != "open" || "${current_head_sha}" != "${EXPECTED_HEAD_SHA}" || "${current_base_sha}" != "${EXPECTED_BASE_SHA}" ]]; then
+              echo "PR context changed before status publication; a current gate run owns the status."
+              exit 0
+            fi
+          fi
+
           state=failure
           description='Codex review gate did not pass'
 
@@ -194,7 +205,7 @@ jobs:
   refresh-released-head:
     if: github.event.action == 'closed' || github.event.action == 'synchronize'
     concurrency:
-      group: codex-review-head-${{ github.event.action == 'closed' && github.event.pull_request.head.sha || github.event.before }}
+      group: codex-review-recovery-head-${{ github.event.action == 'closed' && github.event.pull_request.head.sha || github.event.before }}
       cancel-in-progress: true
     permissions:
       contents: read
