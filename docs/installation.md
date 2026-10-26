@@ -12,19 +12,19 @@ pip install openai-sdk-helpers
 The core profile includes the OpenAI Python SDK, the OpenAI Agents SDK,
 Pydantic, Jinja, settings helpers, Responses helpers, Agents helpers, managed
 Agents capability detection and session helpers, Decisions capability detection
-and helpers, vector storage, tools, validation, and the Codex plugin surface. It does not install LangExtract or
-Streamlit.
+and helpers, vector storage, tools, validation, and the Codex plugin surface.
+It does not install LangExtract or Streamlit.
 
-The package-wide OpenAI Python SDK range is `>=3.37.0,<4.0.0` for every
-installation profile, including Managed Agents and Decisions.
+The package-wide SDK requirements are `openai>=3.37.0,<4.0.0` and
+`openai-agents>=0.24.0,<1.0.0` for every installation profile, including
+Managed Agents and Decisions.
 
 The Managed Agents facade checks `client.beta.agents.sessions`, and the
 Decisions facade checks `client.decisions.create`. Both fail before sending a
 network request if an injected client lacks the required capability.
 
-```bash
-pip install "openai>=3.37.0,<4.0.0"
-```
+These SDKs are dependencies of the base distribution; no separate
+feature-specific installation is required.
 
 ## Document extraction
 
