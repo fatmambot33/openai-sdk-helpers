@@ -156,6 +156,9 @@ jobs:
               echo "PR context changed before status publication; a current gate run owns the status."
               exit 0
             fi
+          else
+            echo "Unable to verify current PR context before status publication; leaving the existing status unchanged."
+            exit 0
           fi
 
           state=failure
