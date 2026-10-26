@@ -169,9 +169,9 @@ more names to the already broad package-root namespace.
 - `ManagedAgentsUnavailableError`
 - `managed_agents_available`
 
-This surface is import-safe across the package-wide supported OpenAI SDK range.
-Using it requires a client exposing `beta.agents.sessions`; see
-[managed Agents API](managed-agents.md) for the feature-specific SDK requirement.
+This surface uses the package-wide `openai>=3.37.0` SDK floor and requires an
+injected client exposing `beta.agents.sessions`. See the
+[managed Agents API](managed-agents.md) guide for the capability boundary.
 
 ### Decisions API (`openai_sdk_helpers.decisions`)
 
@@ -182,10 +182,9 @@ Using it requires a client exposing `beta.agents.sessions`; see
 - `MIN_DECISIONS_OPENAI_VERSION`
 - `decisions_available`
 
-This surface is import-safe across the package-wide supported OpenAI SDK range.
-Using it requires a client exposing `decisions.create`; see
-[Decisions API](decisions.md) for the feature-specific SDK requirement and
-execution boundary.
+This surface uses the package-wide `openai>=3.37.0` SDK floor and requires an
+injected client exposing `decisions.create`. See the [Decisions API](decisions.md)
+guide for supported inputs and the execution boundary.
 
 ## Compatibility policy
 

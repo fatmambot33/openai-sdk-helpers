@@ -98,8 +98,8 @@ print(result.text)
 
 Use `openai_sdk_helpers.managed_agents` when the application needs OpenAI-managed
 durable agent sessions and the managed execution harness. This surface requires
-an OpenAI Python SDK exposing `beta.agents.sessions` (3.13.0 or later) without
-raising the package-wide SDK minimum for other helpers.
+an OpenAI Python SDK exposing `beta.agents.sessions`. This capability first
+appeared in SDK 3.13.0; the current package-wide floor is `openai>=3.37.0`.
 
 ```python
 from openai import OpenAI
@@ -257,10 +257,10 @@ universal agent framework, prompt catalog, storage service, protocol
 implementation, or transport framework. Application-specific business logic
 belongs in consuming projects.
 
-Managed Agents API helpers shipped in 0.10.0. Decisions API helpers are the next
-priority because they add a distinct OpenAI execution primitive; Realtime API
-helpers follow afterward. Issue order and release gates are tracked in
-[ROADMAP.md](ROADMAP.md).
+Managed Agents helpers shipped in 0.10.0 and Decisions helpers in 0.11.0.
+Version 0.11.1 completed the Decisions GA compatibility update; Realtime API
+helpers are the next planned milestone. Issue order and release gates are
+tracked in [ROADMAP.md](ROADMAP.md).
 
 ## License
 

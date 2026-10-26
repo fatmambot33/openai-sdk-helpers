@@ -55,39 +55,44 @@ explicit rather than automatic.
 
 ## 0.10.0 — Managed Agents API
 
-- [x] #191 — add thin typed helpers for the OpenAI-managed Agents API.
-- [ ] #194 — prepare, publish, and verify 0.10.0.
+Published on 2026-10-09.
 
-The managed Agents API is a distinct execution surface from the application-run
-Agents SDK already supported by this package. The implemented helpers preserve
-official SDK terminology, resources, results, events, and escape hatches rather
-than build a parallel agent framework, orchestration engine, sandbox abstraction,
-transport, or session store. Existing package capabilities remain usable on
-supported pre-Agents-API OpenAI SDK versions; using this surface requires an SDK
-version that provides the API and fails early with an actionable capability
-error otherwise.
+- [x] #191 — ship thin typed helpers for the OpenAI-managed Agents API.
+- [x] #193 — implement and merge the capability-gated SDK integration.
+- [ ] #194 — reconcile the historical release-verification checklist and close
+      the administrative tracker. Publication is confirmed; the issue remains open.
 
-Implementation #191 landed through PR #193 with required CI, AI-native
-validation, Python 3.10–3.13 tests, all installation profiles, installed-wheel
-examples, Pyright, formatting, documentation checks, and resolved Codex review
-threads. The milestone is not released until #194 completes protected OIDC
-publication and post-release verification.
+This API is distinct from the application-run Agents SDK. It preserves official
+session objects, results, events, and resource escape hatches without introducing
+another framework, transport, sandbox, or session store. At the time of 0.10.0,
+its feature-specific SDK requirement was lower than today's package-wide floor;
+see the versioned changelog for historical compatibility.
 
 ## 0.11.0 — Decisions API
 
-- [x] #198 — ship capability-gated sync/async Decisions predicate, choice,
-      and score helpers in v0.11.0 (2026-10-09).
-- [ ] #200 — align GA input, caching, types, and package-wide SDK minimum
-      with OpenAI Python 3.37.0 in v0.11.1.
+Published on 2026-10-09.
 
-The Decisions surface preserves official SDK question/answer objects, usage,
-refusals, exceptions, and raw resource access. The v0.11.1 GA update raises the package-wide OpenAI Python SDK requirement
-to `openai>=3.37.0` and forwards native caching, JSON, and conversation input. The scope excludes routing frameworks, policy engines,
-replacement schemas, and generated explanation layers.
+- [x] #198 — ship synchronous/asynchronous predicate, choice, and score
+      helpers with native SDK results, refusals, usage, and raw escape hatches.
+
+## 0.11.1 — Decisions GA compatibility
+
+Published on 2026-10-26 through protected PyPI Trusted Publishing, with a
+matching GitHub release.
+
+- [x] #200 — adopt GA JSON/conversation/tool-history inputs and structured
+      question instructions, forward native prompt caching, and raise the
+      package-wide OpenAI Python floor to `3.37.0` and Agents SDK floor to
+      `0.24.0`.
+
+The GA helpers remain thin SDK-first wrappers: no routing framework, policy
+engine, replacement schema, caching service, or generated explanation layer.
+These dependencies apply to every installation profile, not only Decisions.
+See [compatibility requirements](COMPATIBILITY.md) for current SDK constraints.
 
 ## 0.12.0 — Realtime API helpers
 
-Next after the v0.11.1 Decisions GA compatibility and release gates.
+Next planned API milestone; the 0.11.1 Decisions GA release gate is complete.
 
 - [ ] #145 — add thin typed server-side session configuration and lifecycle
       helpers over official SDK objects.
