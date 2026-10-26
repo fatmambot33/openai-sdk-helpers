@@ -194,7 +194,7 @@ jobs:
   refresh-released-head:
     if: github.event.action == 'closed' || github.event.action == 'synchronize'
     concurrency:
-      group: codex-review-head-${{ github.event.pull_request.head.sha }}
+      group: codex-review-head-${{ github.event.action == 'closed' && github.event.pull_request.head.sha || github.event.before }}
       cancel-in-progress: true
     permissions:
       contents: read
@@ -334,7 +334,7 @@ jobs:
         if: failure()
         env:
           GH_TOKEN: ${{ github.token }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_SHA: ${{ github.event.action == 'closed' && github.event.pull_request.head.sha || github.event.before }}
         run: >-
           gh api --method POST
           "repos/${{ github.repository }}/statuses/${HEAD_SHA}"
