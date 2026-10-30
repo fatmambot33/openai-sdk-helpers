@@ -186,6 +186,21 @@ This surface uses the package-wide `openai>=3.37.0` SDK floor and requires an
 injected client exposing `decisions.create`. See the [Decisions API](decisions.md)
 guide for supported inputs and the execution boundary.
 
+### Realtime API (`openai_sdk_helpers.realtime`)
+
+- `AsyncRealtimeClient`
+- `MIN_REALTIME_OPENAI_VERSION`
+- `RealtimeClient`
+- `RealtimeEvent`
+- `RealtimeUnavailableError`
+- `normalize_realtime_event`
+- `realtime_available`
+
+This surface uses the package-wide `openai>=3.37.0` SDK floor and requires an
+injected client exposing `beta.realtime.connect` and `beta.realtime.sessions.create`.
+Install the OpenAI SDK's `realtime` extra to open connections. See the
+[Realtime API](realtime.md) guide for lifecycle and credential boundaries.
+
 ## Compatibility policy
 
 The package-root export list is defined by `openai_sdk_helpers.__all__` and is
