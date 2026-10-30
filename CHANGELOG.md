@@ -4,7 +4,15 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
-No unreleased changes.
+- Added preview synchronous and asynchronous Realtime helpers for official
+  client-secret session creation, connection-manager construction, session
+  updates, event-envelope normalization, response cancellation, and function
+  call output submission.
+- Preserved raw official Realtime resources, connection managers, events, and
+  exceptions; browser UI, audio device handling, reconnection, transport, and
+  protocol ownership remain outside the package.
+- Added deterministic fake-session/event tests and a credential-free supported
+  Realtime smoke example.
 
 ## 0.11.1 — 2026-10-26
 
