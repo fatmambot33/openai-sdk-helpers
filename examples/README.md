@@ -14,6 +14,7 @@ pull request.
 | `supported_agents.py` | Agents configuration and official SDK agent construction | No API call |
 | `supported_managed_agents.py` | Managed Agents capability detection and facade construction | No API call |
 | `supported_decisions.py` | Decisions capability detection, facade construction, and predicate forwarding | No API call |
+| `supported_realtime.py` | Realtime capability detection, client-secret forwarding, and explicit event helpers | No API call |
 | `codex_plugin.py` | Codex plugin lifecycle plus sync and async commands | No API call |
 
 Run them after installing the package:
@@ -23,6 +24,7 @@ python examples/supported_responses.py
 python examples/supported_agents.py
 python examples/supported_managed_agents.py
 python examples/supported_decisions.py
+python examples/supported_realtime.py
 python examples/codex_plugin.py
 ```
 
@@ -30,6 +32,10 @@ The managed Agents example requires an installed OpenAI Python SDK that exposes
 `beta.agents.sessions` (3.13.0 or later). The Decisions example uses a fake
 resource and therefore remains credential-free. All package installs now require
 `openai>=3.37.0` for the Decisions GA-compatible baseline.
+
+The Realtime example uses fake SDK resources and therefore needs neither an API
+key nor `openai[realtime]`. Applications that open a real Realtime connection
+must install the official SDK's `realtime` extra.
 
 ## Illustrative examples
 
