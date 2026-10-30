@@ -13,17 +13,20 @@ This document tracks current dependency requirements.
 
 The package-wide minimum is `openai>=3.37.0,<4.0.0` across **all**
 installation profiles: Responses, Agents, Managed Agents, retrieval, and
-Decisions. Older OpenAI SDK releases are not supported by 0.11.1+.
+Decisions. Realtime uses the same package-wide floor. Older OpenAI SDK releases
+are not supported by 0.11.1+.
 
 The minimum incorporates the 2026-10-22 Decisions GA release, including
 JSON, text, images, conversation/tool history, structured question
 instructions, prompt caching, and batches of up to 400 questions.
 
-Injected SDK clients must still provide `client.decisions.create` or
-`client.beta.agents.sessions` for their respective helpers. Missing
-capabilities raise `DecisionsUnavailableError` or
-`ManagedAgentsUnavailableError` before any network call. The helpers
-preserve upstream SDK objects, exceptions, and raw escape hatches.
+Injected SDK clients must still provide `client.decisions.create`,
+`client.beta.agents.sessions`, or `client.beta.realtime.connect` plus
+`client.beta.realtime.sessions.create` for their respective helpers. Missing
+capabilities raise `DecisionsUnavailableError`, `ManagedAgentsUnavailableError`,
+or `RealtimeUnavailableError` before any network call. Opening a Realtime
+connection additionally requires the official `openai[realtime]` extra. The
+helpers preserve upstream SDK objects, exceptions, and raw escape hatches.
 
 ## OpenAI Agents SDK
 
