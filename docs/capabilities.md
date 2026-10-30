@@ -23,6 +23,7 @@ Maturity meanings:
 | Agents workflows | `openai_sdk_helpers.agent` | Composes the official OpenAI Agents SDK | Supported | Core | Sync and async runners | Callers retain underlying Agents SDK objects, tools, sessions, and results |
 | Managed Agents API sessions | `openai_sdk_helpers.managed_agents` | Adds capability-gated convenience around official managed Agents session lifecycle calls without owning orchestration or session state | Preview | Core; package-wide `openai>=3.37.0` (API introduced in 3.13.0) | Sync and async discrete requests; streaming remains official-SDK-native | `sdk_client`, `agents`, and `sessions` expose original SDK resources; results and exceptions remain unchanged |
 | Decisions API | `openai_sdk_helpers.decisions` | GA-compatible native predicate, choice, and score helpers, including structured instructions, JSON/tool-history input, and cache forwarding | Supported | Core; package-wide `openai>=3.37.0` | Matching sync/async requests; one-question conveniences plus native batch create | `sdk_client` and `decisions` expose original SDK resources; Decision/answer objects and exceptions remain unchanged |
+| Realtime API | `openai_sdk_helpers.realtime` | Thin server-side client-secret, connection, event-envelope, cancellation, and function-output helpers over the official SDK | Preview | Core; package-wide `openai>=3.37.0`; install `openai[realtime]` to connect | Sync/async client-secret HTTP requests plus caller-owned connection managers | `sdk_client`, `realtime`, `sessions`, raw connection managers, connections, events, and exceptions remain accessible |
 | Typed structures | `openai_sdk_helpers.structure` | Pydantic schemas for SDK inputs and outputs | Stable | Core; extraction structures require `extract` | Local | Pydantic models and generated schemas remain directly accessible |
 | Prompt rendering | `openai_sdk_helpers.prompt` | SDK-independent Jinja rendering | Stable | Core | Local | Callers control template directories and rendered strings |
 | Tool contracts and handlers | `openai_sdk_helpers.tools` | Reusable definitions for Responses and Agents integrations | Supported | Core | Sync and async handlers where declared | Raw tool definitions and handler exceptions remain accessible |
@@ -42,7 +43,7 @@ They must pass the feature acceptance test in `PRODUCT.md` before implementation
 
 | Capability | Target | Roadmap status | Constraint |
 | --- | --- | --- | --- |
-| Realtime API helpers | `0.12.0` | Issues #145–#146 | Thin server-side helpers over official SDK sessions/events only; no browser/audio application, replacement transport, protocol implementation, or parallel event framework |
+| Realtime API helpers | `0.12.0` | Issues #145–#146 implemented; release pending | Thin server-side helpers over official SDK sessions/events only; no browser/audio application, replacement transport, protocol implementation, or parallel event framework |
 
 Images and audio generation are not committed roadmap surfaces. They should be
 added only after repeated workflows demonstrate that a package-level helper is
@@ -66,6 +67,12 @@ Use **Decisions** when an application needs a fast typed predicate, fixed
 choice, or ordered score over shared evidence without generation or an agent
 loop. Use the raw official resource for newly released request fields that have
 not earned a package helper.
+
+Use **Realtime** when a server needs to create an ephemeral client secret,
+open and own an official SDK connection, normalize event envelopes, cancel a
+response, or return function output. Use raw official Realtime resources for
+audio capture/playback, reconnection, browser transport, WebRTC, or any newly
+released event and session fields.
 
 Use **Codex plugins** when a separately packaged capability should register
 commands through deterministic entry-point discovery without modifying the core
