@@ -143,6 +143,27 @@ Batch questions, multimodal inputs, usage, refusals, and future model identifier
 remain available through the official SDK-shaped interface. See
 [docs/decisions.md](docs/decisions.md) for the execution boundary and examples.
 
+### Realtime
+
+Use `openai_sdk_helpers.realtime` for thin server-side helpers around official
+Realtime client-secret sessions, connection managers, normalized event envelopes,
+explicit cancellation, and function-call output submission. It leaves browser
+UI, audio devices, transports, reconnection, and the full event protocol to the
+official SDK.
+
+```python
+from openai import OpenAI
+from openai_sdk_helpers.realtime import RealtimeClient
+
+realtime = RealtimeClient(OpenAI())
+secret = realtime.create_client_secret(
+    session={"model": "gpt-realtime", "modalities": ["text"]}
+)
+```
+
+Install `openai[realtime]` before opening a connection. See
+[docs/realtime.md](docs/realtime.md) for lifecycle and credential boundaries.
+
 ### Codex plugins
 
 Use `openai_sdk_helpers.codex` when a separately packaged capability should
@@ -175,6 +196,7 @@ The canonical inventory of shipped and planned surfaces is
 - Agents SDK wrappers, runners, search workflows, and reusable text agents;
 - capability-gated managed Agents API session lifecycle helpers;
 - capability-gated Decisions API helpers for predicates, choices, and scores;
+- capability-gated Realtime API helpers for server-side sessions and events;
 - typed Pydantic structures and Jinja prompt rendering;
 - file and vector-store helpers;
 - output validation and shared tool contracts;
@@ -218,6 +240,7 @@ and trust boundaries.
 - [Conversation state](docs/conversation-state.md) — ownership modes, compatibility, persistence, and migration
 - [Managed Agents API](docs/managed-agents.md) — managed session helpers, compatibility, streaming, and escape hatches
 - [Decisions API](docs/decisions.md) — fast predicate, choice, and score helpers with compatibility boundaries
+- [Realtime API](docs/realtime.md) — server-side session, event, cancellation, and tool-result helpers
 - [Installation profiles](docs/installation.md) — core, optional dependencies, and feature-specific SDK requirements
 - [Supported examples](examples/README.md) — executable and illustrative example policy
 - [Security policy](SECURITY.md) — confidential reporting and supported versions
@@ -258,9 +281,9 @@ implementation, or transport framework. Application-specific business logic
 belongs in consuming projects.
 
 Managed Agents helpers shipped in 0.10.0 and Decisions helpers in 0.11.0.
-Version 0.11.1 completed the Decisions GA compatibility update; Realtime API
-helpers are the next planned milestone. Issue order and release gates are
-tracked in [ROADMAP.md](ROADMAP.md).
+Version 0.11.1 completed the Decisions GA compatibility update. Realtime API
+helpers are implemented for the next release and await the remaining release
+gates. Issue order and release gates are tracked in [ROADMAP.md](ROADMAP.md).
 
 ## License
 
