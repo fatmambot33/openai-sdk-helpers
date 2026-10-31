@@ -99,7 +99,7 @@ print(result.text)
 Use `openai_sdk_helpers.managed_agents` when the application needs OpenAI-managed
 durable agent sessions and the managed execution harness. This surface requires
 an OpenAI Python SDK exposing `beta.agents.sessions`. This capability first
-appeared in SDK 3.13.0; the current package-wide floor is `openai>=3.37.0`.
+appeared in SDK 3.13.0; the current package-wide floor is `openai>=3.41.0`.
 
 ```python
 from openai import OpenAI
@@ -124,7 +124,7 @@ boundaries.
 Use `openai_sdk_helpers.decisions` for fast typed predicates, fixed choices,
 and ordered scoring when generation or an agent loop would be unnecessary.
 The GA-compatible Decisions surface uses the package-wide OpenAI Python SDK
-minimum (`openai>=3.37.0`). It accepts JSON/tool history, structured
+minimum (`openai>=3.41.0`). It accepts JSON/tool history, structured
 instructions, and native prompt caching parameters.
 
 ```python
@@ -157,7 +157,7 @@ from openai_sdk_helpers.realtime import RealtimeClient
 
 realtime = RealtimeClient(OpenAI())
 secret = realtime.create_client_secret(
-    session={"model": "gpt-realtime", "modalities": ["text"]}
+    session={"type": "realtime", "model": "gpt-realtime", "modalities": ["text"]}
 )
 ```
 
