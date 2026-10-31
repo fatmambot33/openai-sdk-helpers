@@ -12,17 +12,17 @@ remain application responsibilities or official SDK surfaces.
 
 ## Compatibility and installation
 
-The package-wide OpenAI Python SDK requirement is `openai>=3.37.0,<4.0.0`.
+The package-wide OpenAI Python SDK requirement is `openai>=3.41.0,<4.0.0`.
 Realtime availability is checked structurally when a facade is constructed: the
-injected client must expose `client.beta.realtime.connect` and
-`client.beta.realtime.sessions.create`. An incompatible client raises
+injected client must expose `client.realtime.connect` and
+`client.realtime.client_secrets.create`. An incompatible client raises
 `RealtimeUnavailableError` before any network operation.
 
 Opening a WebSocket connection additionally requires the official SDK's
 Realtime extra:
 
 ```bash
-pip install "openai[realtime]>=3.37.0,<4.0.0"
+pip install "openai[realtime]>=3.41.0,<4.0.0"
 ```
 
 Creating a client secret is an HTTP request and uses the normal `openai`
@@ -42,6 +42,7 @@ from openai_sdk_helpers.realtime import RealtimeClient
 realtime = RealtimeClient(OpenAI())
 session = realtime.create_client_secret(
     session={
+        "type": "realtime",
         "model": "gpt-realtime",
         "modalities": ["text"],
         "instructions": "Answer clearly and briefly.",
@@ -51,7 +52,7 @@ session = realtime.create_client_secret(
 # Treat session.client_secret.value as a credential.
 ```
 
-Use the raw `realtime.sessions` resource whenever the installed SDK adds a new
+Use the raw `realtime.client_secrets` resource whenever the installed SDK adds a new
 session parameter before it earns a package helper.
 
 ## Connection lifecycle
@@ -116,8 +117,8 @@ or silently serializing arbitrary application objects.
 Every facade exposes the unchanged official objects:
 
 - `sdk_client` — configured OpenAI client;
-- `realtime` — raw `client.beta.realtime` resource;
-- `sessions` — raw official Realtime sessions resource.
+- `realtime` — raw `client.realtime` resource;
+- `client_secrets` — raw official Realtime client-secrets resource.
 
 The connection manager returned by `connect`, its live connection, every raw
 event, and upstream exceptions are preserved. Use these direct resources for
