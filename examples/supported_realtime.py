@@ -14,7 +14,7 @@ class _FakeSessions:
 
     def create(self, **kwargs: Any) -> SimpleNamespace:
         self.calls.append(kwargs)
-        return SimpleNamespace(client_secret=SimpleNamespace(value="not-a-real-secret"))
+        return SimpleNamespace(value="not-a-real-secret")
 
 
 class _FakeConnection:
@@ -49,20 +49,27 @@ assert realtime_available(sdk_client)
 
 client = RealtimeClient(sdk_client)  # type: ignore[arg-type]
 secret = client.create_client_secret(
-    session={"type": "realtime", "model": "gpt-realtime", "modalities": ["text"]}
+    session={
+        "type": "realtime",
+        "model": "gpt-realtime",
+        "output_modalities": ["text"],
+    }
 )
-assert secret.client_secret.value == "not-a-real-secret"
+assert secret.value == "not-a-real-secret"
 assert sessions.calls == [
     {
         "session": {
             "type": "realtime",
             "model": "gpt-realtime",
-            "modalities": ["text"],
+            "output_modalities": ["text"],
         }
     }
 ]
 
 connection = _FakeConnection()
-client.update_session(connection, session={"instructions": "Be concise."})
+client.update_session(
+    connection,
+    session={"type": "realtime", "instructions": "Be concise."},
+)
 client.submit_tool_result(connection, call_id="call_123", output='{"status":"ok"}')
 assert connection.calls[-1] == ("response.create", {})
