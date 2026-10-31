@@ -157,7 +157,11 @@ from openai_sdk_helpers.realtime import RealtimeClient
 
 realtime = RealtimeClient(OpenAI())
 secret = realtime.create_client_secret(
-    session={"type": "realtime", "model": "gpt-realtime", "modalities": ["text"]}
+    session={
+        "type": "realtime",
+        "model": "gpt-realtime",
+        "output_modalities": ["text"],
+    }
 )
 ```
 
