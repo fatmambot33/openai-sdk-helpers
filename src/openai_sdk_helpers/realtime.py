@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from openai import AsyncOpenAI, OpenAI
 
 
-MIN_REALTIME_OPENAI_VERSION = "3.37.0"
+MIN_REALTIME_OPENAI_VERSION = "3.41.0"
 
 
 class RealtimeUnavailableError(OpenAISDKError):
@@ -53,8 +53,8 @@ def realtime_available(client: object) -> bool:
     Returns
     -------
     bool
-        ``True`` when ``client.beta.realtime`` exposes ``connect`` and
-        ``sessions.create``.
+        ``True`` when ``client.realtime`` exposes ``connect`` and
+        ``client_secrets.create``.
     """
     return _find_realtime_resource(client) is not None
 
@@ -102,7 +102,7 @@ class RealtimeClient:
     Raises
     ------
     RealtimeUnavailableError
-        If the supplied client does not expose ``beta.realtime``.
+        If the supplied client does not expose ``realtime``.
 
     Methods
     -------
@@ -132,13 +132,13 @@ class RealtimeClient:
 
     @property
     def realtime(self) -> Any:
-        """Return the raw official ``client.beta.realtime`` resource."""
+        """Return the raw official ``client.realtime`` resource."""
         return self._realtime
 
     @property
-    def sessions(self) -> Any:
-        """Return the raw official Realtime sessions resource."""
-        return self._realtime.sessions
+    def client_secrets(self) -> Any:
+        """Return the raw official Realtime client-secrets resource."""
+        return self._realtime.client_secrets
 
     def create_client_secret(
         self,
@@ -151,8 +151,8 @@ class RealtimeClient:
         Parameters
         ----------
         session : Mapping[str, Any] or None, default=None
-            Official Realtime session configuration forwarded unchanged as keyword
-            arguments. Omit to use the upstream defaults.
+            Official Realtime session configuration forwarded unchanged as the
+            native ``session`` parameter. Omit to use the upstream defaults.
         operation_context : OperationContext or None, default=None
             Optional lifecycle observer context for the HTTP request.
 
@@ -166,10 +166,12 @@ class RealtimeClient:
         Treat the returned client secret as a credential. The helper does not log,
         store, or expose it beyond the original SDK response.
         """
-        kwargs = dict(session or {})
+        kwargs: dict[str, Any] = {}
+        if session is not None:
+            kwargs["session"] = dict(session)
         return run_observed_sync(
             operation_context,
-            lambda: self.sessions.create(**kwargs),
+            lambda: self.client_secrets.create(**kwargs),
         )
 
     def connect(
@@ -319,7 +321,7 @@ class AsyncRealtimeClient:
     Raises
     ------
     RealtimeUnavailableError
-        If the supplied client does not expose ``beta.realtime``.
+        If the supplied client does not expose ``realtime``.
 
     Methods
     -------
@@ -353,9 +355,9 @@ class AsyncRealtimeClient:
         return self._realtime
 
     @property
-    def sessions(self) -> Any:
-        """Return the raw official asynchronous Realtime sessions resource."""
-        return self._realtime.sessions
+    def client_secrets(self) -> Any:
+        """Return the raw official asynchronous client-secrets resource."""
+        return self._realtime.client_secrets
 
     async def create_client_secret(
         self,
@@ -368,8 +370,8 @@ class AsyncRealtimeClient:
         Parameters
         ----------
         session : Mapping[str, Any] or None, default=None
-            Official Realtime session configuration forwarded unchanged as keyword
-            arguments. Omit to use the upstream defaults.
+            Official Realtime session configuration forwarded unchanged as the
+            native ``session`` parameter. Omit to use the upstream defaults.
         operation_context : OperationContext or None, default=None
             Optional lifecycle observer context for the HTTP request.
 
@@ -378,10 +380,12 @@ class AsyncRealtimeClient:
         Any
             Original official SDK client-secret session response.
         """
-        kwargs = dict(session or {})
+        kwargs: dict[str, Any] = {}
+        if session is not None:
+            kwargs["session"] = dict(session)
         return await run_observed_async(
             operation_context,
-            lambda: self.sessions.create(**kwargs),
+            lambda: self.client_secrets.create(**kwargs),
         )
 
     def connect(
@@ -525,11 +529,10 @@ class AsyncRealtimeClient:
 
 def _find_realtime_resource(client: object) -> Any | None:
     """Return the Realtime resource when its required methods are available."""
-    beta = getattr(client, "beta", None)
-    realtime = getattr(beta, "realtime", None)
-    sessions = getattr(realtime, "sessions", None)
+    realtime = getattr(client, "realtime", None)
+    client_secrets = getattr(realtime, "client_secrets", None)
     if callable(getattr(realtime, "connect", None)) and callable(
-        getattr(sessions, "create", None)
+        getattr(client_secrets, "create", None)
     ):
         return realtime
     return None
@@ -540,8 +543,8 @@ def _require_realtime_resource(client: object) -> Any:
     realtime = _find_realtime_resource(client)
     if realtime is None:
         raise RealtimeUnavailableError(
-            "The supplied client does not expose `beta.realtime.connect` and "
-            "`beta.realtime.sessions.create`. Install `openai[realtime]>=3.37.0` "
+            "The supplied client does not expose `realtime.connect` and "
+            "`realtime.client_secrets.create`. Install `openai[realtime]>=3.41.0` "
             "and inject a compatible OpenAI client.",
             context={
                 "feature": "realtime",
