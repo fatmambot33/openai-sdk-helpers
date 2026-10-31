@@ -44,12 +44,12 @@ session = realtime.create_client_secret(
     session={
         "type": "realtime",
         "model": "gpt-realtime",
-        "modalities": ["text"],
+        "output_modalities": ["text"],
         "instructions": "Answer clearly and briefly.",
     }
 )
 
-# Treat session.client_secret.value as a credential.
+# Treat session.value as a credential.
 ```
 
 Use the raw `realtime.client_secrets` resource whenever the installed SDK adds a new
@@ -66,7 +66,7 @@ behind the application's back.
 with realtime.connect(model="gpt-realtime") as connection:
     realtime.update_session(
         connection,
-        session={"instructions": "Keep answers concise."},
+        session={"type": "realtime", "instructions": "Keep answers concise."},
     )
     for event in realtime.iter_events(connection):
         print(event.type)
