@@ -9,7 +9,7 @@ classification, prioritization, or scoring step.
 
 ## Compatibility
 
-The package-wide OpenAI Python SDK requirement is `openai>=3.37.0,<4.0.0`.
+The package-wide OpenAI Python SDK requirement is `openai>=3.41.0,<4.0.0`.
 OpenAI Decisions became generally available on October 22, 2026. SDK 3.37.0
 provides GA input types and native prompt caching parameters.
 
