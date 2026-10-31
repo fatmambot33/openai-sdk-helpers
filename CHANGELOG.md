@@ -8,6 +8,9 @@ All notable changes to this project are documented here.
   client-secret session creation, connection-manager construction, session
   updates, event-envelope normalization, response cancellation, and function
   call output submission.
+- Targeted the GA `client.realtime` resource and `client_secrets` API, replacing
+  the retired beta Realtime surface; raised the package-wide OpenAI Python SDK
+  minimum to `3.41.0` accordingly.
 - Preserved raw official Realtime resources, connection managers, events, and
   exceptions; browser UI, audio device handling, reconnection, transport, and
   protocol ownership remain outside the package.
