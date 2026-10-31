@@ -42,17 +42,25 @@ class _FakeConnection:
 
 
 sessions = _FakeSessions()
-realtime = SimpleNamespace(sessions=sessions, connect=lambda **kwargs: kwargs)
-sdk_client = SimpleNamespace(beta=SimpleNamespace(realtime=realtime))
+realtime = SimpleNamespace(client_secrets=sessions, connect=lambda **kwargs: kwargs)
+sdk_client = SimpleNamespace(realtime=realtime)
 
 assert realtime_available(sdk_client)
 
 client = RealtimeClient(sdk_client)  # type: ignore[arg-type]
 secret = client.create_client_secret(
-    session={"model": "gpt-realtime", "modalities": ["text"]}
+    session={"type": "realtime", "model": "gpt-realtime", "modalities": ["text"]}
 )
 assert secret.client_secret.value == "not-a-real-secret"
-assert sessions.calls == [{"model": "gpt-realtime", "modalities": ["text"]}]
+assert sessions.calls == [
+    {
+        "session": {
+            "type": "realtime",
+            "model": "gpt-realtime",
+            "modalities": ["text"],
+        }
+    }
+]
 
 connection = _FakeConnection()
 client.update_session(connection, session={"instructions": "Be concise."})
