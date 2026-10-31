@@ -137,7 +137,7 @@ def test_sync_lifecycle_connection_and_explicit_events() -> None:
         session={
             "type": "realtime",
             "model": "gpt-realtime",
-            "modalities": ["text"],
+            "output_modalities": ["text"],
         },
         operation_context=OperationContext(
             "realtime.secret", observers=(observed.append,)
@@ -153,7 +153,7 @@ def test_sync_lifecycle_connection_and_explicit_events() -> None:
             "session": {
                 "type": "realtime",
                 "model": "gpt-realtime",
-                "modalities": ["text"],
+                "output_modalities": ["text"],
             }
         }
     ]
@@ -183,7 +183,7 @@ def test_sync_lifecycle_connection_and_explicit_events() -> None:
     connection = _SyncConnection()
     helper.update_session(
         connection,
-        session={"instructions": "Be concise."},
+        session={"type": "realtime", "instructions": "Be concise."},
         event_id="event_session",
     )
     helper.cancel_response(connection, response_id="resp_123", event_id="event_cancel")
@@ -203,7 +203,13 @@ def test_sync_lifecycle_connection_and_explicit_events() -> None:
     assert connection.calls == [
         (
             "session.update",
-            {"session": {"instructions": "Be concise."}, "event_id": "event_session"},
+            {
+                "session": {
+                    "type": "realtime",
+                    "instructions": "Be concise.",
+                },
+                "event_id": "event_session",
+            },
         ),
         (
             "response.cancel",
@@ -266,12 +272,19 @@ async def test_async_facade_matches_sync_semantics() -> None:
 
     assert (
         await helper.create_client_secret(
-            session={"type": "realtime", "model": "gpt-realtime"}
+            session={
+                "type": "realtime",
+                "model": "gpt-realtime",
+                "output_modalities": ["text"],
+            }
         )
         is sessions.result
     )
     assert helper.connect(model="gpt-realtime") == "manager"
-    await helper.update_session(connection, session={"modalities": ["text"]})
+    await helper.update_session(
+        connection,
+        session={"type": "realtime", "output_modalities": ["text"]},
+    )
     await helper.cancel_response(connection)
     await helper.submit_tool_result(connection, call_id="call_123", output="ok")
 
@@ -283,7 +296,13 @@ async def test_async_facade_matches_sync_semantics() -> None:
     ]
 
     assert sessions.calls == [
-        {"session": {"type": "realtime", "model": "gpt-realtime"}}
+        {
+            "session": {
+                "type": "realtime",
+                "model": "gpt-realtime",
+                "output_modalities": ["text"],
+            }
+        }
     ]
     assert connect_calls == [
         {
@@ -294,7 +313,15 @@ async def test_async_facade_matches_sync_semantics() -> None:
         }
     ]
     assert connection.calls == [
-        ("session.update", {"session": {"modalities": ["text"]}}),
+        (
+            "session.update",
+            {
+                "session": {
+                    "type": "realtime",
+                    "output_modalities": ["text"],
+                }
+            },
+        ),
         ("response.cancel", {}),
         (
             "conversation.item.create",
