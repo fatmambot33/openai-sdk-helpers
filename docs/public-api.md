@@ -169,7 +169,7 @@ more names to the already broad package-root namespace.
 - `ManagedAgentsUnavailableError`
 - `managed_agents_available`
 
-This surface uses the package-wide `openai>=3.37.0` SDK floor and requires an
+This surface uses the package-wide `openai>=3.41.0` SDK floor and requires an
 injected client exposing `beta.agents.sessions`. See the
 [managed Agents API](managed-agents.md) guide for the capability boundary.
 
@@ -182,7 +182,7 @@ injected client exposing `beta.agents.sessions`. See the
 - `MIN_DECISIONS_OPENAI_VERSION`
 - `decisions_available`
 
-This surface uses the package-wide `openai>=3.37.0` SDK floor and requires an
+This surface uses the package-wide `openai>=3.41.0` SDK floor and requires an
 injected client exposing `decisions.create`. See the [Decisions API](decisions.md)
 guide for supported inputs and the execution boundary.
 
@@ -196,8 +196,8 @@ guide for supported inputs and the execution boundary.
 - `normalize_realtime_event`
 - `realtime_available`
 
-This surface uses the package-wide `openai>=3.37.0` SDK floor and requires an
-injected client exposing `beta.realtime.connect` and `beta.realtime.sessions.create`.
+This surface uses the package-wide `openai>=3.41.0` SDK floor and requires an
+injected client exposing `realtime.connect` and `realtime.client_secrets.create`.
 Install the OpenAI SDK's `realtime` extra to open connections. See the
 [Realtime API](realtime.md) guide for lifecycle and credential boundaries.
 
