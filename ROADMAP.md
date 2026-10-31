@@ -94,14 +94,18 @@ See [compatibility requirements](COMPATIBILITY.md) for current SDK constraints.
 
 Next planned API milestone; the 0.11.1 Decisions GA release gate is complete.
 
-- [ ] #145 — add thin typed server-side session configuration and lifecycle
+- [x] #145 — add thin typed server-side session configuration and lifecycle
       helpers over official SDK objects.
-- [ ] #146 — add normalized events, explicit tool/cancellation helpers, and
+- [x] #146 — add normalized events, explicit tool/cancellation helpers, and
       deterministic recorded-event/fake-session fixtures.
 
 The scope excludes browser UI, audio-device management, a replacement transport,
 a parallel event/state framework, and protocol reimplementation. Raw official
 SDK sessions, clients, transports, and events remain accessible.
+
+Implementation is complete and covered by credential-free tests and a wheel
+smoke example. The milestone is not published until the release gates below and
+the protected OIDC publication workflow are complete.
 
 ## Release gates
 

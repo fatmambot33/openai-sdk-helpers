@@ -10,7 +10,7 @@ subagents are owned by the official API.
 
 ## Compatibility
 
-The package-wide SDK requirement is `openai>=3.37.0,<4.0.0`. Managed
+The package-wide SDK requirement is `openai>=3.41.0,<4.0.0`. Managed
 Agents was introduced in OpenAI Python SDK 3.13.0, but that earlier SDK is
 no longer supported by the package. The facade still checks that injected
 clients expose `client.beta.agents.sessions` and raises
