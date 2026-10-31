@@ -99,18 +99,16 @@ class _AsyncEvents:
             yield event
 
 
-def _client(sessions: object, connect: Any) -> SimpleNamespace:
+def _client(client_secrets: object, connect: Any) -> SimpleNamespace:
     return SimpleNamespace(
-        beta=SimpleNamespace(
-            realtime=SimpleNamespace(sessions=sessions, connect=connect)
-        )
+        realtime=SimpleNamespace(client_secrets=client_secrets, connect=connect)
     )
 
 
 def test_capability_detection_and_error_are_actionable() -> None:
     """Detect the API structurally and fail before any request."""
     supported = _client(_SyncSessions(), lambda **kwargs: kwargs)
-    unsupported = SimpleNamespace(beta=SimpleNamespace())
+    unsupported = SimpleNamespace()
 
     assert realtime_available(supported)
     assert not realtime_available(unsupported)
@@ -118,10 +116,10 @@ def test_capability_detection_and_error_are_actionable() -> None:
     with pytest.raises(RealtimeUnavailableError) as error:
         RealtimeClient(unsupported)  # type: ignore[arg-type]
 
-    assert "openai[realtime]>=3.37.0" in str(error.value)
+    assert "openai[realtime]>=3.41.0" in str(error.value)
     assert error.value.context == {
         "feature": "realtime",
-        "minimum_openai_version": "3.37.0",
+        "minimum_openai_version": "3.41.0",
     }
 
 
@@ -136,17 +134,29 @@ def test_sync_lifecycle_connection_and_explicit_events() -> None:
     observed = []
 
     result = helper.create_client_secret(
-        session={"model": "gpt-realtime", "modalities": ["text"]},
+        session={
+            "type": "realtime",
+            "model": "gpt-realtime",
+            "modalities": ["text"],
+        },
         operation_context=OperationContext(
             "realtime.secret", observers=(observed.append,)
         ),
     )
 
     assert helper.sdk_client is sdk_client
-    assert helper.realtime is sdk_client.beta.realtime
-    assert helper.sessions is sessions
+    assert helper.realtime is sdk_client.realtime
+    assert helper.client_secrets is sessions
     assert result is sessions.result
-    assert sessions.calls == [{"model": "gpt-realtime", "modalities": ["text"]}]
+    assert sessions.calls == [
+        {
+            "session": {
+                "type": "realtime",
+                "model": "gpt-realtime",
+                "modalities": ["text"],
+            }
+        }
+    ]
     assert [event.phase for event in observed] == [
         OperationPhase.START,
         OperationPhase.SUCCESS,
@@ -255,7 +265,9 @@ async def test_async_facade_matches_sync_semantics() -> None:
     connection = _AsyncConnection()
 
     assert (
-        await helper.create_client_secret(session={"model": "gpt-realtime"})
+        await helper.create_client_secret(
+            session={"type": "realtime", "model": "gpt-realtime"}
+        )
         is sessions.result
     )
     assert helper.connect(model="gpt-realtime") == "manager"
@@ -270,7 +282,9 @@ async def test_async_facade_matches_sync_semantics() -> None:
         )
     ]
 
-    assert sessions.calls == [{"model": "gpt-realtime"}]
+    assert sessions.calls == [
+        {"session": {"type": "realtime", "model": "gpt-realtime"}}
+    ]
     assert connect_calls == [
         {
             "model": "gpt-realtime",
