@@ -16,13 +16,13 @@ and helpers, Realtime capability detection and server-side helpers, vector
 storage, tools, validation, and the Codex plugin surface.
 It does not install LangExtract or Streamlit.
 
-The package-wide SDK requirements are `openai>=3.37.0,<4.0.0` and
+The package-wide SDK requirements are `openai>=3.41.0,<4.0.0` and
 `openai-agents>=0.24.0,<1.0.0` for every installation profile, including
 Managed Agents, Decisions, and Realtime.
 
 The Managed Agents facade checks `client.beta.agents.sessions`, and the
 Decisions facade checks `client.decisions.create`. The Realtime facade checks
-`client.beta.realtime.connect` and `client.beta.realtime.sessions.create`. All
+`client.realtime.connect` and `client.realtime.client_secrets.create`. All
 three fail before sending a network request if an injected client lacks the
 required capability.
 
@@ -30,7 +30,7 @@ Opening an official Realtime WebSocket connection additionally requires the
 OpenAI SDK's optional transport dependency:
 
 ```bash
-pip install "openai[realtime]>=3.37.0,<4.0.0"
+pip install "openai[realtime]>=3.41.0,<4.0.0"
 ```
 
 Client-secret session creation itself uses the base OpenAI SDK; applications
